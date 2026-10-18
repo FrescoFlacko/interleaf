@@ -588,6 +588,11 @@ of problems rather than continuing.
      blockmaps ([macOS signing and notarization](#macos-signing-and-notarization)).
    - Linux (an x64 Linux host or CI runner with a fresh `npm ci`):
      `npm run package:linux` builds the AppImage, `.deb` and pacman package.
+     Pushing the version tag (`git tag v<v> && git push origin v<v>`) runs
+     the `Linux package` workflow on that commit; its
+     `interleaf-linux-artifacts` artifact holds all four Linux files
+     (`gh run download <run-id> -n interleaf-linux-artifacts`). The workflow
+     only builds; it never signs or publishes.
 2. **Stage.** Copy exactly these files into one empty directory outside the
    checkout. `sign` refuses any missing or extra file.
    `Interleaf-<v>-arm64.dmg`, `Interleaf-<v>.dmg`,
