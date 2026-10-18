@@ -1,0 +1,13 @@
+// Optional Cloudflare Workers static-assets configuration for the marketing
+// site. It serves the prebuilt files in ../out/website and runs no Worker code.
+// Nothing here is secret; the account comes from your own `wrangler login`.
+// Build first, then (only when you intend to publish):
+//   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON website.build.ts
+//   npx wrangler deploy --config website/wrangler.jsonc
+{
+  "name": "interleaf-website",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "../out/website"
+  }
+}

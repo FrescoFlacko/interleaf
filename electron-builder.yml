@@ -1,0 +1,200 @@
+appId: com.interleaf.app
+productName: Interleaf
+copyright: Copyright © 2026 Interleaf
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - out/**
+  # Development-only build artifact: the rebranded Electron.app an unpackaged
+  # macOS run is launched from (electron.dev-bundle.ts). A packaged build has
+  # its own Interleaf bundle and must never nest that copy inside it.
+  - '!out/dev-app'
+  - package.json
+
+# The brand raster ships outside the asar so main can hand a real filesystem
+# path to BrowserWindow/Dock on the platforms that need an explicit window
+# icon (Windows, Linux, and any unpackaged run). macOS packaged builds use the
+# bundled .icns; this is the same artwork in PNG form.
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+
+# Release destination: the public releases-only repository (the source
+# repository is never a distribution channel). Declaring it makes electron-builder write
+# resources/app-update.yml (electron-updater reads its cache directory name
+# from there) and the macOS ZIP blockmaps used for differential downloads.
+# The app never trusts this file's feed: it pins the same owner/repo in
+# src/main/updates/update-trust.ts and accepts only Ed25519-signed manifests.
+# No token lives here, every package script passes `--publish never`, and
+# assets are uploaded only by electron.update-release.ts as a draft that is
+# verified before it is promoted (docs/PACKAGING.md, "Stable updates").
+publish:
+  provider: github
+  owner: FrescoFlacko
+  repo: interleaf-releases
+  releaseType: draft
+
+# Writes README-AppImage.txt (install instructions) beside each built
+# AppImage, in whatever output directory the build uses. Other targets are
+# left alone (electron.appimage-readme.ts).
+afterAllArtifactBuild: ./electron.appimage-readme.ts
+
+asar: true
+# Native decoders cannot be read from inside the archive: keep sharp and its
+# prebuilt libvips binaries on disk so the isolated raster worker can load
+# them from the unpacked path (ADR 0013).
+asarUnpack:
+  - '**/node_modules/sharp/**'
+  - '**/node_modules/@img/**'
+compression: maximum
+
+# Documents the operating system may hand to Interleaf ("Open With"). Opening
+# one reads it where it is without adding it to the library (ADR 0014); main
+# validates every delivered path before reading it. Interleaf is a viewer and
+# never the preferred handler, so it does not take these types over from an
+# editor the user already has. electron-builder turns this list into the macOS
+# CFBundleDocumentTypes, the Windows NSIS registrations and the Linux desktop
+# entry's MimeType.
+fileAssociations:
+  - ext: pdf
+    name: PDF Document
+    mimeType: application/pdf
+    role: Viewer
+    rank: Alternate
+  - ext: epub
+    name: EPUB Book
+    mimeType: application/epub+zip
+    role: Viewer
+    rank: Alternate
+  - ext: [mobi, azw, azw3]
+    name: Kindle Book
+    mimeType: application/x-mobipocket-ebook
+    role: Viewer
+    rank: Alternate
+  - ext: docx
+    name: Word Document
+    mimeType: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    role: Viewer
+    rank: Alternate
+  - ext: pptx
+    name: PowerPoint Presentation
+    mimeType: application/vnd.openxmlformats-officedocument.presentationml.presentation
+    role: Viewer
+    rank: Alternate
+  - ext: [md, markdown]
+    name: Markdown Document
+    mimeType: text/markdown
+    role: Viewer
+    rank: Alternate
+
+mac:
+  icon: resources/icon.icns
+  category: public.app-category.books
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  # Notarize the signed .app through notarytool. Credentials come only from the
+  # invocation environment (APPLE_KEYCHAIN_PROFILE for the local release); when
+  # they are absent electron-builder merely warns and skips, so a release must
+  # go through electron.mac-release.ts, which refuses instead. No signing
+  # identity is pinned here: an explicit identity overrides
+  # CSC_IDENTITY_AUTO_DISCOVERY=false and would sign the unsigned smoke build.
+  notarize: true
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+
+win:
+  icon: resources/icon.png
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  signtoolOptions:
+    signingHashAlgorithms:
+      - sha256
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+
+linux:
+  icon: resources/icon.png
+  # Pinned to productName on purpose. electron-builder names the installed
+  # binary (/opt/Interleaf/Interleaf), the hicolor icon files, the MIME XML and
+  # the desktop entry (Interleaf.desktop) after executableName, and when it is
+  # unset defaults it to the lowercase package `name` (`interleaf`), not to
+  # productName. The runtime identity is pinned separately by `desktopName`
+  # (Interleaf.desktop) in package.json: without it Electron falls back to a
+  # lowercased slug of app.name (interleaf.desktop). Electron reports that
+  # desktop name, minus the suffix, as the Wayland app_id. Keeping the entry
+  # file name, desktopName and StartupWMClass identical is what lets Hyprland,
+  # xdg-desktop-portal and GLib DesktopAppInfo resolve the running window to
+  # this entry; change all of them together or none.
+  executableName: Interleaf
+  target:
+    - AppImage
+    - deb
+    # Arch/Omarchy. electron-builder drives fpm for this target; the artifact
+    # is a real pacman package (see the pacman section for its filename).
+    - pacman
+  category: Office
+  maintainer: Interleaf
+  vendor: Interleaf
+  synopsis: Local-first reader, annotation, and AI research environment
+  # Becomes the .desktop Comment and the deb/pacman package description.
+  # Keep it a single line: electron-builder escapes newlines, it does not wrap.
+  description: >-
+    Local-first reader for PDF, EPUB, MOBI/KF8 and DOCX with persistent
+    annotations, lexical search, an optional document chat panel, and a
+    controlled handoff to local coding-agent CLIs.
+  desktop:
+    # Desktop-entry keys merged over electron-builder's computed defaults.
+    # Name/Exec/Icon/Terminal/Type come from the config above; Comment is
+    # taken from `description` and Categories from `category`, so neither is
+    # repeated here (electron-builder overwrites both after this merge).
+    #
+    # StartupWMClass must equal the window identity Electron reports on Linux.
+    # Electron sets its desktop name from package.json `desktopName`
+    # (Interleaf.desktop) and derives the Wayland app_id from it; main also
+    # pins the X11 WM_CLASS to the same value (src/main/app/linux-platform.ts).
+    # Hyprland window rules, Waybar and Walker resolve a running window to this
+    # entry through that key.
+    #
+    # MimeType is not listed here: electron-builder derives it from
+    # `fileAssociations` above, so the desktop entry advertises exactly the
+    # types the application registers.
+    entry:
+      StartupWMClass: Interleaf
+      StartupNotify: 'true'
+      GenericName: Document Reader
+      Keywords: reader;pdf;epub;mobi;docx;pptx;markdown;annotation;
+
+pacman:
+  # fpm names its pacman output `<name>-<version>-<arch>.pacman` by default.
+  # Rename it to the conventional pacman suffix so `pacman -U` on Omarchy gets
+  # a file named like every other package it installs. The archive itself is
+  # xz-compressed (electron-builder's default for fpm), and pacman reads the
+  # real architecture from .PKGINFO, not from this filename.
+  artifactName: '${name}-${version}-${arch}.pkg.tar.xz'
+  # electron-builder's default pacman dependency list still contains packages
+  # that are no longer in the Arch repositories (http-parser,
+  # libappindicator-gtk3), which makes `pacman -U` fail to resolve on a current
+  # Omarchy system. Declare the runtime libraries Electron actually needs and
+  # that exist in core/extra today. gnome-keyring (Secret Service) and
+  # xdg-desktop-portal are runtime prerequisites of the desktop session rather
+  # than hard package dependencies; see docs/PACKAGING.md.
+  depends:
+    - gtk3
+    - nss
+    - alsa-lib
+    - libxss
+    - libnotify
+    - libsecret
+    - xdg-utils

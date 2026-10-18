@@ -1,0 +1,69 @@
+@import "../chat/fonts/fonts.css";
+
+/* Type scale transcribed from AI Chat Panel.dc.html section 6 (6a: new agent
+   task; 6b: selected session). Geometry is reproduced literally; colour comes
+   entirely from the semantic theme tokens in styles/global.css, so the panel
+   follows all six palettes instead of the mockup's parallel light palette.
+   Scoped to the agent panel: no other surface changes typography. */
+.agent-design {
+  font-family: 'IBM Plex Sans', Arial, sans-serif;
+}
+
+/* The reference sets every label, chip, command and metadata value in IBM Plex
+   Mono. Declared here rather than through Tailwind's `font-mono` so the agent
+   panel carries the design's own stack without redefining it app-wide. */
+.agent-design .agent-mono {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Dashed placeholder boxes: the empty working directory value and the
+   selection and page context chips. */
+.agent-dashed {
+  border-style: dashed;
+}
+
+/* The task and resume composers use the shared `ComposerShell`
+   (styles/companion.css), which owns their frame, focus and field outline. */
+
+/* 6a and 6b both put "All sessions" in the panel header as a 28 px chip rather
+   than as a section heading. `AgentDisclosure` keeps its behaviour, its
+   chevron and its heading wrapper unchanged — only the trigger's box is
+   restyled here, so the shared component stays a single-purpose disclosure. */
+.agent-session-chip > h3 > button {
+  width: auto;
+  height: 28px;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Run details is the one block above the feed that gives way on a short
+   pane: it shrinks to a floor that keeps its toggle in view and scrolls, while
+   the Result card and a minimum of activity keep their height. */
+.agent-run-summary { flex: 0 1 auto; min-height: min(5.5rem, 100%); overflow-y: auto; overscroll-behavior: contain; }
+.agent-activity-feed { min-height: 6rem; }
+/* When the viewport itself is too short for that stack (a small window or
+   200% zoom), the session view scrolls as one column instead, so the run
+   header, Run details, the Result card, the feed and the resume composer all
+   stay reachable rather than being clipped by the panel. */
+@media (max-height: 560px) {
+  .agent-session-view { overflow-y: auto; }
+  .agent-session-view > * { flex-shrink: 0; }
+  .agent-session-view .agent-run-summary { overflow-y: visible; }
+}
+
+/* A long task prompt scrolls inside Run details instead of growing it. */
+.agent-run-prompt { max-height: min(7rem, 16vh); min-height: 1.5rem; overflow-y: auto; overscroll-behavior: contain; border-radius: 6px; }
+.agent-run-prompt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The report is Markdown; long code and URLs wrap instead of widening the
+   narrow panel. */
+.agent-result-report pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-result-report :where(p, li, a, code) { overflow-wrap: anywhere; }
+
+/* Resume follow-ups: shared `FollowUpChip`s that only fill the field. */
+.agent-follow-ups { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }

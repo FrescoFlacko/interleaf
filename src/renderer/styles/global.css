@@ -1,0 +1,571 @@
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./companion.css";
+@import "./motion.css";
+
+/*
+ * Semantic token bridge: palette CSS custom properties (written onto <html>
+ * by `apply-palette.ts`; defaults in tokens.css) are mapped onto Tailwind
+ * color utilities so components can use
+ * classes like `bg-surface` / `text-secondary` and stay palette-agnostic.
+ */
+@theme inline {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-elevated: var(--bg-surface-elevated);
+  --color-bg-reader: var(--bg-reader);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-selection: var(--selection);
+  --color-selection-translucent: var(--selection-translucent);
+  --color-focus-ring: var(--focus-ring);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-border: var(--warning-border);
+  --color-on-accent: var(--on-accent);
+  --color-on-danger: var(--on-danger);
+  --color-on-success: var(--on-success);
+  --color-on-warning: var(--on-warning);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--selection);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Surface-level focus hairline. A composer whose field is borderless shows its
+ * focus on the frame around the whole surface, and that frame must not borrow
+ * the saturated --focus-ring / --accent colour a control's own keyboard
+ * indicator uses. It is still the only focus indicator those surfaces have, so
+ * it has to be seen: each palette's secondary-text neutral is the lightest
+ * token that clears 3:1 against the backgrounds on both sides of the hairline
+ * in all six themes (a softer mix of it with --border-subtle does not), while
+ * staying an unsaturated one-pixel line rather than a coloured ring. Named as a
+ * role so the chat composer and the Agent Task card share one source, and
+ * declared beside the palettes so it follows the active theme. */
+:root,
+[data-theme] {
+  --border-focus-surface: var(--text-secondary);
+}
+
+/* The workspace's top row. The reader header and the companion tab bar sit
+ * side by side at the same y, so their dividers read as one line across the
+ * window only if both rows are exactly as tall. Padding alone cannot promise
+ * that — the two rows hold different controls, and the reader header's own
+ * padding put its divider 2px below the companion's — so both take their
+ * height from this one declared value instead, border included. 43px is the
+ * companion bar's natural height: four tab labels at their line height plus
+ * the selected tab's 2px underline plus the row's own hairline. It is large
+ * enough for the reader header's tallest control (a 28px button group) with
+ * room to spare, so neither row clips what it holds. */
+:root {
+  --workspace-header-row-height: 43px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Companion tab bar. The row is the last thing that should give way in a 280 px
+ * sidebar, so when its four labels no longer fit it scrolls sideways instead of
+ * wrapping or clipping them. The gutter itself is hidden: it would take width
+ * from the labels it exists to reveal, and the tabs are already reachable with
+ * the arrow keys, which scroll the focused tab into view. */
+.companion-tablist {
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.companion-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+/* Library header filter strip. The same answer as the tab bar above, for the
+ * same reason: this row is one of the two that must stay exactly
+ * `--workspace-header-row-height` tall, so when the search field, the two
+ * selects and the view toggle no longer fit it gives up width, not height. A
+ * visible gutter would both eat into that width and add to the row's own
+ * height, and Tab already scrolls the focused control into view. Instead,
+ * each edge with controls past it fades, as the Settings rail does, so a
+ * control there reads as more to scroll to rather than as cut off. */
+.library-header-controls {
+  --strip-fade-start: 0px;
+  --strip-fade-end: 0px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--strip-fade-start),
+    #000 calc(100% - var(--strip-fade-end)),
+    transparent
+  );
+}
+.library-header-controls[data-overflow-start] {
+  --strip-fade-start: 24px;
+}
+.library-header-controls[data-overflow-end] {
+  --strip-fade-end: 24px;
+}
+.library-header-controls::-webkit-scrollbar {
+  display: none;
+}
+
+/* Loading shimmer for pending text (`LoadingShimmerText`).
+ *
+ * A highlight sweeps across the label's own glyphs instead of pulsing the whole
+ * element's opacity, so the text never fades below full strength and stays
+ * legible while it animates. Both stops are semantic text tokens, so the effect
+ * follows every palette. Under reduced motion the sweep is removed outright —
+ * not merely shortened — and the text falls back to a static, fully opaque
+ * secondary label. */
+.ml-loading-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--text-secondary) 0%,
+    var(--text-secondary) 35%,
+    var(--text-primary) 50%,
+    var(--text-secondary) 65%,
+    var(--text-secondary) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  /* Tiled, so every glyph is painted at every point of the sweep: an
+   * unpainted region would make part of the loading text invisible. */
+  background-repeat: repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ml-loading-shimmer-sweep 1.6s linear infinite;
+}
+
+/* Companion and sidebar content entry (ResizablePanel): it fades in while
+ * moving 20px in from the panel's outer edge, from the frame that commits the
+ * panel's width. No fill mode, so at rest no transform remains. */
+@keyframes panel-content-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes panel-content-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+@keyframes ml-loading-shimmer-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ml-loading-shimmer {
+    animation: none !important;
+    background-image: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--text-secondary);
+    opacity: 1;
+  }
+}
+
+/* Painted glyphs cannot survive a forced-colours palette; fall back to the
+ * system text colour rather than rendering transparent text. */
+@media (forced-colors: active) {
+  .ml-loading-shimmer {
+    animation: none;
+    background-image: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: CanvasText;
+  }
+}
+
+/* Hover feedback for the library grid card (`.ml-card-hover`).
+ *
+ * No lift: the card stays exactly where the grid placed it. Hover deepens the
+ * shadow and strengthens a 1px ring, both painted with `box-shadow`, so the box
+ * never changes size and a hovered card in the last column (one column at 200%
+ * zoom included) cannot overflow the grid. The hover state applies only to a
+ * fine pointer that can hover, so a tap never leaves a card stuck "hovered".
+ * Nothing moves, so reduced motion needs no override; the global rule already
+ * collapses the 150ms colour-and-shadow transition. */
+.ml-card-hover {
+  box-shadow:
+    0 0 0 1px var(--border-subtle),
+    0 1px 2px rgba(0, 0, 0, 0.16),
+    0 8px 20px rgba(0, 0, 0, 0.1);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ml-card-hover:hover {
+    box-shadow:
+      0 0 0 1px var(--border-strong),
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      0 12px 26px rgba(0, 0, 0, 0.16);
+  }
+}
+
+/* Flattened port of the `.textLayer` block in pdfjs-dist 6.2.108
+ * `web/pdf_viewer.css` (nesting expanded; annotation-editor-only rules such as
+ * `.highlighting`, `.highlight` and `.selectionRendering` omitted because this
+ * adapter constructs `TextLayerBuilder` without a highlighter, an accessibility
+ * manager or an images handler). Importing the upstream sheet wholesale is not
+ * an option: it also ships `:root`, `.pdfViewer`, toolbar and editor chrome
+ * that would collide with the app shell. `tests/unit/pdf-text-layer.spec.ts`
+ * asserts this port stays in sync with the installed upstream stylesheet. */
+.textLayer {
+  color-scheme: only light;
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+  pointer-events: auto;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor, 1) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  /* Preview scale applied while a page is still painted at an older render
+   * scale. It is a variable rather than an inline `transform` because the
+   * rotation rules below own this element's `transform`; an inline value would
+   * silently drop the rotation on /Rotate 90|270 pages. */
+  --preview-scale: 1;
+  transform: scale(var(--preview-scale));
+}
+
+/* `TextLayer` sizes its container from the *unrotated* page box and records the
+ * viewport rotation in `data-main-rotation` (`setLayerDimensions` is called with
+ * `mustFlip: false`), so page rotation is applied here. Mirrors the
+ * `[data-main-rotation]` rules in pdfjs-dist 6.2.108 `web/pdf_viewer.css`,
+ * scoped to `.textLayer` because this app has no other consumer of that
+ * attribute. Depends on `transform-origin: 0 0` above. */
+.textLayer[data-main-rotation='90'] {
+  transform: scale(var(--preview-scale)) rotate(90deg) translateY(-100%);
+}
+
+.textLayer[data-main-rotation='180'] {
+  transform: scale(var(--preview-scale)) rotate(180deg) translate(-100%, -100%);
+}
+
+.textLayer[data-main-rotation='270'] {
+  transform: scale(var(--preview-scale)) rotate(270deg) translateX(-100%);
+}
+
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+  transform-origin: 0% 0%;
+}
+
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.textLayer .markedContent {
+  display: contents;
+}
+
+.textLayer span[role="img"] {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+.textLayer ::selection,
+.reader-surface .textLayer ::selection {
+  background-color: var(--selection-translucent, rgba(3, 105, 161, 0.25));
+  color: transparent;
+}
+
+@media (forced-colors: active) {
+  .textLayer ::selection {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+}
+
+/* Native line breaks must not paint a band across the blank page width.
+ * Mirrors pdfjs-dist 6.2.108 `web/pdf_viewer.css` (`br::selection`). The
+ * `.reader-surface` variant is required because the reader palette rule above
+ * is more specific than a bare `.textLayer br::selection`. */
+.textLayer br::selection,
+.reader-surface .textLayer br::selection {
+  background-color: transparent;
+}
+
+/* Upstream blank-space selection guard. `TextLayerBuilder` appends this
+ * non-selectable sentinel after the glyph spans and toggles `.selecting` on
+ * pointerdown, which expands it to cover the layer beneath the spans (which
+ * carry `z-index: 1`). PDF.js owns the element and the class; this rule only
+ * supplies the geometry. */
+.textLayer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.textLayer.selecting .endOfContent {
+  top: 0;
+}
+
+/* Flattened port of the `.annotationLayer` link styles in pdfjs-dist 6.2.108
+ * `web/pdf_viewer.css`. Container is transparent and inert to pointer events so
+ * non-link clicks and selections fall through to `.textLayer`. Individual link
+ * sections are interactive, focusable, and visually indicate hover/focus. */
+.annotationLayer {
+  color-scheme: only light;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transform-origin: 0 0;
+  z-index: 1;
+  --preview-scale: 1;
+  transform: scale(var(--preview-scale));
+}
+
+.annotationLayer[data-main-rotation='90'] {
+  transform: scale(var(--preview-scale)) rotate(90deg) translateY(-100%);
+}
+
+.annotationLayer[data-main-rotation='180'] {
+  transform: scale(var(--preview-scale)) rotate(180deg) translate(-100%, -100%);
+}
+
+.annotationLayer[data-main-rotation='270'] {
+  transform: scale(var(--preview-scale)) rotate(270deg) translateX(-100%);
+}
+
+.annotationLayer section {
+  position: absolute;
+  text-align: initial;
+  pointer-events: auto;
+  box-sizing: border-box;
+  transform-origin: 0 0;
+}
+
+/* While selecting text, disable pointer-events on annotations so links do not trap text selection */
+.textLayer.selecting ~ .annotationLayer section {
+  pointer-events: none;
+}
+
+.annotationLayer .linkAnnotation > a {
+  position: absolute;
+  font-size: 1em;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.annotationLayer .linkAnnotation:not(.hasBorder) > a:hover {
+  opacity: 0.2;
+  background-color: rgb(255 255 0);
+}
+
+.annotationLayer .linkAnnotation.hasBorder:hover {
+  background-color: rgb(255 255 0 / 0.2);
+}
+
+.annotationLayer .linkAnnotation > a:focus-visible {
+  outline: 2px solid var(--accent, #0284c7);
+  outline-offset: 1px;
+}
+
+/* Page container contract from `.pdfViewer .page` in pdfjs-dist 6.2.108
+ * `web/pdf_viewer.css`. `TextLayer` sizes its container through
+ * `setLayerDimensions()`, which emits
+ * `round(down, var(--total-scale-factor) * <pt>px, var(--scale-round-x))`;
+ * without the rounding units defined those declarations are invalid at
+ * computed-value time and the layer falls back to `width/height: auto`.
+ * `direction: ltr` pins the layer's inline base direction so per-span `dir`
+ * attributes (which PDF.js sets for RTL and vertical runs) stay authoritative
+ * regardless of the surrounding app locale. */
+.pdf-page-wrapper {
+  box-sizing: content-box;
+  user-select: text;
+  direction: ltr;
+  --user-unit: 1;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+}
+
+/* Reader background can be chosen independently from the surrounding app
+ * palette. Values are semantic theme tokens, never document-provided CSS: an
+ * explicit reader background sets the `--reader-*-override` properties (and
+ * `--note-translucent` / `--search-mark`) inline on `.reader-surface` from the
+ * typed table (`readerBackgroundVariables`). */
+.reader-surface {
+  background-color: var(--reader-background-override, var(--bg-reader));
+  color: var(--reader-foreground-override, var(--text-primary));
+  --selection-translucent: var(--reader-selection-override, var(--selection-translucent));
+}
+.reader-surface ::selection {
+  background-color: var(--selection-translucent, var(--selection));
+}
+/* Exact search-term marks inside search-result cards. Deliberately identical to
+ * the in-document `::highlight(interleaf-search)` treatment in
+ * `features/reader/annotations/search-highlight.ts` so the same word looks the
+ * same in the results pane and on the page. `<mark>` carries the semantics; the
+ * UA default background is replaced rather than layered. */
+.search-term-mark {
+  background-color: var(--search-mark);
+  color: inherit;
+  text-decoration: underline 2px solid var(--warning);
+  text-decoration-skip-ink: none;
+  border-radius: 2px;
+}
+@media (forced-colors: active) {
+  .search-term-mark {
+    background-color: Highlight;
+    color: HighlightText;
+    text-decoration: underline;
+    forced-color-adjust: none;
+  }
+}
+
+/* Color swatches in the reader's selection toolbar
+ * (`features/reader/components/AnnotationSelectionToolbar.tsx`). The fill is set
+ * inline from the shared annotation definition's hex value; only the boundary
+ * lives here.
+ *
+ * The boundary is unconditional, not a hover or selected state: yellow at 100%
+ * opacity on a white toolbar has nothing else separating it from the surface,
+ * and the same ring has to read against the two dark palettes, so the outer
+ * dark line and the inner light line are both always painted. */
+.ml-highlight-swatch {
+  display: block;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+/* Under a forced-colours palette the swatch is the information, so its fill is
+ * kept deliberately rather than flattened to the system surface — a row of five
+ * identical ButtonFace circles would say nothing. The boundary switches to a
+ * system colour so it still contrasts with whatever palette is in force, and
+ * the visible color name beside the swatches remains the non-colour cue. */
+@media (forced-colors: active) {
+  .ml-highlight-swatch {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+}
+
+/* Fenced `mermaid` blocks in the Markdown reader
+ * (`features/reader/adapters/mermaid-block.ts`). The figure is one Markdown
+ * block holding two things: the drawn diagram, and the original fenced source,
+ * which stays in the document so every stored annotation anchor, citation, and
+ * search offset keeps pointing at the same characters it always did. */
+.markdown-mermaid {
+  display: block;
+}
+
+/* The picture is shown at the size the layout engine computed, never scaled to
+ * fit, so labels stay readable. A diagram larger than the box therefore scrolls
+ * inside it rather than stretching the document sideways, and the height is
+ * tied to the reader's viewport so one big diagram cannot take over the page.
+ * `mermaid-block.ts` makes this box focusable and names it as a region while,
+ * and only while, it actually overflows. */
+.markdown-mermaid-diagram {
+  max-height: 70vh;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background-color: var(--bg-surface);
+}
+
+.markdown-mermaid-diagram:empty {
+  display: none;
+}
+
+.markdown-mermaid-diagram:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.markdown-mermaid-image {
+  display: block;
+  /* The intrinsic size is the readable size; shrinking to the measure would
+   * make a dense diagram's labels illegible. */
+  max-width: none;
+}
+
+/* The one sentence shown when a diagram was not drawn. It sits above the source
+ * that was always there, so the reader loses nothing but the illustration. */
+.markdown-mermaid-note {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}

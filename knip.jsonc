@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // No "rules" block: knip's defaults report every issue type as an error.
+  "entry": [
+    // Spawned by path as a child process from tests/unit/ebook-security.spec.ts,
+    // so no import edge leads to it.
+    "tests/fixtures/zip-inflate-child.ts",
+    // Preloaded by path with `--import` into that child.
+    "tests/fixtures/ts-extension-hooks.ts"
+  ],
+  "project": [
+    // CSS is included so knip follows `@import "tailwindcss"` in global.css.
+    // The trailing "!" keeps the app source in scope for `knip --production`.
+    "src/**/*.{ts,tsx,css}!",
+    // Tests are part of the project so imports from test helpers count as uses.
+    "tests/**/*.{ts,tsx}"
+  ],
+  "vitest": {
+    // The opt-in manual config is run by hand (see its header), never from a
+    // package script, so knip cannot discover it or the checks it includes.
+    "config": ["vitest.config.ts", "tests/manual/vitest.manual.config.ts"]
+  },
+  "ignoreDependencies": [
+    // Resolved with createRequire().resolve() in
+    // src/main/workers/article-extract-worker.ts and loaded inside a worker
+    // thread from a source string, which knip cannot trace.
+    "@mozilla/readability"
+  ]
+}

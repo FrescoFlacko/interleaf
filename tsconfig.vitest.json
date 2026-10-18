@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "tests/unit/**/*.ts",
+    "tests/integration/**/*.ts",
+    "tests/renderer/**/*.tsx",
+    "tests/renderer/**/*.ts",
+    "tests/e2e/**/*.ts",
+    "tests/setup.ts",
+    "vitest.config.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "playwright.config.ts"
+  ]
+}

@@ -1,0 +1,18 @@
+Interleaf
+Copyright 2026 The Interleaf Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes third-party software and assets, each under its own
+license:
+
+- foliate-js (vendored subset in src/renderer/features/reader/adapters/foliate/),
+  Copyright (c) 2022 John Factotum, MIT License. See that directory's LICENSE
+  and VENDOR.md.
+- IBM Plex fonts (src/renderer/features/chat/fonts/), Copyright 2017 IBM Corp.,
+  SIL Open Font License 1.1. See that directory's LICENSE.txt.
+- Demo books shown in website/assets/screens/ are openly licensed works
+  credited in website/PROVENANCE.md.
+
+npm dependencies are not bundled in this repository; their licenses are
+recorded in their own packages.

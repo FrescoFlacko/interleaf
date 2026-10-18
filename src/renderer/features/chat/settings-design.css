@@ -1,0 +1,300 @@
+@import "./fonts/fonts.css";
+
+/* Geometry and type scale transcribed from AI Chat Panel.dc.html sections 5a
+   (collapsed provider list) and 5d (a provider expanded with its agent profile
+   merged in). Colour comes entirely from the app's semantic theme tokens in
+   styles/global.css, so the dialog follows every palette instead of
+   carrying the mockup's parallel light palette. Scoped to the Settings dialog:
+   no other surface changes typography. */
+.settings-design {
+  font-family: 'IBM Plex Sans', Arial, sans-serif;
+}
+
+/* The section content keeps room for a classic scrollbar, so the last
+   column of a grid is never painted under it when one appears. */
+.settings-content {
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+}
+
+/* Below `md` the rail is one scrolling row: its trailing edge fades so the
+   sections past it read as more to scroll to rather than as clipped words. */
+@media (width < 48rem) {
+  .settings-rail {
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    padding-right: 32px;
+  }
+}
+
+.settings-title {
+  font: 600 20px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.settings-description {
+  font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+.settings-section-title {
+  font: 600 16px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  letter-spacing: -0.012em;
+  color: var(--text-primary);
+}
+.settings-section-sub {
+  font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+
+/* One bordered list; each row is separated by a hairline, the last one is not. */
+.provider-list {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.provider-row + .provider-row {
+  border-top: 1px solid var(--border-subtle);
+}
+.provider-row--expanded {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.provider-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .provider-summary:hover {
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+}
+.provider-row--expanded > .provider-summary {
+  padding-bottom: 12px;
+}
+.provider-summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.provider-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.provider-dot--ready { background: var(--success); }
+.provider-dot--attention { background: var(--warning); }
+.provider-dot--unavailable { background: var(--text-secondary); opacity: 0.5; }
+
+.provider-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.provider-name {
+  font: 500 13px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-primary);
+}
+.provider-row--expanded .provider-name { font-weight: 600; }
+.provider-version {
+  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  color: var(--text-secondary);
+}
+.provider-description {
+  font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+.provider-trailing {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+.provider-status {
+  font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+.provider-chevron { color: var(--text-secondary); }
+
+.provider-body {
+  padding: 0 16px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.provider-body--agent {
+  padding-bottom: 16px;
+  gap: 16px;
+}
+.provider-lede {
+  font: 400 12px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+  max-width: 520px;
+}
+.provider-divider {
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.settings-field-label {
+  /* Sentence-case field label, the same as every other form in the app. */
+  font: 500 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+.settings-field-note {
+  font: 400 11px/1.45 'IBM Plex Sans', Arial, sans-serif;
+}
+/* The note's default colour sits in the components layer so a state utility
+   on the same element (`text-danger`, `text-success`) wins; as an unlayered
+   rule it painted every validation error in the secondary grey. */
+@layer components {
+  .settings-field-note { color: var(--text-secondary); }
+}
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.settings-control {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  font: 400 12px/1.2 'IBM Plex Sans', Arial, sans-serif;
+}
+.settings-control--mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+.settings-control:disabled { opacity: 0.6; }
+
+/* The saved key never shows more than its public prefix and last four
+   characters; the raw secret stays in the main process. */
+.settings-key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+}
+.settings-key-value {
+  font: 400 12px/1 'IBM Plex Mono', monospace;
+  color: var(--text-primary);
+}
+.settings-key-saved {
+  font: 500 11px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--success);
+}
+.settings-inline-action {
+  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .settings-inline-action:hover { text-decoration: underline; }
+}
+.settings-inline-action:disabled { opacity: 0.45; cursor: default; text-decoration: none; }
+.settings-inline-action--danger { color: var(--danger); font-weight: 400; }
+
+.settings-outline-button {
+  flex: none;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  background: var(--bg-surface-elevated);
+  font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+@media (hover: hover) and (pointer: fine) {
+  .settings-outline-button:hover:not(:disabled) { color: var(--text-primary); }
+}
+.settings-outline-button:disabled { opacity: 0.4; }
+
+.settings-accent-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+.settings-accent-button:disabled { opacity: 0.45; }
+
+.settings-metadata {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font: 400 11px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+
+.settings-env-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+}
+.settings-env-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.settings-env-name {
+  font: 400 12px/1.2 'IBM Plex Mono', monospace;
+  color: var(--text-primary);
+}
+
+/* Narrow dialogs and high zoom collapse the paired columns rather than
+   clipping either control. */
+@media (max-width: 860px) {
+  .settings-field-grid { grid-template-columns: minmax(0, 1fr); }
+  .settings-env-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .provider-body { padding-left: 16px; }
+}
+
+.provider-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .provider-group-toggle:hover { color: var(--text-primary); background: var(--bg-elevated); }
+}
+.provider-group-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

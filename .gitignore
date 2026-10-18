@@ -1,0 +1,64 @@
+node_modules/
+out/
+dist/
+dist-electron/
+release/
+*.dmg
+*.AppImage
+*.deb
+*.exe
+*.msi
+*.zip
+coverage/
+test-results/
+playwright-report/
+.vite/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+.firecrawl/
+.worktrees/
+.interleaf/
+# Legacy app-owned marker directory written before the Interleaf rename.
+.marginlab/
+__pycache__/
+
+# Agent and visual-test runtime output. Anchored to the repository root so it
+# does not swallow nested source directories such as src/renderer/features/agent/.
+/agent/
+.agents/skills/playwright-skill/.temp-execution-*.js
+
+# Local-only agent tooling, maintainer working notes and QA evidence.
+/AGENTS.md
+/CLAUDE.md
+/.codex/
+/.agents/
+/.claude/
+/.pi/
+/skills/
+/skills-lock.json
+/scripts/harness/
+/tests/harness/
+/tests/hooks/
+/docs/agents/
+/docs/defects/
+/docs/evidence/
+/docs/tasks/
+/docs/design/
+/docs/MASTER_PLAN.md
+/docs/REMAINING_WORK.md
+/docs/ROADMAP.md
+/docs/AI_CHAT_SESSIONS_PLAN.md
+/screenshots/
+/wiki-site/.openai/
+
+# Stray root-level screen captures and duplicate copies of the canonical brand
+# rasters in resources/brand/. Anchored to the repository root so tracked
+# screenshots/, docs/ and resources/ assets are unaffected.
+/Screenshot *.png
+/Interleaf - Logo.png
+/Interleaf - Logo with Word.png

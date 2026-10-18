@@ -1,0 +1,52 @@
+/* Readable-text scale for the companion column.
+ *
+ * Only the text a reader actually reads carries these classes: transcript
+ * turns, agent activity and reports, and the two composers. Icons, hit
+ * targets, chips, badges and status captions keep their fixed sizes, so
+ * raising the scale makes the words larger without moving a control or
+ * changing the geometry of the panel. The scale itself is a single custom
+ * property set on the panel root, which means a subtree with no scale set —
+ * a component rendered on its own in a test, or a portalled menu — falls back
+ * to 1 and looks exactly as it did before this preference existed.
+ *
+ * These rules are deliberately unlayered: the elements they size also carry
+ * Tailwind's `leading-*` utilities, and an `@layer utilities` font-size would
+ * otherwise win over the scale. */
+.companion-readable {
+  font-size: calc(var(--companion-readable-base, 14px) * var(--companion-text-scale, 1));
+}
+/* The readable sizes already in the panels, preserved exactly so the default
+ * rendering is unchanged at scale 1. Each is only a base size; the scale is
+ * applied by the rule above. */
+.companion-readable-sm { --companion-readable-base: 13.5px; }
+.companion-readable-xs { --companion-readable-base: 13px; }
+.companion-readable-2xs { --companion-readable-base: 11.5px; }
+.companion-readable-3xs { --companion-readable-base: 11px; }
+
+/* Rendered Markdown inside a readable turn.
+ *
+ * A chat answer is mostly not a plain paragraph: it is headings, lists, tables
+ * and code. Those elements carry their own fixed Tailwind sizes, which would
+ * otherwise ignore the container and leave a reader who raised the scale with
+ * larger prose and unchanged headings. The list is written out element by
+ * element rather than as a blanket descendant rule, so the parts of a turn that
+ * are not prose — citation chips, link hosts, the code block's language label
+ * and copy button — keep the fixed sizes that make them read as marks on the
+ * text rather than as the text.
+ *
+ * Each base below is the size the element renders at today, so scale 1 is
+ * byte-for-byte the previous rendering. Setting the base on the element itself
+ * also stops a `-sm`/`-xs` base inherited from the turn's own class from
+ * reaching in. Lists, tables and list items are not named here: they have no
+ * size of their own and already inherit the container's. */
+.companion-readable :is(h1, h2, h3, h4, h5, h6),
+.companion-readable pre {
+  font-size: calc(var(--companion-readable-base, 14px) * var(--companion-text-scale, 1));
+}
+.companion-readable h1 { --companion-readable-base: 18px; }
+.companion-readable h2 { --companion-readable-base: 16px; }
+.companion-readable h3 { --companion-readable-base: 14px; }
+.companion-readable h4 { --companion-readable-base: 13px; }
+.companion-readable h5 { --companion-readable-base: 12px; }
+.companion-readable h6 { --companion-readable-base: 11px; }
+.companion-readable pre { --companion-readable-base: 11px; }

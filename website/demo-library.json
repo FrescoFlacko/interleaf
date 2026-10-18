@@ -1,0 +1,66 @@
+{
+  "description": "The only documents allowed in the isolated demo library photographed for the Interleaf website. Every entry is verified by SHA-256 before import; see website/PROVENANCE.md for the licence evidence.",
+  "verifiedOn": "2026-09-26",
+  "books": [
+    {
+      "id": "erickson-algorithms",
+      "importAs": "Algorithms.pdf",
+      "format": "pdf",
+      "title": "Algorithms",
+      "author": "Jeff Erickson",
+      "edition": "1st paperback edition, 13 June 2019 (ISBN 978-1-792-64483-2)",
+      "sourceUrl": "https://jeffe.cs.illinois.edu/teaching/algorithms/book/Algorithms-JeffE.pdf",
+      "landingUrl": "https://jeffe.cs.illinois.edu/teaching/algorithms/",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Algorithms by Jeff Erickson, © 2019, licensed under CC BY 4.0. http://algorithms.wtf",
+      "sha256": "00295b82ff725c52a71351a0bb1ee1bdb1584e594a62395d3fb382aefd0f4d42",
+      "bytes": 25055430
+    },
+    {
+      "id": "morin-ods-java",
+      "importAs": "Open Data Structures (in Java).pdf",
+      "format": "pdf",
+      "title": "Open Data Structures (in Java)",
+      "author": "Pat Morin",
+      "edition": "Edition 0.1G (screen PDF, generated 26 January 2015)",
+      "sourceUrl": "https://opendatastructures.org/ods-java-screen.pdf",
+      "landingUrl": "https://opendatastructures.org/",
+      "license": "CC BY 2.5 Canada",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.5/ca/",
+      "attribution": "Contains text from Open Data Structures (in Java) by Pat Morin, opendatastructures.org, licensed under CC BY 2.5 CA.",
+      "sha256": "9448058ee235c85584a6754105a9a94d6bf25db1444e85fe984827e9ed3b970a",
+      "bytes": 1853333
+    },
+    {
+      "id": "gutenberg-28885",
+      "importAs": "Alice's Adventures in Wonderland.epub",
+      "format": "epub",
+      "title": "Alice's Adventures in Wonderland",
+      "author": "Lewis Carroll; illustrated by Arthur Rackham; proem by Austin Dobson",
+      "edition": "Project Gutenberg eBook #28885, from the 1907 Rackham-illustrated edition (EPUB3 with images)",
+      "sourceUrl": "https://www.gutenberg.org/ebooks/28885.epub3.images",
+      "landingUrl": "https://www.gutenberg.org/ebooks/28885",
+      "license": "Public domain in the USA",
+      "licenseUrl": "https://www.gutenberg.org/policy/license.html",
+      "attribution": "Alice's Adventures in Wonderland (1907, illustrated by Arthur Rackham), Project Gutenberg eBook #28885.",
+      "sha256": "1a9a1a8e676daa6bf054700a5b98c777635f68da0c69407ebdd168a36a7104d8",
+      "bytes": 1475294
+    },
+    {
+      "id": "gutenberg-57532",
+      "importAs": "Passages from the Life of a Philosopher.epub",
+      "format": "epub",
+      "title": "Passages from the Life of a Philosopher",
+      "author": "Charles Babbage",
+      "edition": "Project Gutenberg eBook #57532, from the 1864 Longman, Green, Longman, Roberts, & Green edition (EPUB3 with images)",
+      "sourceUrl": "https://www.gutenberg.org/ebooks/57532.epub3.images",
+      "landingUrl": "https://www.gutenberg.org/ebooks/57532",
+      "license": "Public domain in the USA",
+      "licenseUrl": "https://www.gutenberg.org/policy/license.html",
+      "attribution": "Passages from the Life of a Philosopher (1864) by Charles Babbage, Project Gutenberg eBook #57532.",
+      "sha256": "5bf3ea7e837b2851649fca9eee70b62e22a3b8393b60db6490edd170d2ac73d7",
+      "bytes": 738706
+    }
+  ]
+}

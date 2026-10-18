@@ -1,0 +1,211 @@
+name: Linux package
+
+# Builds and structurally verifies the Linux artifacts Interleaf ships:
+# the AppImage and the pacman package used on Arch/Omarchy, and proves on a
+# packaged AppImage that one version updates itself to the next from a signed
+# manifest. Nothing here publishes, signs a release, or uses a repository
+# secret, and no paid provider call is made: `npm run test` uses the fake
+# providers/CLIs only, and the update smoke signs with a key generated in
+# memory for the run and serves its feed on loopback.
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  # Lets a maintainer run the native packaged update proof on any branch.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-package:
+    name: Build and verify Linux artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Installs the Linux sharp prebuilds (@img/sharp-linux-*) for this host.
+      # macOS or Windows checkouts of node_modules are never reused here.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit and integration tests
+        run: npm run test
+
+      # Electron E2E (`npm run test:e2e`) is deliberately not run in this job.
+      # It drives a real Electron window and needs an X/Wayland display
+      # (xvfb-run or a compositor) that this job does not set up, and it has
+      # not been validated headless on a GitHub runner. It uses fake providers
+      # and would make no paid call; enabling it is a separate change.
+
+      - name: Build
+        run: npm run build
+
+      # fpm's pacman target writes the package's .MTREE with bsdtar, which
+      # ubuntu-latest does not ship.
+      - name: Install pacman packaging tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libarchive-tools
+
+      - name: Package AppImage and pacman
+        run: npx electron-builder --linux AppImage pacman --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Verify artifact structure
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          appimages=(release/*.AppImage)
+          packages=(release/*.pkg.tar.*)
+
+          if [ ${#appimages[@]} -eq 0 ]; then
+            echo "::error::no AppImage was produced in release/"
+            ls -la release || true
+            exit 1
+          fi
+          if [ ${#packages[@]} -eq 0 ]; then
+            echo "::error::no pacman package was produced in release/"
+            ls -la release || true
+            exit 1
+          fi
+
+          appimage="${appimages[0]}"
+          package="${packages[0]}"
+          echo "AppImage: $appimage"
+          echo "pacman package: $package"
+          test -s "$appimage"
+          test -s "$package"
+
+          # electron.appimage-readme.ts writes the install instructions beside
+          # the AppImage, naming the built file.
+          readme="$(dirname "$appimage")/README-AppImage.txt"
+          if [ ! -s "$readme" ]; then
+            echo "::error::$readme was not written beside the AppImage"
+            exit 1
+          fi
+          grep -qF -- "chmod +x ~/Applications/$(basename "$appimage")" "$readme"
+          if grep -q '{{' "$readme"; then
+            echo "::error::$readme still holds a template placeholder"
+            exit 1
+          fi
+          echo "ok: $readme"
+
+          # The pacman artifact is an xz-compressed tar. GNU tar reads it; fall
+          # back to bsdtar when libarchive-tools is present instead.
+          if tar -tf "$package" > /tmp/pkg-contents.txt 2>/dev/null; then
+            echo "listed with tar"
+          elif bsdtar -tf "$package" > /tmp/pkg-contents.txt; then
+            echo "listed with bsdtar"
+          else
+            echo "::error::could not list $package"
+            exit 1
+          fi
+          sed -n '1,80p' /tmp/pkg-contents.txt
+
+          require_entry() {
+            if ! grep -q -- "$1" /tmp/pkg-contents.txt; then
+              echo "::error::pacman package is missing $1"
+              exit 1
+            fi
+            echo "ok: $1"
+          }
+
+          require_entry 'opt/Interleaf/Interleaf'
+          require_entry 'opt/Interleaf/resources/app.asar'
+          # ADR 0013: the native raster decoder must stay outside the asar.
+          require_entry 'opt/Interleaf/resources/app.asar.unpacked/node_modules/sharp/'
+          require_entry 'opt/Interleaf/resources/app.asar.unpacked/node_modules/@img/'
+          require_entry 'usr/share/applications/Interleaf.desktop'
+
+          workdir="$(mktemp -d)"
+          tar -xf "$package" -C "$workdir" usr/share/applications/Interleaf.desktop \
+            || bsdtar -xf "$package" -C "$workdir" usr/share/applications/Interleaf.desktop
+          desktop="$workdir/usr/share/applications/Interleaf.desktop"
+          echo "--- Interleaf.desktop"
+          cat "$desktop"
+          echo "---"
+          # Hyprland/Waybar/Walker associate the running window through this key.
+          grep -q '^StartupWMClass=Interleaf$' "$desktop"
+          grep -q '^Categories=Office;' "$desktop"
+          grep -q '^Name=Interleaf$' "$desktop"
+          grep -q '^Comment=' "$desktop"
+          echo "desktop entry verified"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: interleaf-linux-artifacts
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            release/*.AppImage
+            release/README-AppImage.txt
+            release/*.pkg.tar.*
+
+  update-smoke:
+    name: Two-version AppImage update smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # xvfb gives Electron a display; libfuse2t64 lets the AppImage mount itself.
+      - name: Install display and FUSE
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libfuse2t64
+
+      # Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor.
+      # An AppImage is mounted nosuid, so Chromium cannot use its SUID helper
+      # and needs a user namespace for its sandbox. The sandbox stays enabled.
+      - name: Allow Chromium's user-namespace sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      # Builds 1.0.0 and 1.0.1 as throwaway smoke AppImages that trust only a
+      # loopback feed and an in-memory key, then has 1.0.0 refuse an empty
+      # destination, an unpinned signer and substituted bytes before it
+      # downloads, installs and relaunches 1.0.1 (electron.update-smoke.ts).
+      - name: Packaged update smoke
+        run: xvfb-run -a node electron.update-smoke.ts --evidence update-smoke-evidence
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload update smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interleaf-update-smoke
+          if-no-files-found: warn
+          retention-days: 7
+          path: update-smoke-evidence/

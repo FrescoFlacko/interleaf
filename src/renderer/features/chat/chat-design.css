@@ -1,0 +1,759 @@
+@import "./fonts/fonts.css";
+
+/* Geometry transcribed from AI Chat Panel.dc.html #1a; colour comes entirely
+   from the app's semantic theme tokens in styles/global.css, so the panel
+   follows all six palettes instead of carrying a parallel light palette.
+   Keep these scoped to the chat panel itself: the shared companion tab bar and
+   the other reader panels keep their own design and typography. */
+.chat-design {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-design-header { padding: 12px 16px 10px; }
+.chat-design-thread-title {
+  font: 500 13px/1.25 'IBM Plex Sans', Arial, sans-serif;
+  letter-spacing: -.01em;
+  color: var(--text-primary);
+}
+.chat-design-header button:not(.chat-design-create-icon) { border-color: var(--border-subtle); color: var(--text-secondary); }
+/* One accent create affordance per screen: the thread's icon and the
+   conversations header's pill are the same action in two densities. */
+.chat-design-create-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 400 14px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+/* Sessions screen (#2b): the neutral canvas / raised card / hairline-footer
+   relationship is kept, expressed as surface → elevated-surface → surface. */
+.chat-design-sessions { display: flex; flex: 1; min-height: 0; flex-direction: column; background: var(--bg-surface); }
+.chat-design-sessions-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 16px;
+  background: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.chat-design-sessions-title {
+  margin-right: auto;
+  font: 600 14px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  letter-spacing: -.01em;
+  color: var(--text-primary);
+}
+.chat-design-gear {
+  /* 2b sizes the 30px square inside its border; this stylesheet inherits
+     border-box, so the border is added back here to keep the 32px control. */
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 13px/1 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+.chat-design-create {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-design-create > span { font-size: 14px; }
+.chat-design-sessions-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-design-card-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.chat-design-card {
+  /* Shape, border and body padding come from the shared companion card. */
+  position: relative;
+  background: var(--bg-surface-elevated);
+  /* Short and colour-only: the card never moves, so nothing here needs a
+     reduced-motion exception beyond the global one in global.css. */
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+/* Hovering the whole-card open target says the whole card opens: the surface
+   lifts by one step and its hairline firms up. Keyed on the target rather than
+   on the card box, so the per-card controls stacked above it (overflow menu,
+   footer actions) and the inline rename/delete editors, which replace the
+   target, do not claim the state. The current card keeps its accent frame and
+   only deepens its own shadow, so hover never reads as selection. */
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-card:has(.chat-design-card-open:hover) {
+    background: var(--bg-surface);
+    border-color: var(--border-focus-surface);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--text-primary) 10%, transparent);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-card[data-current="true"]:has(.chat-design-card-open:hover) {
+    border-color: var(--accent);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+}
+.chat-design-card[data-current="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--accent) 12%, transparent);
+  overflow: hidden;
+}
+.chat-design-card-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.chat-design-card-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary); }
+.chat-design-card[data-current="true"] .chat-design-card-dot { background: var(--accent); }
+.chat-design-card-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 14px/1.25 'IBM Plex Sans', Arial, sans-serif;
+  letter-spacing: -.01em;
+  color: var(--text-primary);
+}
+.chat-design-card[data-current="true"] .chat-design-card-title { font-weight: 600; }
+.chat-design-card-current {
+  margin-left: auto;
+  flex: none;
+  font: 500 11px/1 'IBM Plex Mono', monospace;
+  letter-spacing: .08em;
+  color: var(--accent);
+}
+.chat-design-card-overflow-wrap { position: relative; margin-left: auto; flex: none; display: flex; }
+.chat-design-card-overflow {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 22px;
+  height: 22px;
+  /* A 22px pointer target around 2b's 13px glyph, pulled back to the 18.75px
+     title row so the hit area cannot make the card taller than the reference. */
+  margin-block: -1.625px;
+  border-radius: 6px;
+  font: 400 13px/1 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-card-overflow:hover { background: var(--bg-surface); }
+}
+.chat-design-card-preview {
+  font: 400 13px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.chat-design-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.chat-design-card-chip {
+  /* The model chip absorbs the narrow-pane shrink first, so the message count
+     and update time stay fully readable, as in reference 2b. */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  color: var(--text-secondary);
+}
+.chat-design-card-metatext {
+  /* One line at 2b's width. The archived and provider-unavailable facts make
+     this longer than a narrow or zoomed pane, so it wraps inside the card
+     instead of clipping them or forcing the card to scroll sideways. */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: 400 11px/1 'IBM Plex Mono', monospace;
+  color: var(--text-secondary);
+}
+.chat-design-card-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+/* The chevron is a block-level icon, so the label and it sit in one row. */
+.chat-design-resume { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--accent); }
+.chat-design-rename { margin-left: auto; font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--text-secondary); }
+.chat-design-delete { font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--danger); }
+/* The card is the selector: this covers it so a pointer anywhere resumes the
+   conversation, while the overflow control above it keeps its own actions. */
+.chat-design-card-open { position: absolute; inset: 0; z-index: 1; border-radius: 12px; cursor: pointer; }
+/* The target is the card's own box, and the current card clips to that box, so
+   the shared 2px-outside focus ring would be cut away exactly where the card
+   most needs it. Drawing it inside keeps the keyboard indicator visible on
+   every card without moving the target. */
+.chat-design button.chat-design-card-open:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -3px; }
+/* Anchored in viewport coordinates from the trigger's rectangle and portalled
+   to the body, so the horizontally scrolling configuration row above cannot
+   clip it or swallow its pointer events. The layer sits above the compact
+   drawer (z-50) that hosts chat in the narrow layout. */
+.chat-design-menu {
+  position: fixed;
+  z-index: 60;
+  /* Bounded here rather than from script, so the first measurement already
+     sees the height the menu will actually have. A long catalog (Omp lists
+     models from every provider it knows) scrolls inside 40% of the window
+     instead of covering the reader. */
+  max-height: min(40vh, calc(100vh - 16px));
+  overflow-y: auto;
+  min-width: 176px;
+  max-width: 260px;
+  /* The shared menu surface (MENU_SURFACE_CLASS in popover-presence.ts). */
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--elevation-popover);
+  display: flex;
+  flex-direction: column;
+}
+.chat-design-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* The shared menu row (MENU_ITEM_CLASS). */
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: left;
+  font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-menu button:hover { background: var(--accent-muted); }
+}
+.chat-design-menu button:focus-visible { outline: none; background: var(--accent-muted); }
+.chat-design-menu button[data-tone="danger"] { color: var(--danger); }
+.chat-design-menu [role="separator"] { height: 1px; margin: 4px; background: var(--border-subtle); }
+.chat-design-menu-check { display: flex; flex: none; justify-content: center; width: 12px; font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--accent); }
+/* Informational panel anchored to a composer control, on the same portalled,
+   viewport-positioned layer as the menu above and for the same reason: the
+   configuration row it sits beside clips and scrolls. */
+.chat-design-popover {
+  position: fixed;
+  z-index: 60;
+  width: 264px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--elevation-popover);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat-design-menu-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The model picker: a search field over a bounded, scrolling list grouped by
+   provider, with Settings in a footer that never scrolls away. It is a short
+   list — about five rows — that scrolls rather than covering the thread. A
+   notice or a status line takes room of its own, so then it grows enough to
+   keep choices in view; the viewport bound applies at 200% zoom. */
+.chat-model-picker {
+  position: fixed;
+  z-index: 60;
+  width: min(288px, calc(100vw - 16px));
+  max-height: min(232px, calc(100vh - 16px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--elevation-popover);
+  overflow: hidden;
+}
+.chat-model-picker:has(> .chat-model-picker-notice, > .chat-model-picker-status) { max-height: min(280px, calc(100vh - 16px)); }
+.chat-model-picker-notice { flex: none; margin: 6px 6px 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--warning); color: var(--text-primary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-search { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
+.chat-model-picker-search > input { flex: 1; min-width: 0; background: transparent; color: var(--text-primary); font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif; outline: none; }
+.chat-model-picker-search:focus-within { box-shadow: inset 0 -2px 0 var(--focus-ring); }
+.chat-model-picker-list { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
+.chat-model-picker-group { padding: 6px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-option { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 4px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-option[data-active="true"] { background: var(--accent-muted); box-shadow: inset 2px 0 0 var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .chat-model-picker-option:hover:not([aria-disabled="true"]) { background: var(--accent-muted); }
+}
+.chat-model-picker-option[aria-disabled="true"] { color: var(--text-secondary); }
+.chat-model-picker-check { flex: none; display: inline-flex; width: 12px; height: 18px; align-items: center; color: var(--accent); }
+.chat-model-picker-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chat-model-picker-name { overflow-wrap: anywhere; font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Mono', monospace; }
+.chat-model-picker-badge { flex: none; margin-top: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-empty,
+.chat-model-picker-status { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--text-secondary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-status[data-tone="error"] { color: var(--danger); }
+.chat-model-picker-status > button { margin-left: auto; min-height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border-subtle); color: var(--text-primary); }
+.chat-model-picker-footer { flex: none; padding: 4px; border-top: 1px solid var(--border-subtle); }
+.chat-model-picker-footer > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif; }
+@media (hover: hover) and (pointer: fine) {
+  .chat-model-picker-footer > button:hover { background: var(--accent-muted); }
+}
+.chat-model-picker button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.chat-design-messages { padding: 6px 16px 0; gap: 24px; }
+.chat-design-messages > :last-child:empty { margin-top: -24px; }
+.chat-design-bubble { background: var(--bg-surface); color: var(--text-primary); }
+.chat-design-assistant > div:first-child { height: 11px; }
+.chat-design-assistant > div:first-child > span:first-child { background: var(--accent); }
+.chat-design-assistant > div:first-child > span:last-child {
+  font: 500 11px/1 'IBM Plex Mono', monospace;
+  letter-spacing: .1em;
+  color: var(--text-secondary);
+}
+.chat-design-assistant > div:nth-child(2) { color: var(--text-primary); }
+.chat-design [data-testid="markdown-content"] > p { margin: 0; }
+.chat-design [data-testid="markdown-content"] > span[aria-hidden="true"] { height: 10px; }
+.chat-design-actions { padding-top: 2px; line-height: 1; }
+.chat-design-actions button { color: var(--text-secondary); font-size: 12px; }
+/* The composer is the one part of the panel that must never be cut off, so the
+   footer keeps its natural height while there is room and gives way from the
+   top when there is not: the messages list collapses first, then the pinned
+   context list scrolls inside its own box. The composer itself never shrinks. */
+.chat-design-footer { padding: 16px 16px 16px; border-top: 1px solid var(--border-subtle); gap: 0; min-height: 0; }
+/* Transient notices float above the footer rather than inside any flow the
+   reader is using: out of the message list, out of the action row that posted
+   them, and out of the composer, so confirming an action never moves the
+   control that was just clicked or the one being aimed at next. */
+.chat-design-toast-region {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.chat-design-toast {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--text-primary) 14%, transparent);
+  font: 400 12px/1.35 'IBM Plex Sans', Arial, sans-serif;
+  color: var(--text-primary);
+}
+/* A success notice has nothing to click, and it floats over the action row that
+   posted it. Swallowing pointer events would take that row away for as long as
+   it is shown, so it is transparent to the pointer. A failure keeps its own
+   Dismiss control, so that one stays clickable. */
+.chat-design-toast[data-tone="success"] { pointer-events: none; }
+.chat-design-toast[data-tone="error"] { border-color: var(--danger); color: var(--danger); }
+.chat-design-footer > .chat-design-context { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; }
+/* Inside the composer card the context row sits above the field; the card's
+   own gap separates them, so the row adds no trailing margin of its own. */
+.chat-design-composer > .chat-design-context { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.chat-design-composer > .chat-design-context .chat-design-chips { margin-bottom: 0; }
+.chat-design-composer > .chat-design-context .chat-design-chips:empty { display: none; }
+.chat-design-composer-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.chat-design-footer > .chat-design-composer { flex: none; }
+/* The summary carries the "@ Add context" pill first, then the count. Every
+ * item keeps its intrinsic width; the count takes the one automatic margin, so
+ * it sits at the far end. It is a companion meta line: sentence-case sans 11px. */
+.chat-design-context-summary { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 8px; min-width: 0; font: 400 11px/16px 'IBM Plex Sans', Arial, sans-serif; color: var(--text-secondary); }
+.chat-design-context-summary > span { flex: none; }
+.chat-design-context-summary > .chat-design-context-add + span { margin-left: auto; }
+/* "@ Add context": the pill that leads the context row inside the composer
+ * card (DESIGN.md, Inline context). It keeps the 24px minimum target height
+ * (WCAG 2.2 SC 2.5.8) and never wraps its short label. */
+.chat-design-context-add {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--accent);
+  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  white-space: nowrap;
+}
+.chat-design-context-add-at { font: 500 12px/1 'IBM Plex Mono', monospace; }
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-context-add:hover:not(:disabled) { border-color: var(--accent); }
+}
+.chat-design-context-add[aria-expanded="true"] { border-color: var(--accent); }
+.chat-design-context-add:disabled { opacity: .4; }
+/* Context-window wheel, in the composer's control row with the other
+ * session-level controls. The track is always drawn so the control keeps one
+ * shape; the value arc appears only when main supplies a real model window, and
+ * the accounting that keeps the glance honest lives in the panel it opens. The
+ * 26px square matches Send's painted height and clears the 24px minimum target
+ * size (WCAG 2.2 SC 2.5.8). */
+.chat-design-context-meter {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-context-meter:hover { border-color: var(--text-secondary); }
+}
+.chat-design-context-meter[aria-expanded="true"] { border-color: var(--accent); }
+.chat-design-budget-ring { flex: none; }
+.chat-design-budget-ring-track { stroke: var(--border-subtle); }
+.chat-design-budget-ring[data-budget-ring="unknown"] .chat-design-budget-ring-track { stroke-dasharray: 2 2; }
+.chat-design-budget-ring-value { stroke: var(--accent); transition: stroke-dashoffset var(--dur-base) var(--ease-out); }
+.chat-design-context-meter[data-budget-level="warning"] .chat-design-budget-ring-value { stroke: var(--warning); }
+.chat-design-context-meter[data-budget-level="error"] .chat-design-budget-ring-value { stroke: var(--danger); }
+/* Context-window panel: the same accounting shape the wheel summarises — one
+ * aggregate, one bar whose second band is the response reserve, then the
+ * itemisation that adds up to that aggregate. */
+.chat-design-budget-quota { display: flex; flex-direction: column; gap: 4px; }
+.chat-design-budget-quota-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-primary);
+  font: 400 12px/1.3 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-design-budget-quota-value { font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+.chat-design-budget-quota[data-budget-level="warning"] .chat-design-budget-quota-value { color: var(--warning); }
+.chat-design-budget-quota[data-budget-level="error"] .chat-design-budget-quota-value { color: var(--danger); }
+.chat-design-budget-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--border-subtle);
+}
+.chat-design-budget-bar-use { background: var(--accent); }
+.chat-design-budget-quota[data-budget-level="warning"] .chat-design-budget-bar-use { background: var(--warning); }
+.chat-design-budget-quota[data-budget-level="error"] .chat-design-budget-bar-use { background: var(--danger); }
+.chat-design-budget-bar-reserved { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+.chat-design-budget-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font: 400 11px/1.3 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-design-budget-legend-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.chat-design-budget-details { display: flex; flex-direction: column; gap: 8px; }
+.chat-design-budget-category-header {
+  color: var(--text-secondary);
+  font: 500 11px/1.2 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-design-budget-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-primary);
+  font: 400 11px/1.5 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-design-budget-row > dt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-design-budget-row > dd { flex: none; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+.chat-design-budget-row[data-budget-row="share"] { padding-left: 10px; color: var(--text-secondary); }
+.chat-design-budget-warning { color: var(--danger); font: 400 11px/1.4 'IBM Plex Sans', Arial, sans-serif; }
+/* Clean Context inside that panel: separated from the accounting above it,
+ * and a column so the question it asks wraps instead of widening the panel. */
+.chat-design-clean-context {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.chat-design-chips { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; min-height: 0; max-height: 130px; overflow-y: auto; }
+.chat-design-chip { display: flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 8px 4px 8px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif; }
+.chat-design-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The remove target is 20px inside an 11px chip line, pulled back so the chip
+ * keeps its height while the × stays easy to hit. */
+.chat-design-chip > button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: -4px -6px -4px -2px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-chip > button:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-surface-elevated); }
+}
+.chat-design-chip > button:disabled { opacity: .4; }
+.chat-design-chip[data-kind="range"] {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-family: 'IBM Plex Mono', monospace;
+}
+/* The prompt is readable text, so it follows the companion text-size
+   preference; `min-height` follows it too, or a larger line would be cropped
+   by the one-line resting height. The shorthand keeps the family and weight
+   and hands the size to the scale. */
+.chat-design-input {
+  width: 100%;
+  min-height: calc(19.6px * var(--companion-text-scale, 1));
+  max-height: 140px;
+  resize: none;
+  field-sizing: content;
+  background: transparent;
+  color: var(--text-primary);
+  font: 400 calc(14px * var(--companion-text-scale, 1))/1.4 'IBM Plex Sans', Arial, sans-serif;
+  outline: none;
+}
+.chat-design-input::placeholder { color: var(--text-secondary); }
+/* The composer frame and its focus state come from the shared
+   `.companion-composer` (styles/companion.css); the field itself still draws
+   no ring of its own, and every actionable control keeps its indicator through
+   the `.chat-design button:focus-visible` rule below. */
+.chat-design-input:focus,
+.chat-design-input:focus-visible { outline: none; box-shadow: none; }
+/* The tool row under the field: Add context, the model picker, web search and
+   the meter, with Send at the right end. The picker gives way first, down to
+   a short ellipsized name; past that the row wraps instead of scrolling, so
+   nothing ever hides behind a scrollbar. */
+.chat-design-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.chat-design-controls button:disabled { opacity: .4; }
+.chat-design button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* The model picker takes the row's spare width and ellipsizes the model name
+   first; the provider name is secondary and gives way after it. */
+.chat-model-trigger {
+  flex: 1 1 80px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  height: 26px;
+  padding: 0 4px 0 6px;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font: 500 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-model-trigger:hover:not(:disabled) { background: var(--bg-surface); }
+}
+.chat-model-trigger[aria-expanded="true"] { background: var(--bg-surface); }
+/* The model glyph marks the control as the model choice at every width; it
+   never shrinks, so the name is what ellipsizes. */
+.chat-model-trigger-icon { flex: none; color: var(--text-secondary); }
+.chat-model-trigger-model { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chat-model-trigger-provider { flex: 0 100 auto; min-width: 24px; overflow: hidden; text-overflow: ellipsis; font-weight: 400; color: var(--text-secondary); }
+/* The chosen model is the trigger's whole resting label. The provider is a
+   secondary note shown only when the trigger is wide enough to hold a typical
+   model name and the provider side by side; at the default and minimum panel
+   widths it steps aside whole, rather than leaving two truncated names
+   competing. It always stays in the accessible name, the tooltip and the
+   picker's group heading. */
+.chat-model-trigger { container-type: inline-size; }
+@container (max-width: 279px) {
+  .chat-model-trigger-provider { display: none; }
+}
+/* Narrower still, as at the minimum panel width beside web search and the
+   meter, the model name drops the word that repeats its provider, so
+   `OpenRouter Auto` reads `Auto` whole instead of `OpenRoute…`. */
+@container (max-width: 119px) {
+  .chat-model-trigger-lead { display: none; }
+}
+.chat-model-trigger-badge { flex: none; display: inline-flex; padding: 0 4px; border-radius: 6px; border: 1px solid var(--warning); color: var(--warning); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-trigger-badge-icon { display: none; }
+/* Too narrow for the model name and the word together, the badge becomes its
+   warning glyph so the model stays legible; the trigger's accessible name and
+   tooltip still say "unavailable". */
+@container (max-width: 199px) {
+  .chat-model-trigger-badge { padding: 0; border: 0; }
+  .chat-model-trigger-badge-icon { display: block; }
+  .chat-model-trigger-badge-text { display: none; }
+}
+.chat-model-trigger-caret { flex: none; margin-left: auto; color: var(--text-secondary); }
+/* Send and Stop: a 28px round icon button, filled only when it can act. Stop
+   is a square glyph in the danger colour, so it differs in shape as well. */
+.chat-design-send {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.chat-design-controls .chat-design-send:disabled { opacity: 1; background: transparent; color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--border-subtle); }
+.chat-design-send[data-tone="stop"] { background: transparent; color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-send:hover:not(:disabled) { opacity: .9; }
+}
+
+/* A short viewport — a small window, or 200% zoom, which halves the CSS
+   viewport — spends its height on the conversation and the composer rather than
+   on chrome. Padding and the pinned-context box give way first; every composer
+   control keeps its full size and stays reachable. */
+@media (max-height: 460px) {
+  .chat-design-header { padding: 8px 12px 6px; }
+  .chat-design-messages { padding: 4px 12px 0; gap: 12px; }
+  .chat-design-footer { padding: 8px 12px 10px; }
+  .chat-design-context-summary { margin-bottom: 6px; }
+  .chat-design-chips { max-height: 56px; margin-bottom: 6px; }
+  .chat-design-chips:empty { margin-bottom: 0; }
+  .chat-design-composer { padding: 8px; gap: 8px; }
+}
+
+/* Add context: portalled and anchored to its pill, like the model picker, so
+   a narrow or zoomed panel shrinks it instead of clipping it. */
+.chat-context-popover { gap: 10px; }
+.chat-context-range { display: flex; flex-direction: column; gap: 6px; }
+.chat-context-range-submit {
+  align-self: flex-end;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-context-range-submit:disabled { opacity: .4; }
+.chat-context-close { align-self: flex-start; min-height: 24px; padding: 0 4px; border-radius: 6px; color: var(--accent); font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; }
+
+/* Empty thread: the document it is about, then starters that only fill the
+   composer (DESIGN.md, Empty states / Nothing auto-sends). */
+.chat-design-starters { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%; max-width: 280px; margin-top: 12px; }
+.chat-design-starter {
+  min-height: 28px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: left;
+  overflow-wrap: anywhere;
+  font: 400 12px/1.35 'IBM Plex Sans', Arial, sans-serif;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-starter:hover:not(:disabled) { border-color: var(--accent); }
+}
+.chat-design-starter:disabled { opacity: .4; cursor: default; }
+
+/* Suggested follow-ups: quieter than the answer, accent-outline chips that
+   fill the composer and never send. */
+.chat-design-follow-ups { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-top: -8px; }
+.chat-design-follow-ups-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.chat-design-follow-ups-label { color: var(--text-secondary); font: 400 11px/1 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+.chat-design-follow-ups-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-follow-ups-refresh:hover { color: var(--accent); }
+}
+.chat-design-follow-ups-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.chat-design-follow-ups > .companion-follow-up { align-self: flex-start; }
+
+/* Prompt details: a collapsed "how this was made" disclosure under an answer. */
+.chat-design-prompt-details { margin-top: 6px; min-width: 0; }
+.chat-design-prompt-details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 2px;
+  color: var(--text-secondary);
+  font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-prompt-details-toggle:hover { color: var(--text-primary); }
+}
+.chat-design-prompt-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+.chat-design-prompt-details-body[hidden] { display: none; }
+.chat-design-prompt-details-label { color: var(--text-secondary); font: 400 11px/1 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+.chat-design-prompt-details-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-primary); font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif; }
+.chat-design-prompt-details-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-design-prompt-details-actions > button {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-design-prompt-details-actions > button:hover:not(:disabled) { border-color: var(--accent); }
+}
+.chat-design-prompt-details-actions > button:disabled { opacity: .4; cursor: default; }
+
+/* Parameter tokens use the mono label style (DESIGN.md, Parameters). */
+.chat-design-param-tokens { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.chat-design-param-token {
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+}
+.chat-design-param-token > dt { flex: none; color: var(--text-secondary); }
+.chat-design-param-token > dd { min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); }

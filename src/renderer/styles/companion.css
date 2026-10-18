@@ -1,0 +1,135 @@
+/*
+ * Shared companion pieces (Reader Chat and Agent Mode). One definition each,
+ * so the two modes of the same panel cannot drift apart again:
+ * `components/companion/*` renders them, and the agent `Select` uses the
+ * picker chip as its `chip` variant.
+ */
+
+/* Picker chip: the provider, model, agent and environment triggers. 28px,
+ * 12px text, 8px radius, the strong control boundary. */
+.companion-picker {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+.companion-picker > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.companion-picker > svg { flex: none; }
+.companion-picker:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.companion-picker:active:not(:disabled) { transform: scale(0.97); }
+.companion-picker:disabled { opacity: 0.4; cursor: not-allowed; }
+@media (hover: hover) and (pointer: fine) {
+  .companion-picker:hover:not(:disabled) { color: var(--text-primary); }
+}
+
+/* Follow-up chip: a suggestion that only fills the field, never sends. */
+.companion-follow-up {
+  max-width: 100%;
+  min-height: 24px;
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--accent);
+  text-align: left;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 16px;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+.companion-follow-up:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.companion-follow-up:active:not(:disabled) { transform: scale(0.97); }
+.companion-follow-up:disabled { opacity: 0.4; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .companion-follow-up:hover:not(:disabled) { background: var(--accent-muted); }
+}
+
+/* Composer shell: the bordered frame around a prompt field, its controls and
+ * its primary action. The frame, not the borderless field, shows focus, in
+ * the neutral surface-focus token rather than the keyboard ring colour. */
+.companion-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.companion-composer[data-padding="none"] { gap: 0; padding: 0; overflow: hidden; }
+.companion-composer:has(textarea:focus) { border-color: var(--border-focus-surface); }
+.companion-composer textarea:focus,
+.companion-composer textarea:focus-visible { outline: none; box-shadow: none; }
+
+/* Companion card: run settings, results and conversation cards. */
+.companion-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-primary);
+}
+.companion-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+/* "Entire document" chip (`WholeDocumentChip`): dashed until attached, then a
+ * solid accented chip. 24px tall, 11px text. */
+.companion-whole-doc {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.companion-whole-doc > svg { flex: none; }
+.companion-whole-doc[data-attached='true'] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .companion-whole-doc:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+}
+.companion-whole-doc:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.companion-whole-doc:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Meta line under or beside companion controls (context counts, notes):
+ * sentence-case sans, 11px, secondary. */
+.companion-meta {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
