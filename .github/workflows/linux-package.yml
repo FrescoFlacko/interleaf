@@ -1,7 +1,8 @@
 name: Linux package
 
 # Builds and structurally verifies the Linux artifacts Interleaf ships:
-# the AppImage and the pacman package used on Arch/Omarchy, and proves on a
+# the AppImage, the Debian package and the pacman package used on
+# Arch/Omarchy, and proves on a
 # packaged AppImage that one version updates itself to the next from a signed
 # manifest. Nothing here publishes, signs a release, or uses a repository
 # secret, and no paid provider call is made: `npm run test` uses the fake
@@ -11,6 +12,10 @@ name: Linux package
 on:
   push:
     branches: [develop]
+    # A version tag builds the Linux release assets from the tagged commit.
+    # They are only uploaded as a workflow artifact; staging, signing and
+    # publishing stay local (docs/PACKAGING.md, "Release procedure").
+    tags: ['v*']
   pull_request:
     branches: [develop]
   # Lets a maintainer run the native packaged update proof on any branch.
@@ -66,8 +71,8 @@ jobs:
       - name: Install pacman packaging tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libarchive-tools
 
-      - name: Package AppImage and pacman
-        run: npx electron-builder --linux AppImage pacman --publish never
+      - name: Package AppImage, deb and pacman
+        run: npx electron-builder --linux AppImage deb pacman --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
@@ -77,6 +82,7 @@ jobs:
           shopt -s nullglob
 
           appimages=(release/*.AppImage)
+          debs=(release/*.deb)
           packages=(release/*.pkg.tar.*)
 
           if [ ${#appimages[@]} -eq 0 ]; then
@@ -84,6 +90,18 @@ jobs:
             ls -la release || true
             exit 1
           fi
+          if [ ${#debs[@]} -eq 0 ]; then
+            echo "::error::no Debian package was produced in release/"
+            ls -la release || true
+            exit 1
+          fi
+          test -s "${debs[0]}"
+          dpkg-deb --info "${debs[0]}"
+          # List to a file first: grep -q exits early and pipefail would turn
+          # dpkg-deb's broken pipe into a failure.
+          dpkg-deb --contents "${debs[0]}" > /tmp/deb-contents.txt
+          grep -q './opt/Interleaf/Interleaf$' /tmp/deb-contents.txt
+          echo "ok: ${debs[0]}"
           if [ ${#packages[@]} -eq 0 ]; then
             echo "::error::no pacman package was produced in release/"
             ls -la release || true
@@ -161,6 +179,7 @@ jobs:
           path: |
             release/*.AppImage
             release/README-AppImage.txt
+            release/*.deb
             release/*.pkg.tar.*
 
   update-smoke:

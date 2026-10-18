@@ -143,9 +143,11 @@ describe('electron-builder Linux configuration', () => {
 });
 
 describe('Linux packaging workflow', () => {
-  it('builds and verifies the AppImage and pacman artifacts without secrets', () => {
-    expect(workflowText).toContain('npx electron-builder --linux AppImage pacman --publish never');
+  it('builds and verifies the AppImage, deb and pacman artifacts without secrets', () => {
+    expect(workflowText).toContain('npx electron-builder --linux AppImage deb pacman --publish never');
+    expect(workflowText).toContain('release/*.deb');
     expect(workflowText).toContain('release/*.pkg.tar.*');
+    expect(workflowText).toContain("tags: ['v*']");
     expect(workflowText).toContain("grep -q '^StartupWMClass=Interleaf$'");
     expect(workflowText).toContain("require_entry 'opt/Interleaf/Interleaf'");
     expect(workflowText).toContain("require_entry 'usr/share/applications/Interleaf.desktop'");
