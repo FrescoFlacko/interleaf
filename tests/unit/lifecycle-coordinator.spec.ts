@@ -352,4 +352,26 @@ describe('LifecycleCoordinator', () => {
       expect(windowCreationCount).toBe(2);
     });
   });
+
+  describe('Injected reveal for existing windows', () => {
+    it('uses the supplied reveal instead of restore-and-focus on activate and second instance', () => {
+      const mockWindow = createMockWindow({ minimized: true });
+      const revealed: MockWindow[] = [];
+      const coordinator = new LifecycleCoordinator({
+        createWindow: () => mockWindow,
+        onQuit: () => undefined,
+        revealExisting: (window) => { revealed.push(window); },
+      });
+      coordinator.startBootstrap();
+      coordinator.markBootstrapReady();
+      expect(coordinator.ensureMainWindow().created).toBe(true);
+
+      expect(coordinator.handleActivate()).toMatchObject({ handled: true, created: false });
+      expect(coordinator.handleSecondInstance()).toEqual({ handled: true, created: false });
+
+      expect(revealed).toEqual([mockWindow, mockWindow]);
+      expect(mockWindow.focusCount).toBe(0);
+      expect(mockWindow.restoreCount).toBe(0);
+    });
+  });
 });

@@ -118,6 +118,23 @@ function offlineEnvironment(): NodeJS.ProcessEnv {
 const HOST_PROFILE_ENVIRONMENT_NAME = /^(?:XDG_|NVM_|BUN_|HOMEBREW_|VOLTA_|PNPM_HOME$|ZDOTDIR$)/u;
 
 /**
+ * Whether apps under test open their windows in the background.
+ *
+ * On by default, so a run of this suite does not take the keyboard or the
+ * front of the desktop from whoever is using the machine: windows are still
+ * rendered and maximized to the same work area, but are ordered in without
+ * activating the app and, on macOS, one native level below ordinary windows,
+ * behind the user's work; the test Dock icon is withdrawn there too (see
+ * `src/main/windows/window-reveal-mode.ts`). Not headless.
+ *
+ * `INTERLEAF_E2E_BACKGROUND=0` in the runner's environment brings windows to
+ * the foreground for watching or debugging a run.
+ */
+export function e2eBackgroundWindows(): boolean {
+  return process.env.INTERLEAF_E2E_BACKGROUND !== '0';
+}
+
+/**
  * The complete environment for one app under test.
  *
  * `isolatedHome` is a throwaway directory created for this launch; it becomes
@@ -136,6 +153,7 @@ export function isolatedLaunchEnvironment(options: {
     HOME: options.isolatedHome,
     PATH: offlinePath(options.binDir),
     INTERLEAF_ISOLATED_CLI_PATH: '1',
+    INTERLEAF_E2E_BACKGROUND: e2eBackgroundWindows() ? '1' : '0',
   };
 }
 

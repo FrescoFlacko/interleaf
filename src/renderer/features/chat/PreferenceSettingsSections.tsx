@@ -92,7 +92,7 @@ export function AppearanceSettingsSection({ settings, onChange }: SettingsSectio
         />
         <output className="text-text-primary">{companionTextSizeLabel(settings.companion.textSize)}</output>
       </label>
-      <p className="mt-1 text-2xs leading-relaxed text-text-secondary">Applies to the readable text in AI Chat and Agent — transcripts, agent activity, and both composers. Controls, icons and the document keep their own sizes.</p>
+      <p className="mt-1 text-2xs leading-relaxed text-text-secondary">Applies to the readable text in Chat and Agent — transcripts, agent activity, and both composers. Controls, icons and the document keep their own sizes.</p>
     </section>
   );
 }

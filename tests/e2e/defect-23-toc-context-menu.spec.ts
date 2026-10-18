@@ -61,7 +61,7 @@ test.describe('Defect 23: TOC section context menu', () => {
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width + 1);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height + 1);
-    await menu.getByRole('menuitem', { name: 'Add section to AI Chat' }).click();
+    await menu.getByRole('menuitem', { name: 'Add section to Chat' }).click();
 
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();

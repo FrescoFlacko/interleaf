@@ -333,7 +333,7 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     // would float over Search with nothing beneath it.
     await meter.click();
     await expect(popover).toBeVisible();
-    const chatTab = app.window.getByRole('tab', { name: 'AI Chat' });
+    const chatTab = app.window.getByRole('tab', { name: 'Chat', exact: true });
     await chatTab.focus();
     await app.window.keyboard.press('ArrowRight');
     await expect(app.window.getByRole('tab', { name: 'Search' })).toHaveAttribute('aria-selected', 'true');

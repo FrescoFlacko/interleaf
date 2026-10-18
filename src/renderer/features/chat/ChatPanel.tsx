@@ -267,7 +267,7 @@ export function ChatPanel() {
   if (!activeDocument) {
     return (
       <div className="p-4 text-sm text-text-secondary">
-        <h2 className="font-semibold text-text-primary">AI Chat</h2>
+        <h2 className="font-semibold text-text-primary">Chat</h2>
         <p className="mt-2 leading-relaxed">Open a document to start a grounded research conversation.</p>
       </div>
     );

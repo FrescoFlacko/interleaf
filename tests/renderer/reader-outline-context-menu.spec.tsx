@@ -62,10 +62,10 @@ describe('Reader TOC context menu', () => {
     const row = screen.getByTestId('toc-item-chapter-1');
     fireEvent.contextMenu(row, { clientX: 300, clientY: 200 });
     expect(screen.getByRole('menu', { name: 'Actions for Chapter 1' })).toBeTruthy();
-    expect(screen.getByRole('menuitem', { name: 'Add section to AI Chat' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Add section to Chat' })).toBeTruthy();
     expect(screen.getByRole('menu').parentElement).toBe(document.body);
 
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to AI Chat' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to Chat' }));
     await waitFor(() => { expect(addPageRange).toHaveBeenCalledWith(documentFixture, 2, 5); });
     expect(showRightTab).toHaveBeenCalledWith('chat');
     expect(screen.queryByRole('menu')).toBeNull();
@@ -109,7 +109,7 @@ describe('Reader TOC context menu', () => {
 
     renderWithChatStore(chat, <ReaderOutlineSidebar />);
     fireEvent.contextMenu(screen.getByTestId('toc-item-chapter-1'), { clientX: 20, clientY: 20 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to AI Chat' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to Chat' }));
     await waitFor(() => {
       expect(showRightTab).toHaveBeenCalledWith('chat');
       expect(chat.getState().error).toBe('Could not attach this outline section.');
@@ -140,7 +140,7 @@ describe('Reader TOC context menu', () => {
 
     renderWithChatStore(chat, <ReaderOutlineSidebar />);
     fireEvent.contextMenu(screen.getByTestId('toc-item-intro'), { clientX: 20, clientY: 20 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to AI Chat' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to Chat' }));
     await waitFor(() => {
       expect(addSelectionContext).toHaveBeenCalledWith(
         markdownDocument,
@@ -175,7 +175,7 @@ describe('Reader TOC context menu', () => {
 
     renderWithChatStore(chat, <ReaderOutlineSidebar />);
     fireEvent.contextMenu(screen.getByTestId('toc-item-chapter-a'), { clientX: 20, clientY: 20 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to AI Chat' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to Chat' }));
     await waitFor(() => {
       expect(addSelectionContext).toHaveBeenCalledWith(
         epubDocument,
@@ -208,7 +208,7 @@ describe('Reader TOC context menu', () => {
 
     renderWithChatStore(chat, <ReaderOutlineSidebar />);
     fireEvent.contextMenu(screen.getByTestId('toc-item-parent'), { clientX: 20, clientY: 20 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to AI Chat' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to Chat' }));
     await waitFor(() => { expect(addPageRange).toHaveBeenCalledWith(documentFixture, 1, 5); });
   });
 
@@ -228,7 +228,7 @@ describe('Reader TOC context menu', () => {
 
     renderWithChatStore(chat, <ReaderOutlineSidebar />);
     fireEvent.contextMenu(screen.getByTestId('toc-item-epub-heading'), { clientX: 20, clientY: 20 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to AI Chat' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add section to Chat' }));
     await waitFor(() => {
       expect(chat.getState().error).toBe('This EPUB outline entry does not expose a safe subsection boundary.');
       expect(showRightTab).toHaveBeenCalledWith('chat');

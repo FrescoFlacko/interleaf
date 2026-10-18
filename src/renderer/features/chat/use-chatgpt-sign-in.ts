@@ -35,7 +35,7 @@ export function useChatGptSignIn({ providers, feedback, onProvidersChanged }: {
       if (!providers.isCurrent(requestId)) return;
       providers.adoptStatus(status);
       if (status.authentication === 'connected') {
-        feedback.announce('Signed in with ChatGPT. Your subscription is now available for Reader AI Chat.');
+        feedback.announce('Signed in with ChatGPT. Your subscription is now available for Chat.');
         onProvidersChanged();
       } else {
         feedback.fail('ChatGPT sign-in was not completed. Try again or check the Codex CLI installation.');

@@ -11,6 +11,8 @@ import { ReaderOutlineSidebar } from './components/ReaderOutlineSidebar';
 import { AnnotationSelectionToolbar } from './components/AnnotationSelectionToolbar';
 import { NotePopover } from './components/NotePopover';
 import { useNotePointer } from './annotations/use-note-pointer';
+import { useHighlightEdit } from './annotations/use-highlight-edit';
+import { ReaderFocusProxies } from './components/ReaderFocusProxies';
 import { selectionIssueHeading } from './types';
 import { useSearchStore } from '../../stores/use-search-store';
 import { readerDocumentStyle, readerSurfaceStyle } from './reader-surface-style';
@@ -52,10 +54,13 @@ export function ReaderView() {
   const resetAnnotations = useAnnotationStore((s) => s.reset);
   const setSelection = useAnnotationStore((s) => s.setSelection);
   const selectionIssue = useAnnotationStore((s) => s.selectionIssue);
+  const activeDocumentId = activeDocument?.id ?? null;
+  const highlightEdit = useHighlightEdit(annotations, activeDocumentId);
   const { openNote, closeNote, openAnnotation, noteFocusProxies, openFromProxy } = useNotePointer(
     containerRef,
     annotations,
-    activeDocument?.id ?? null
+    activeDocumentId,
+    highlightEdit.route
   );
   const [shownNote, shownAnnotation] = usePairedPresence(openNote, openAnnotation);
   const clearSelectionError = useAnnotationStore((s) => s.clearSelectionError);
@@ -287,35 +292,22 @@ export function ReaderView() {
         * Focus Mode hides the reader chrome, not the user's own selection. A
         * passage selected while reading distraction-free offers the same
         * actions as normal mode; each action decides for itself whether it
-        * leaves Focus Mode.
+        * leaves Focus Mode. Clicking a saved highlight reopens the same
+        * toolbar to recolour, delete, or ask about it.
         */}
-      <AnnotationSelectionToolbar />
-      {noteFocusProxies.map((proxy) => (
-        <button
-          key={proxy.annotationId}
-          type="button"
-          data-testid={`note-focus-proxy-${proxy.annotationId}`}
-          aria-label={`Open reader note: ${proxy.label}`}
-          onClick={(event) => {
-            // Keyboard activation (Enter/Space on a focused proxy). A native
-            // click here must not also reach the surface controller's
-            // outside-click close for the popover this opens. Pointer events
-            // are disabled on the proxy so it never blocks text selection or
-            // direct pointer activation of the underlying painted range.
-            event.stopPropagation();
-            openFromProxy(proxy.annotationId, event.currentTarget);
-          }}
-          style={{
-            position: 'fixed',
-            pointerEvents: 'none',
-            left: proxy.rect.left,
-            top: proxy.rect.top,
-            width: Math.max(proxy.rect.right - proxy.rect.left, 8),
-            height: Math.max(proxy.rect.bottom - proxy.rect.top, 8),
-          }}
-          className="pointer-events-none fixed z-20 rounded-sm bg-transparent outline-none focus-visible:bg-accent/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        />
-      ))}
+      <AnnotationSelectionToolbar editing={highlightEdit.editing} />
+      <ReaderFocusProxies
+        proxies={noteFocusProxies}
+        testIdPrefix="note-focus-proxy"
+        labelPrefix="Open reader note"
+        onActivate={openFromProxy}
+      />
+      <ReaderFocusProxies
+        proxies={highlightEdit.highlightFocusProxies}
+        testIdPrefix="highlight-focus-proxy"
+        labelPrefix="Edit highlight"
+        onActivate={highlightEdit.openHighlightFromProxy}
+      />
       {shownNote.shown !== null && shownAnnotation.shown !== null && (
         <NotePopover
           phase={shownNote.phase}

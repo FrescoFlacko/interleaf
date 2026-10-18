@@ -757,3 +757,25 @@
 }
 .chat-design-param-token > dt { flex: none; color: var(--text-secondary); }
 .chat-design-param-token > dd { min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); }
+/* Answer-action tooltip: the menu surface at its smallest, fading in over
+   125ms with a 0.97 scale; a neighbour opened while one is showing appears at
+   once. Reduced motion collapses the transition globally. */
+.chat-design-tooltip {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  width: max-content;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--elevation-popover);
+  color: var(--text-primary);
+  font: 400 11px/16px 'IBM Plex Sans', Arial, sans-serif;
+  transition: opacity 125ms var(--ease-out), transform 125ms var(--ease-out);
+}
+@starting-style {
+  .chat-design-tooltip { opacity: 0; transform: scale(0.97); }
+}
+.chat-design-tooltip[data-instant] { transition: none; }
