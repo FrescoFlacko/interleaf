@@ -5,10 +5,12 @@ import {
   getNotePointerSurfaces,
   notePointerDetachDoc,
   notePointerInvalidateLayout,
+  pickHighlightAtSurfacePoint,
   pickNoteAtSurfacePoint,
   resetNotePointer,
   subscribeNotePointerRepaints,
   subscribeNotePointerSurfaces,
+  type NotePointerEntry,
   type NotePointerSurface,
   type RectLike,
 } from './note-pointer';
@@ -53,6 +55,22 @@ export type NoteFocusProxy = {
 type OpenMeta = { readonly opener: Element | null };
 
 /**
+ * The saved-highlight editor's side of the shared surface listeners: a click
+ * that misses every note but lands on a painted highlight opens it, and the
+ * same dismissals that close a note close it.
+ */
+export type HighlightPointerRoute = {
+  readonly open: (next: OpenNote, opener: Element | null) => void;
+  readonly isOpen: () => boolean;
+  readonly close: (reason: NoteCloseReason) => void;
+};
+
+/** Which painted entries of a surface a geometry lookup reads. */
+export type EntrySelector = (surface: NotePointerSurface) => readonly NotePointerEntry[];
+
+const noteEntriesOf: EntrySelector = (surface) => surface.entries;
+
+/**
  * Defect 20 reader wiring: pointer cursor over exactly-noted text and a click
  * affordance that opens the note popover — while never disturbing text
  * selection, the selection toolbar, or drag-to-select flows.
@@ -76,7 +94,8 @@ type OpenMeta = { readonly opener: Element | null };
 export function useNotePointer(
   containerRef: React.RefObject<HTMLElement | null>,
   annotations: readonly Annotation[],
-  documentId: string | null
+  documentId: string | null,
+  highlightRoute: HighlightPointerRoute | null = null
 ): {
   readonly openNote: OpenNote | null;
   readonly closeNote: (reason?: NoteCloseReason) => void;
@@ -89,6 +108,8 @@ export function useNotePointer(
   const controllersRef = useRef(new Map<Document, SurfaceController>());
   const openNoteRef = useRef<OpenNote | null>(null);
   openNoteRef.current = openNote;
+  const highlightRouteRef = useRef(highlightRoute);
+  highlightRouteRef.current = highlightRoute;
 
   const closeNote = useCallback((reason: NoteCloseReason = 'close-button'): void => {
     const meta = openMetaRef.current;
@@ -220,11 +241,20 @@ export function useNotePointer(
         if (root === null) continue;
         const controller = new SurfaceController(surface, root, {
           onOpen: (next, opener) => {
+            closeHighlightRoute(highlightRouteRef.current, 'outside-click');
             openMetaRef.current = { opener };
             setOpenNote(next);
           },
-          isOpen: () => openNoteRef.current !== null,
-          onClose: closeNote,
+          onOpenHighlight: (next, opener) => {
+            if (openNoteRef.current !== null) closeNote('outside-click');
+            highlightRouteRef.current?.open(next, opener);
+          },
+          highlightsActive: () => highlightRouteRef.current !== null,
+          isOpen: () => openNoteRef.current !== null || highlightRouteRef.current?.isOpen() === true,
+          onClose: (reason = 'close-button') => {
+            if (openNoteRef.current !== null) closeNote(reason);
+            closeHighlightRoute(highlightRouteRef.current, reason);
+          },
         });
         controller.attach();
         controllers.set(surface.doc, controller);
@@ -255,21 +285,29 @@ export function useNotePointer(
   return { openNote, closeNote, openAnnotation, noteFocusProxies, openFromProxy };
 }
 
+function closeHighlightRoute(route: HighlightPointerRoute | null, reason: NoteCloseReason): void {
+  if (route?.isOpen() === true) route.close(reason);
+}
+
 type FragmentIdentity = { readonly rangeIndex: number; readonly rectIndex: number } | null;
 
 /**
  * One proxy per painted note across all live surfaces: the union of its live
  * fragment rects, translated to top-window viewport coordinates. Notes whose
  * geometry sits entirely outside the viewport are omitted — an invisible
- * tab stop would be worse than none.
+ * tab stop would be worse than none. `select` reads another entry list (the
+ * painted highlights) through the same geometry.
  */
-function computeFocusProxies(): NoteFocusProxy[] {
+export function computeFocusProxies(
+  select: EntrySelector = noteEntriesOf,
+  fallbackLabel = NOTE_FOCUS_FALLBACK_LABEL
+): NoteFocusProxy[] {
   const byId = new Map<string, NoteFocusProxy>();
   const viewport = typeof window === 'undefined'
     ? { width: 0, height: 0 }
     : { width: window.innerWidth, height: window.innerHeight };
   for (const surface of getNotePointerSurfaces()) {
-    for (const entry of surface.entries) {
+    for (const entry of select(surface)) {
       const topRects: RectLike[] = [];
       for (const range of entry.ranges) {
         for (const rect of Array.from(range.getClientRects())) {
@@ -297,7 +335,7 @@ function computeFocusProxies(): NoteFocusProxy[] {
           // A location/empty quote can legitimately have no selected text;
           // keep its native focus target meaningfully named for assistive
           // technology instead of exposing an unlabeled "Open reader note: ".
-          label: entry.selectedTextPreview.trim() || NOTE_FOCUS_FALLBACK_LABEL,
+          label: entry.selectedTextPreview.trim() || fallbackLabel,
           rect: union,
         });
         continue;
@@ -374,13 +412,14 @@ function clipToViewport(rect: RectLike, width: number, height: number): RectLike
 }
 
 
-function repositionFromSurfaces(
+export function repositionFromSurfaces(
   annotationId: string,
   fragment: FragmentIdentity,
-  previousRect: RectLike | null
+  previousRect: RectLike | null,
+  select: EntrySelector = noteEntriesOf
 ): { rect: RectLike; fragment: FragmentIdentity } | null {
   for (const surface of getNotePointerSurfaces()) {
-    const entry = surface.entries.find((candidate) => candidate.annotationId === annotationId);
+    const entry = select(surface).find((candidate) => candidate.annotationId === annotationId);
     if (entry === undefined) continue;
     // Flatten the live fragments with their identities.
     const live: { rect: RectLike; topRect: RectLike; rangeIndex: number; rectIndex: number }[] = [];
@@ -466,6 +505,9 @@ function isCoordinateEvent(event: Event): event is PointerLikeEvent {
 
 type SurfaceControllerCallbacks = {
   readonly onOpen: (next: OpenNote, opener: Element | null) => void;
+  readonly onOpenHighlight: (next: OpenNote, opener: Element | null) => void;
+  /** Whether painted highlights are clickable (an editor route is wired). */
+  readonly highlightsActive: () => boolean;
   readonly isOpen: () => boolean;
   readonly onClose: (reason?: NoteCloseReason) => void;
 };
@@ -565,8 +607,13 @@ class SurfaceController {
       this.setCursor(false);
       return;
     }
-    const hit = pickNoteAtSurfacePoint(this.surface, point.x, point.y);
-    this.setCursor(hit !== null, point);
+    this.setCursor(this.hitsAt(point.x, point.y), point);
+  }
+
+  /** Whether a click here would open something: a note, or a highlight when editable. */
+  private hitsAt(x: number, y: number): boolean {
+    if (pickNoteAtSurfacePoint(this.surface, x, y) !== null) return true;
+    return this.callbacks.highlightsActive() && pickHighlightAtSurfacePoint(this.surface, x, y) !== null;
   }
 
   private cancelPendingHoverFrame(): void {
@@ -652,8 +699,7 @@ class SurfaceController {
         this.setCursor(false);
         return;
       }
-      const hit = pickNoteAtSurfacePoint(this.surface, point.x, point.y);
-      this.setCursor(hit !== null, point);
+      this.setCursor(this.hitsAt(point.x, point.y), point);
     });
   };
 
@@ -727,7 +773,12 @@ class SurfaceController {
       this.setCursor(false);
       return;
     }
-    const hit = pickNoteAtSurfacePoint(this.surface, event.clientX, event.clientY);
+    // A note under the point wins over a highlight beneath it.
+    const noteHit = pickNoteAtSurfacePoint(this.surface, event.clientX, event.clientY);
+    const highlightHit = noteHit === null && this.callbacks.highlightsActive()
+      ? pickHighlightAtSurfacePoint(this.surface, event.clientX, event.clientY)
+      : null;
+    const hit = noteHit ?? highlightHit;
     if (hit === null) {
       if (this.callbacks.isOpen()) this.callbacks.onClose('outside-click');
       return;
@@ -735,7 +786,8 @@ class SurfaceController {
     // Record the top-document focused element as the opener (an iframe click
     // focuses the iframe element in the top document) for intentional restore.
     const opener = document.activeElement;
-    this.callbacks.onOpen(
+    const open = noteHit === null ? this.callbacks.onOpenHighlight : this.callbacks.onOpen;
+    open(
       {
         annotationId: hit.annotationId,
         rect: this.surface.toTopClientRect(hit.rect),

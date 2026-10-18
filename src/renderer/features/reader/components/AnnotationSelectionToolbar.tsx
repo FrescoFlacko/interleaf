@@ -3,6 +3,7 @@ import { hasParagraphFormat } from '@shared/document-format-family';
 import { AGENT_MAX_CONTEXT_TEXT_LENGTH } from '@shared/schemas/agent';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { HighlightColor } from '@shared/types/annotation';
+import type { ReaderSelection } from '../types';
 import { useAnnotationStore } from '../../../stores/use-annotation-store';
 import { AppIcon } from '../../../components/AppIcon';
 import { selectActiveDocument, useReaderStore } from '../../../stores/use-reader-store';
@@ -17,9 +18,21 @@ import {
 import { bridge } from '../../../app/api-client';
 import { Button } from '../../../components/ui/button';
 import { selectionToolbarBounds, selectionToolbarPosition } from './selection-toolbar-position';
+import type { HighlightEditing } from '../annotations/use-highlight-edit';
+import {
+  DeleteHighlightButton,
+  useFocusOnKeyboardOpen,
+  useRecolorHighlight,
+  useSelectionToolbarTarget,
+} from './highlight-edit-controls';
 
-export function AnnotationSelectionToolbar() {
-  const selection = useAnnotationStore((state) => state.selection);
+type AnnotationSelectionToolbarProps = {
+  /** A saved highlight reopened by clicking its painted text, shown while no live selection exists. */
+  readonly editing?: HighlightEditing | null;
+};
+
+export function AnnotationSelectionToolbar({ editing: reopened = null }: AnnotationSelectionToolbarProps) {
+  const { selection, editing, resetKey, label: toolbarLabel } = useSelectionToolbarTarget(reopened);
   const createAnnotation = useAnnotationStore((state) => state.create);
   const requestAnnotationReveal = useAnnotationStore((state) => state.requestReveal);
   const setSelection = useAnnotationStore((state) => state.setSelection);
@@ -42,6 +55,8 @@ export function AnnotationSelectionToolbar() {
   const noteButtonRef = useRef<HTMLButtonElement>(null);
   const notePanelRef = useRef<HTMLDivElement>(null);
   const [toolbarSize, setToolbarSize] = useState({ width: 0, height: 0 });
+  const recolorHighlight = useRecolorHighlight(editing, { setActionError, setStatus: setCopyStatus });
+  useFocusOnKeyboardOpen(editing, toolbarRef);
 
   useEffect(() => {
     setNoteOpen(false);
@@ -51,7 +66,7 @@ export function AnnotationSelectionToolbar() {
     setActionError(null);
     setHoveredColorLabel(null);
     setFocusedColorLabel(null);
-  }, [selection]);
+  }, [resetKey]);
 
   // An error or status line can widen and lengthen the open box, so it is
   // measured again and re-clamped rather than growing past the reader.
@@ -78,19 +93,24 @@ export function AnnotationSelectionToolbar() {
    * Focus Mode stays on, and the next Escape — with no top layer left — reaches
    * the app shortcut that exits it. While the note editor is open that dialog
    * owns Escape instead (below), which closes it without losing the selection.
+   * A reopened highlight closes and returns focus to whatever opened it.
    */
   useEffect(() => {
     if (!selection || noteOpen) return;
     const dismiss = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       event.preventDefault();
+      if (editing) {
+        editing.close('escape');
+        return;
+      }
       setSelection(null, null);
       const readerViewport = document.querySelector<HTMLElement>('[data-reader-focus-target="true"]');
       window.queueMicrotask(() => { readerViewport?.focus(); });
     };
     document.addEventListener('keydown', dismiss);
     return () => { document.removeEventListener('keydown', dismiss); };
-  }, [noteOpen, selection, setSelection]);
+  }, [editing, noteOpen, selection, setSelection]);
 
   useEffect(() => {
     if (!noteOpen) return;
@@ -123,6 +143,7 @@ export function AnnotationSelectionToolbar() {
 
   const clear = (): void => {
     setSelection(null, null);
+    editing?.release();
     setNoteOpen(false);
     setNoteDraft('');
     setActionError(null);
@@ -185,7 +206,7 @@ export function AnnotationSelectionToolbar() {
     const readerViewport = document.querySelector<HTMLElement>('[data-reader-focus-target="true"]');
     window.queueMicrotask(() => { readerViewport?.focus(); });
   };
-  const validateAnnotationBounds = (sel: NonNullable<typeof selection>): string | null => {
+  const validateAnnotationBounds = (sel: ReaderSelection): string | null => {
     if (sel.chatDescriptor.format === 'pdf' && sel.chatDescriptor.endPageIndex - sel.chatDescriptor.startPageIndex + 1 > 50) {
       return 'Highlights and notes are limited to 50 pages. Use Ask AI for large ranges.';
     }
@@ -227,9 +248,13 @@ export function AnnotationSelectionToolbar() {
     return null;
   };
 
+  /** A saved highlight with no chat route passed these bounds when it was created. */
+  const targetBoundsError = (target: typeof selection): string | null =>
+    target.chatDescriptor === null ? null : validateAnnotationBounds({ ...target, chatDescriptor: target.chatDescriptor });
+
   const createHighlight = async (color: HighlightColor): Promise<void> => {
     setActionError(null);
-    const boundError = validateAnnotationBounds(selection);
+    const boundError = targetBoundsError(selection);
     if (boundError) {
       setActionError(boundError);
       return;
@@ -268,7 +293,7 @@ export function AnnotationSelectionToolbar() {
   const createNote = async (): Promise<void> => {
     if (savingNote) return;
     setActionError(null);
-    const boundError = validateAnnotationBounds(selection);
+    const boundError = targetBoundsError(selection);
     if (boundError) {
       setActionError(boundError);
       return;
@@ -294,12 +319,27 @@ export function AnnotationSelectionToolbar() {
 
   const canSaveNote = canSaveNoteDraft(noteDraft, savingNote);
 
+  /** A swatch recolours a reopened highlight in place, else highlights the selection. */
+  const chooseColor = (color: HighlightColor): Promise<void> =>
+    editing ? recolorHighlight(color) : createHighlight(color);
+
+  /** Close returns focus to what reopened a highlight, as Escape does. */
+  const closeToolbar = (): void => {
+    if (editing) editing.close('close-button');
+    else clear();
+  };
+
   /** The single chat-context action: attach the passage and ask about it. */
   const askAi = async (): Promise<void> => {
     setActionError(null);
+    const descriptor = selection.chatDescriptor;
+    if (!descriptor) {
+      setActionError('This highlight has no section reference to attach. Select the text again to ask about it.');
+      return;
+    }
     const leftFocusMode = exitFocusMode();
     showRightTab('chat');
-    const added = await addSelectionContext(activeDocument, selection.chatDescriptor, true);
+    const added = await addSelectionContext(activeDocument, descriptor, true);
     if (!added) return;
     clear();
     // The chat store already armed the composer (`composerFocusNonce`); this
@@ -335,7 +375,8 @@ export function AnnotationSelectionToolbar() {
       data-testid="annotation-selection-toolbar"
       data-top-layer="selection-toolbar"
       role="toolbar"
-      aria-label="Selection actions"
+      aria-label={toolbarLabel}
+      data-editing-annotation-id={editing?.annotation.id}
       className="fixed z-50 rounded-lg border border-border-subtle bg-bg-primary p-2 text-xs shadow-xl"
       style={{ left, top, maxWidth }}
     >
@@ -348,13 +389,14 @@ export function AnnotationSelectionToolbar() {
               type="button"
               aria-label={`${item.label} highlight`}
               title={`${item.label} highlight`}
+              aria-pressed={editing ? editing.annotation.color === item.id : undefined}
               data-testid={`highlight-color-button-${item.id}`}
-              onClick={() => { void createHighlight(item.id); }}
+              onClick={() => { void chooseColor(item.id); }}
               onMouseEnter={() => { setHoveredColorLabel(item.label); }}
               onMouseLeave={() => { setHoveredColorLabel(null); }}
               onFocus={() => { setFocusedColorLabel(item.label); }}
               onBlur={() => { setFocusedColorLabel(null); }}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-bg-surface"
+              className="group flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-bg-surface"
             >
               {/*
                 * The color itself is painted from the shared definition's hex
@@ -365,7 +407,7 @@ export function AnnotationSelectionToolbar() {
               <span
                 aria-hidden="true"
                 data-testid={`highlight-color-swatch-${item.id}`}
-                className="ml-highlight-swatch h-5 w-5"
+                className="ml-highlight-swatch h-5 w-5 group-aria-pressed:outline-2 group-aria-pressed:outline-offset-2 group-aria-pressed:outline-text-primary"
                 style={{ backgroundColor: item.hexValue }}
               />
             </button>
@@ -435,10 +477,11 @@ export function AnnotationSelectionToolbar() {
           >
             Submit to agent
           </Button>
+          {editing && <DeleteHighlightButton editing={editing} setActionError={setActionError} setStatus={setCopyStatus} />}
           <button
             type="button"
             aria-label="Close selection toolbar"
-            onClick={clear}
+            onClick={closeToolbar}
             className="rounded px-1.5 py-1 text-text-secondary hover:bg-bg-surface shrink-0"
           >
             <AppIcon name="close" size={13} />

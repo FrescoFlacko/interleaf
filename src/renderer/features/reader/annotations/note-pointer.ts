@@ -119,35 +119,51 @@ export function pickNoteAtPoint(
   };
 }
 
+type PaintedRange = { readonly annotation: Annotation; readonly range: RangeLike };
+
+function isPointerNote(annotation: Annotation): boolean {
+  return annotation.type === 'note' && !annotation.isLocationNote;
+}
+
+/** Only a coloured highlight is painted (see `applyDomHighlights`), so only it can be clicked. */
+function isPaintedHighlight(annotation: Annotation): boolean {
+  return annotation.type === 'highlight' && annotation.color !== null;
+}
+
 /** Groups a fresh adapter paint into note-only entries in registration order. */
-export function collectNoteEntries(
-  painted: readonly { annotation: Annotation; range: RangeLike }[]
+export function collectNoteEntries(painted: readonly PaintedRange[]): NotePointerEntry[] {
+  return groupPointerEntries(painted, isPointerNote).filter((entry) =>
+    // An entry whose ranges expose zero client fragments (e.g. fully hidden)
+    // can never be hit-tested, so it must not participate in resolution.
+    entry.ranges.some((range) => rectsOf(range).length > 0)
+  );
+}
+
+/**
+ * Groups a fresh adapter paint into painted-highlight entries in registration
+ * order. Highlights far outnumber notes, so they are not measured at paint
+ * time; hit-testing, focus proxies and repositioning skip a range without
+ * client fragments on their own.
+ */
+function collectHighlightEntries(painted: readonly PaintedRange[]): NotePointerEntry[] {
+  return groupPointerEntries(painted, isPaintedHighlight);
+}
+
+function groupPointerEntries(
+  painted: readonly PaintedRange[],
+  include: (annotation: Annotation) => boolean
 ): NotePointerEntry[] {
   const byId = new Map<string, NotePointerEntry>();
-  const order: string[] = [];
   for (const item of painted) {
-    if (item.annotation.type !== 'note') continue;
-    if (item.annotation.isLocationNote) continue;
+    if (!include(item.annotation)) continue;
     const id = item.annotation.id;
     const existing = byId.get(id);
-    if (existing !== undefined) {
-      byId.set(id, { ...existing, ranges: [...existing.ranges, item.range] });
-      continue;
-    }
-    order.push(id);
-    byId.set(id, {
-      annotationId: id,
-      selectedTextPreview: (item.annotation.selectedText ?? '').slice(0, 160),
-      ranges: [item.range],
-    });
+    byId.set(id, existing === undefined
+      ? { annotationId: id, selectedTextPreview: (item.annotation.selectedText ?? '').slice(0, 160), ranges: [item.range] }
+      : { ...existing, ranges: [...existing.ranges, item.range] });
   }
-  return order
-    .map((id) => byId.get(id))
-    .filter((entry): entry is NotePointerEntry =>
-      // A note whose ranges expose zero client fragments (e.g. fully hidden)
-      // can never be hit-tested, so it must not participate in resolution.
-      entry?.ranges.some((range) => rectsOf(range).length > 0) === true
-    );
+  // Map iteration follows first insertion, so entries keep registration order.
+  return [...byId.values()];
 }
 
 /* ---------------------------------------------------------------------------
@@ -159,8 +175,10 @@ export function collectNoteEntries(
 export type NotePointerSurface = {
   readonly owner: object;
   readonly doc: Document;
-  /** Entry list in paint order; surface-local hit-testing input. */
+  /** Note entry list in paint order; surface-local hit-testing input. */
   entries: readonly NotePointerEntry[];
+  /** Painted-highlight entries in paint order; a note under the same point wins. */
+  highlightEntries: readonly NotePointerEntry[];
   /** Translates a surface-local rect to top-window viewport coordinates. */
   readonly toTopClientRect: (rect: RectLike) => RectLike;
   /** Bumped on every paint; rect caches compare against it. */
@@ -212,20 +230,25 @@ export function pickNoteAtSurfacePoint(surface: NotePointerSurface, x: number, y
   return pickNoteAtPoint(surface.entries, x, y, cachedRectsFor(surface));
 }
 
+/** Hit-test the painted highlights within one surface using its cached fragment rects. */
+export function pickHighlightAtSurfacePoint(surface: NotePointerSurface, x: number, y: number): NoteHit | null {
+  return pickNoteAtPoint(surface.highlightEntries, x, y, cachedRectsFor(surface));
+}
+
 export type NotePointerPaintMeta = {
   /** Translates surface-local rects to top-window coords (identity for top docs). */
   readonly toTopClientRect?: (rect: RectLike) => RectLike;
 };
 
 /**
- * Register/replace the painted note entries for one owner+document surface.
+ * Register/replace the painted note and highlight entries for one owner+document surface.
  * Any other document painted by the same owner is detached first (section
  * swaps), and the rect cache is dropped (fresh ranges never share rects).
  */
 export function notePointerPaint(
   owner: object,
   doc: Document,
-  painted: readonly { annotation: Annotation; range: RangeLike }[],
+  painted: readonly PaintedRange[],
   meta: NotePointerPaintMeta = {}
 ): void {
   let byDoc = surfacesByOwner.get(owner);
@@ -248,11 +271,13 @@ export function notePointerPaint(
     owner,
     doc,
     entries: [],
+    highlightEntries: [],
     toTopClientRect: meta.toTopClientRect ?? ((rect) => rect),
     epoch: 0,
     rectCache: new Map(),
   };
   surface.entries = collectNoteEntries(painted);
+  surface.highlightEntries = collectHighlightEntries(painted);
   surface.epoch += 1;
   surface.rectCache.clear();
   byDoc.set(doc, surface);
