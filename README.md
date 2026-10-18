@@ -1,6 +1,13 @@
-# Interleaf
+<p align="center">
+  <img src=".github/assets/readme-banner.png" alt="Interleaf: Read. Think. Build." width="100%">
+</p>
 
-> **Read. Think. Build.**
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2f8a4a" alt="License: Apache-2.0"></a>
+  <a href="package.json"><img src="https://img.shields.io/github/package-json/v/FrescoFlacko/interleaf/develop?color=2f8a4a&label=version" alt="Version"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-1f3d33" alt="Platforms: macOS and Linux">
+  <a href="https://github.com/electron/electron"><img src="https://img.shields.io/github/package-json/dependency-version/FrescoFlacko/interleaf/dev/electron/develop?color=1f3d33&logo=electron" alt="Electron version"></a>
+</p>
 
 Interleaf is a local-first Electron desktop reader for PDF, EPUB, MOBI/KF8,
 DOCX, PPTX and Markdown documents, including saved web articles. It combines persistent annotations and lexical search with
