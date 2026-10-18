@@ -117,23 +117,44 @@ run.*
 
 ## Architecture
 
-```text
-┌──────────────────────────────┐
-│ Renderer: React reader + UI  │
-└──────────────┬───────────────┘
-               │ typed, validated IPC
-┌──────────────▼───────────────┐
-│ Preload: narrow contextBridge │
-└──────────────┬───────────────┘
-               │ Electron IPC
-┌──────────────▼───────────────────────────────────────────┐
-│ Main: SQLite, library, indexing, AI, agents, credentials │
-└──────────────┬──────────────────────────────┬───────────┘
-               │                              │
-     ┌─────────▼─────────┐          ┌─────────▼─────────┐
-     │ App-owned files   │          │ Local CLI tools   │
-     │ documents/DB/logs │          │ Codex/Claude/etc. │
-     └───────────────────┘          └───────────────────┘
+```mermaid
+flowchart TB
+    subgraph Renderer["Renderer · untrusted UI"]
+        direction LR
+        UI["React reader + UI"] <--> RW["Reader parsing workers"]
+    end
+
+    Preload["Preload · narrow contextBridge"]
+
+    subgraph Main["Main process"]
+        direction LR
+        Core["SQLite, library, indexing,<br/>AI, agents, credentials"] <--> MW["Hashing / archive workers"]
+    end
+
+    subgraph Outside["Outside the app processes"]
+        direction LR
+        Files[("App-owned files<br/>documents, DB, logs")]
+        CLIs["Local CLI tools<br/>Codex, Claude Code, …"]
+        Providers["AI providers<br/>(optional)"]
+    end
+
+    Renderer -- "typed, validated IPC" --> Preload
+    Preload -- "Electron IPC" --> Main
+    Main -- "read / write" --> Files
+    Main -- "spawn, shell: false" --> CLIs
+    Main -. "chat requests" .-> Providers
+
+    classDef ui fill:#eef6ea,stroke:#2f8a4a,color:#1f3d33
+    classDef bridge fill:#d9ecd2,stroke:#2f8a4a,color:#1f3d33
+    classDef main fill:#1f3d33,stroke:#1f3d33,color:#ffffff
+    classDef ext fill:#ffffff,stroke:#5b6b63,color:#1f3d33
+    class UI,RW ui
+    class Preload bridge
+    class Core,MW main
+    class Files,CLIs,Providers ext
+    style Renderer fill:#f9fbf7,stroke:#dfe9da,color:#1f3d33
+    style Main fill:#f9fbf7,stroke:#dfe9da,color:#1f3d33
+    style Outside fill:#f9fbf7,stroke:#dfe9da,color:#1f3d33
 ```
 
 SQLite is main-process-only. The preload exposes named domain operations, not
