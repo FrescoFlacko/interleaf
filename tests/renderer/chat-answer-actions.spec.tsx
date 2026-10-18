@@ -98,9 +98,9 @@ describe('Reference answer actions', () => {
 
     // Decorative inside a named button: the name is announced once.
     expect(copyButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    // Hover carries the same wording as the accessible name.
-    expect(copyButton).toHaveAttribute('title', 'Copy answer');
-    expect(saveButton).toHaveAttribute('title', 'Save answer as note');
+    // The explanation is the app's own tooltip, never a second native one.
+    expect(copyButton).not.toHaveAttribute('title');
+    expect(saveButton).not.toHaveAttribute('title');
 
     // The words these buttons used to spell out are gone from the row.
     expect(screen.queryByText('Copy')).toBeNull();

@@ -191,7 +191,7 @@ test.describe('Chat and Agent text size', () => {
     await configureOpenRouterTestSeam(app);
     await openDocument();
 
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     await chat.getByRole('button', { name: 'New chat' }).click();
@@ -288,7 +288,7 @@ test.describe('Chat and Agent text size', () => {
     await configureOpenRouterTestSeam(app);
     await openDocument();
 
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     await expect(app.window.getByRole('region', { name: 'AI research chat' })).toBeVisible();
     await app.window.getByRole('button', { name: 'New chat' }).click();
     await chooseChatModel(app.window, 'openrouter', 'openrouter/auto');

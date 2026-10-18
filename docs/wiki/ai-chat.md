@@ -48,7 +48,7 @@ a footnote:
 1. Open a document.
 2. Show the right companion panel if it is hidden — `⌘ Shift + A` on macOS,
    `Ctrl + Shift + A` on Windows and Linux.
-3. Select the **AI Chat** tab.
+3. Select the **Chat** tab.
 
 With no document open the panel says *Open a document to start a grounded
 research conversation.* Chat is always about one document.

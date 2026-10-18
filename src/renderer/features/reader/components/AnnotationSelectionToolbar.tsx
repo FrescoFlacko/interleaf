@@ -353,11 +353,11 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
     const totalLen = selection.totalSelectedLength;
     // The same limit the Agent panel's "+ Selection" and main's schema apply.
     if (totalLen > AGENT_MAX_CONTEXT_TEXT_LENGTH) {
-      setActionError(`Agent context is limited to ${AGENT_MAX_CONTEXT_TEXT_LENGTH.toLocaleString('en-US')} characters. Narrow your selection or use AI Chat.`);
+      setActionError(`Agent context is limited to ${AGENT_MAX_CONTEXT_TEXT_LENGTH.toLocaleString('en-US')} characters. Narrow your selection or use Chat.`);
       return;
     }
     if (!selection.anchor) {
-      setActionError('Agent context packets require a mapped document selection. Use AI Chat for this selection.');
+      setActionError('Agent context packets require a mapped document selection. Use Chat for this selection.');
       return;
     }
     // Every rejection above keeps Focus Mode and the error visible; only an

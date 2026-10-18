@@ -143,7 +143,7 @@ API key) and [Local server](providers/local-server.md) (point at a server you
 already run) are the two quickest routes.
 
 1. Press `⌘ Shift + A` / `Ctrl + Shift + A` to open the companion panel, then
-   select the **AI Chat** tab.
+   select the **Chat** tab.
 2. Choose **New conversation**.
 3. Attach what the AI should look at. Select text in the document, or use the
    **+** button on the **CONTEXT** bar to add a page range or the whole

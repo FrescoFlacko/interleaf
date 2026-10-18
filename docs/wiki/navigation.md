@@ -27,7 +27,7 @@ and how to get from any one place to any other.
 ├───────────────┬──────────────────────────┬───────────────────┤
 │               │                          │                   │
 │  Library      │  Library view            │  Companion panel  │
-│  sidebar      │      or                  │  AI Chat · Search │
+│  sidebar      │      or                  │  Chat · Search    │
 │               │  Reader                  │  Annotations ·    │
 │               │                          │  Agent            │
 └───────────────┴──────────────────────────┴───────────────────┘
@@ -126,7 +126,7 @@ The right-hand panel has four tabs:
 
 | Tab | Purpose | Page |
 | --- | --- | --- |
-| **AI Chat** | Ask questions about the open document. | [AI Chat](ai-chat.md) |
+| **Chat** | Ask questions about the open document. | [AI Chat](ai-chat.md) |
 | **Search** | Full-text search in this document or across the library. | [Reading ▸ Searching](reading.md#searching-inside-documents) |
 | **Annotations** | Browse, filter and search your highlights, notes and bookmarks. | [Highlights and notes](highlights-and-notes.md#the-annotations-browser) |
 | **Agent** | Set up and run a coding agent task. | [AI Agent](ai-agent.md) |

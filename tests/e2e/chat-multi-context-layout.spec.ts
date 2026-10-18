@@ -143,7 +143,7 @@ test.describe('chat composer with several page contexts attached', () => {
 
   test('shrinks a long model label beside Send at wide, middle and narrow pane widths', async () => {
     await openDocument(1);
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     const provider = chat.getByTestId('chat-model-picker');
@@ -216,7 +216,7 @@ test.describe('chat composer with several page contexts attached', () => {
   test('keeps Omp, a long model name, the meter and Send aligned at the minimum width and at 200% zoom', async () => {
     await openDocument(8);
 
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     await chat.getByRole('button', { name: 'New chat' }).click();
@@ -271,7 +271,7 @@ test.describe('chat composer with several page contexts attached', () => {
   test('pins Send to the right content edge in the reported single-page-range state (Pages 56-62)', async () => {
     await openDocument(70);
 
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     await chat.getByRole('button', { name: 'New chat' }).click();

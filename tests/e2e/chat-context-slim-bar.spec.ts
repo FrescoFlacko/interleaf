@@ -313,7 +313,7 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     // Re-select the real Chat tab after leaving the compact drawer. This keeps
     // the desktop step independent of whichever companion tab a prior drawer
     // lifecycle restored, while still exercising the production tab control.
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const desktopChat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(desktopChat).toBeVisible();
     await desktopChat.getByRole('button', { name: 'Add pages to AI context' }).click();
