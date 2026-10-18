@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { APP_NAME } from '@shared/constants/brand';
 import { defaultBrandIconPath } from '../app/brand-icon';
 import type { Logger } from '../logging/logger';
+import { revealNewWindow, type WindowRevealMode } from './window-reveal-mode';
 
 /**
  * Secure BrowserWindow construction (docs/SECURITY.md §3, electron-development
@@ -43,6 +44,8 @@ readonly preloadPath: string;
  * Defaults to `defaultBrandIconPath()`; omitted when no icon is found.
  */
 readonly iconPath?: string | undefined;
+/** Defaults to `foreground`; `background` is the E2E-only mode in `window-reveal-mode.ts`. */
+readonly revealMode?: WindowRevealMode | undefined;
 readonly log: Logger; }
 
 const DEFAULT_WINDOW_BOUNDS = { width: 1400, height: 900 } as const;
@@ -100,8 +103,7 @@ export function createMainWindow(options: MainWindowOptions): BrowserWindow {
   // restorable window with its controls, not OS fullscreen. Maximizing while
   // still hidden means the first frame the user sees is already full size.
   win.once('ready-to-show', () => {
-    win.maximize();
-    win.show();
+    revealNewWindow(win, options.revealMode);
   });
 
   installMainWindowSecurityHandlers(win.webContents, options.devUrl, log);

@@ -17,6 +17,12 @@ export type WindowTarget = {
 export type LifecycleCoordinatorDeps<TWindow extends WindowTarget> = {
   readonly createWindow: () => TWindow;
   readonly onQuit: () => void;
+  /**
+   * Brings an existing window back. Defaults to restoring a minimized window
+   * and focusing it; the E2E background mode supplies a reveal that never
+   * makes the window key (`window-reveal-mode.ts`).
+   */
+  readonly revealExisting?: ((window: TWindow) => void) | undefined;
 };
 
 export type WindowEnsureResult<TWindow extends WindowTarget> = {
@@ -36,13 +42,22 @@ export type SecondInstanceResult = {
   readonly created?: boolean | undefined;
 };
 
+function restoreAndFocus(window: WindowTarget): void {
+  if (window.isMinimized()) {
+    window.restore();
+  }
+  window.focus();
+}
+
 export class LifecycleCoordinator<TWindow extends WindowTarget = WindowTarget> {
   private _state: AppLifecycleState = 'uninitialized';
   private _mainWindow: TWindow | null = null;
   private readonly deps: LifecycleCoordinatorDeps<TWindow>;
+  private readonly revealExisting: (window: TWindow) => void;
 
   constructor(deps: LifecycleCoordinatorDeps<TWindow>) {
     this.deps = deps;
+    this.revealExisting = deps.revealExisting ?? restoreAndFocus;
   }
 
   get state(): AppLifecycleState {
@@ -116,10 +131,7 @@ export class LifecycleCoordinator<TWindow extends WindowTarget = WindowTarget> {
    */
   ensureMainWindow(): WindowEnsureResult<TWindow> {
     if (this._mainWindow !== null && !this._mainWindow.isDestroyed()) {
-      if (this._mainWindow.isMinimized()) {
-        this._mainWindow.restore();
-      }
-      this._mainWindow.focus();
+      this.revealExisting(this._mainWindow);
       return { window: this._mainWindow, created: false };
     }
 

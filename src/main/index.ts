@@ -68,6 +68,7 @@ import {
   defaultIndexHtmlPath,
   defaultPreloadPath,
 } from './windows/main-window';
+import { existingWindowReveal, windowRevealMode } from './windows/window-reveal-mode';
 import { ClipboardService } from './clipboard/clipboard-service';
 import { MermaidRenderService } from './documents/mermaid/mermaid-render-service';
 import { createMermaidSandboxWindow } from './documents/mermaid/mermaid-sandbox-window';
@@ -118,10 +119,14 @@ let updates: UpdateController | null = null;
 // `open-file`, the launch command line); they wait here for the renderer.
 const openFileRequests = new OpenFileRequestQueue();
 
+// Foreground for every real launch; background only for the E2E suite.
+const revealMode = windowRevealMode({ env: process.env, signals: runtimePackagingSignals() });
+
 function createAndAttachMainWindow(): BrowserWindow {
   mediaScopeId = randomUUID();
   const window = createMainWindow({
     devUrl: process.env.ELECTRON_RENDERER_URL,
+    revealMode,
     indexHtmlPath: defaultIndexHtmlPath(),
     preloadPath: defaultPreloadPath(),
     log: securityLog,
@@ -138,6 +143,7 @@ const lifecycleCoordinator = new LifecycleCoordinator<BrowserWindow>({
   onQuit: () => {
     app.quit();
   },
+  revealExisting: existingWindowReveal(revealMode),
 });
 
 const shutdownBarrier = new ShutdownBarrier<BrowserWindow>({
@@ -223,14 +229,20 @@ function registerAppLifecycle(): void {
   });
 }
 
+// The name is already set at module load; the Dock icon needs app.ready.
+// An E2E background run withdraws its Dock icon instead, before any window.
+function presentDockIcon(): void {
+  if (revealMode === 'background') app.dock?.hide();
+  else applyDevelopmentDockIcon(runtimePackagingSignals());
+}
+
 async function bootstrap(): Promise<void> {
   // Fail closed on the profile decision taken at module load, before any
   // directory, database, vault, or service is created.
   assertStartupContinues(userDataProfileStartup);
   lifecycleCoordinator.startBootstrap();
   if (process.platform === 'darwin') {
-    // The name is already set at module load; the Dock icon needs app.ready.
-    applyDevelopmentDockIcon(runtimePackagingSignals());
+    presentDockIcon();
   }
 
   const paths = resolveAppPaths();
