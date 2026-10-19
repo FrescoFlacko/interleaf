@@ -7,7 +7,7 @@
    carrying the mockup's parallel light palette. Scoped to the Settings dialog:
    no other surface changes typography. */
 .settings-design {
-  font-family: 'IBM Plex Sans', Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
 }
 
 /* The section content keeps room for a classic scrollbar, so the last
@@ -27,21 +27,21 @@
 }
 
 .settings-title {
-  font: 600 20px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 600 20px/1.2 'Inter', Arial, sans-serif;
   letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 .settings-description {
-  font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.4 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 .settings-section-title {
-  font: 600 16px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 600 16px/1.2 'Inter', Arial, sans-serif;
   letter-spacing: -0.012em;
   color: var(--text-primary);
 }
 .settings-section-sub {
-  font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.4 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 
@@ -99,16 +99,16 @@
   min-width: 0;
 }
 .provider-name {
-  font: 500 13px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 13px/1.3 'Inter', Arial, sans-serif;
   color: var(--text-primary);
 }
 .provider-row--expanded .provider-name { font-weight: 600; }
 .provider-version {
-  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  font: 400 11px/1.3 'JetBrains Mono', monospace;
   color: var(--text-secondary);
 }
 .provider-description {
-  font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.4 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 .provider-trailing {
@@ -120,7 +120,7 @@
   white-space: nowrap;
 }
 .provider-status {
-  font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 .provider-chevron { color: var(--text-secondary); }
@@ -136,7 +136,7 @@
   gap: 16px;
 }
 .provider-lede {
-  font: 400 12px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.5 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
   max-width: 520px;
 }
@@ -153,11 +153,11 @@
 }
 .settings-field-label {
   /* Sentence-case field label, the same as every other form in the app. */
-  font: 500 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/16px 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 .settings-field-note {
-  font: 400 11px/1.45 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1.45 'Inter', Arial, sans-serif;
 }
 /* The note's default colour sits in the components layer so a state utility
    on the same element (`text-danger`, `text-success`) wins; as an unlayered
@@ -178,10 +178,10 @@
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-elevated);
   color: var(--text-primary);
-  font: 400 12px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.2 'Inter', Arial, sans-serif;
 }
 .settings-control--mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 .settings-control:disabled { opacity: 0.6; }
 
@@ -197,15 +197,15 @@
   background: var(--bg-surface-elevated);
 }
 .settings-key-value {
-  font: 400 12px/1 'IBM Plex Mono', monospace;
+  font: 400 12px/1 'JetBrains Mono', monospace;
   color: var(--text-primary);
 }
 .settings-key-saved {
-  font: 500 11px/1.4 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 11px/1.4 'Inter', Arial, sans-serif;
   color: var(--success);
 }
 .settings-inline-action {
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/1 'Inter', Arial, sans-serif;
   color: var(--accent);
   background: none;
   border: 0;
@@ -225,7 +225,7 @@
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   background: var(--bg-surface-elevated);
-  font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .settings-outline-button:hover:not(:disabled) { color: var(--text-primary); }
@@ -240,7 +240,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/1 'Inter', Arial, sans-serif;
 }
 .settings-accent-button:disabled { opacity: 0.45; }
 
@@ -249,7 +249,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  font: 400 11px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1.3 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 
@@ -267,7 +267,7 @@
   gap: 8px 12px;
 }
 .settings-env-name {
-  font: 400 12px/1.2 'IBM Plex Mono', monospace;
+  font: 400 12px/1.2 'JetBrains Mono', monospace;
   color: var(--text-primary);
 }
 

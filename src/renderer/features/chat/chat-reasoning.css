@@ -5,7 +5,7 @@
 /* The saved level beside the model name. It never shrinks, so the model name
    ellipsizes first; a level the model no longer offers reads in the warning
    colour with the warning glyph. */
-.chat-model-trigger-effort { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-subtle); color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-trigger-effort { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-subtle); color: var(--text-secondary); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 .chat-model-trigger-effort[data-stale="true"] { border-color: var(--warning); color: var(--warning); }
 .chat-model-trigger-effort-icon { flex: none; }
 /* Narrow, the word alone carries the level; the stale glyph stays. */
@@ -15,7 +15,7 @@
 
 /* A row's own level when it is the bound one, and the chevron that says the
    row has levels. Both are secondary to the model name. */
-.chat-model-picker-level { flex: none; margin-top: 2px; color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-level { flex: none; margin-top: 2px; color: var(--text-secondary); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 .chat-model-picker-chevron { flex: none; align-self: center; color: var(--text-secondary); opacity: .65; }
 .chat-model-picker-option[data-active="true"] .chat-model-picker-chevron,
 .chat-model-picker-option[data-expanded="true"] .chat-model-picker-chevron { opacity: 1; }
@@ -39,9 +39,9 @@
 .chat-reasoning-flyout::before { content: ''; position: absolute; top: 0; bottom: 0; width: 6px; }
 .chat-reasoning-flyout[data-side="right"]::before { right: 100%; }
 .chat-reasoning-flyout[data-side="left"]::before { left: 100%; }
-.chat-reasoning-heading { padding: 4px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-reasoning-heading { padding: 4px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'Inter', Arial, sans-serif; }
 .chat-reasoning-levels { display: flex; flex-direction: column; }
-.chat-reasoning-level { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 24px; padding: 2px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-reasoning-level { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 24px; padding: 2px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'Inter', Arial, sans-serif; }
 .chat-reasoning-level:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .chat-reasoning-level:focus { background: var(--accent-muted); }
 @media (hover: hover) and (pointer: fine) {
@@ -49,11 +49,11 @@
   .chat-reasoning-back:hover { background: var(--accent-muted); }
 }
 .chat-reasoning-level-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-reasoning-level-hint { flex: none; color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-reasoning-level-hint { flex: none; color: var(--text-secondary); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 
 /* The narrow fallback fills the list's place and scrolls like it. */
 .chat-reasoning-nested { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
-.chat-reasoning-back { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 500 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-reasoning-back { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 500 12px/16px 'Inter', Arial, sans-serif; }
 .chat-reasoning-back-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-reasoning-back:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 

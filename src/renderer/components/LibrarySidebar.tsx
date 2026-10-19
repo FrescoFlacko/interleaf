@@ -57,7 +57,7 @@ export function LibrarySidebar() {
       <div className="flex flex-col gap-6 p-4 overflow-y-auto">
         {/* Navigation items */}
         <nav aria-label="Library sections" className="flex flex-col gap-1">
-          <h2 className="mb-2 text-2xs font-semibold uppercase tracking-wider text-text-secondary">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
             Library
           </h2>
           {navItems.map((item) => (
@@ -79,7 +79,7 @@ export function LibrarySidebar() {
         {/* Folders hierarchy */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xs font-semibold uppercase tracking-wider text-text-secondary">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Folders
             </h2>
             <button
@@ -90,9 +90,9 @@ export function LibrarySidebar() {
               onClick={() => {
                 setNewFolderModalOpen(true);
               }}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary"
+              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary"
             >
-              <AppIcon name="add" size={12} className="shrink-0" />
+              <AppIcon name="add" size={13} className="shrink-0" />
               New
             </button>
           </div>
@@ -103,7 +103,7 @@ export function LibrarySidebar() {
               aria-label="Virtual folders"
               className="flex flex-col gap-0.5"
             >
-              <p className="px-2 py-1 text-2xs italic text-text-secondary">
+              <p className="px-2 py-1 text-xs italic text-text-secondary">
                 No folders created yet.
               </p>
             </div>

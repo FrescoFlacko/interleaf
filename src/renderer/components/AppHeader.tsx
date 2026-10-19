@@ -129,13 +129,13 @@ export function AppHeader({ compact }: { readonly compact: boolean }) {
         <span className="ml-1.5 flex items-baseline gap-1 sm:gap-2 min-w-0">
           <span
             data-testid="app-header-name"
-            className="text-sm sm:text-base font-semibold tracking-tight shrink-0"
+            className="text-base sm:text-lg font-semibold tracking-tight shrink-0"
           >
             {APP_NAME}
           </span>
           <span
             data-testid="app-header-tagline"
-            className="hidden min-[680px]:inline text-sm text-text-secondary truncate"
+            className="hidden min-[680px]:inline text-base text-text-secondary truncate"
           >
             {APP_TAGLINE}
           </span>

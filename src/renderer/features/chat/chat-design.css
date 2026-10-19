@@ -8,11 +8,11 @@
 .chat-design {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'IBM Plex Sans', Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
 }
 .chat-design-header { padding: 12px 16px 10px; }
 .chat-design-thread-title {
-  font: 500 13px/1.25 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 13px/1.25 'Inter', Arial, sans-serif;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
@@ -28,7 +28,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 400 14px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 14px/1 'Inter', Arial, sans-serif;
 }
 /* Sessions screen (#2b): the neutral canvas / raised card / hairline-footer
    relationship is kept, expressed as surface → elevated-surface → surface. */
@@ -44,7 +44,7 @@
 }
 .chat-design-sessions-title {
   margin-right: auto;
-  font: 600 14px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 600 14px/1.2 'Inter', Arial, sans-serif;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
@@ -59,7 +59,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 400 13px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/1 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 .chat-design-create {
@@ -72,7 +72,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/1 'Inter', Arial, sans-serif;
 }
 .chat-design-create > span { font-size: 14px; }
 .chat-design-sessions-body {
@@ -125,7 +125,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 500 14px/1.25 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 14px/1.25 'Inter', Arial, sans-serif;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
@@ -133,7 +133,7 @@
 .chat-design-card-current {
   margin-left: auto;
   flex: none;
-  font: 500 11px/1 'IBM Plex Mono', monospace;
+  font: 500 11px/1 'JetBrains Mono', monospace;
   letter-spacing: .08em;
   color: var(--accent);
 }
@@ -150,14 +150,14 @@
      title row so the hit area cannot make the card taller than the reference. */
   margin-block: -1.625px;
   border-radius: 6px;
-  font: 400 13px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/1 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-card-overflow:hover { background: var(--bg-surface); }
 }
 .chat-design-card-preview {
-  font: 400 13px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/1.5 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -176,7 +176,7 @@
   padding: 4px 8px;
   border-radius: 6px;
   background: var(--bg-surface);
-  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  font: 400 11px/1.3 'JetBrains Mono', monospace;
   color: var(--text-secondary);
 }
 .chat-design-card-metatext {
@@ -186,7 +186,7 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
-  font: 400 11px/1 'IBM Plex Mono', monospace;
+  font: 400 11px/1 'JetBrains Mono', monospace;
   color: var(--text-secondary);
 }
 .chat-design-card-footer {
@@ -200,9 +200,9 @@
   background: var(--bg-surface);
 }
 /* The chevron is a block-level icon, so the label and it sit in one row. */
-.chat-design-resume { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--accent); }
-.chat-design-rename { margin-left: auto; font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--text-secondary); }
-.chat-design-delete { font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--danger); }
+.chat-design-resume { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font: 500 12px/1 'Inter', Arial, sans-serif; color: var(--accent); }
+.chat-design-rename { margin-left: auto; font: 400 12px/1 'Inter', Arial, sans-serif; color: var(--text-secondary); }
+.chat-design-delete { font: 400 12px/1 'Inter', Arial, sans-serif; color: var(--danger); }
 /* The card is the selector: this covers it so a pointer anywhere resumes the
    conversation, while the overflow control above it keeps its own actions. */
 .chat-design-card-open { position: absolute; inset: 0; z-index: 1; border-radius: 12px; cursor: pointer; }
@@ -243,7 +243,7 @@
   padding: 6px 8px;
   border-radius: 6px;
   text-align: left;
-  font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/20px 'Inter', Arial, sans-serif;
   color: var(--text-primary);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -252,7 +252,7 @@
 .chat-design-menu button:focus-visible { outline: none; background: var(--accent-muted); }
 .chat-design-menu button[data-tone="danger"] { color: var(--danger); }
 .chat-design-menu [role="separator"] { height: 1px; margin: 4px; background: var(--border-subtle); }
-.chat-design-menu-check { display: flex; flex: none; justify-content: center; width: 12px; font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--accent); }
+.chat-design-menu-check { display: flex; flex: none; justify-content: center; width: 12px; font: 400 11px/1 'Inter', Arial, sans-serif; color: var(--accent); }
 /* Informational panel anchored to a composer control, on the same portalled,
    viewport-positioned layer as the menu above and for the same reason: the
    configuration row it sits beside clips and scrolls. */
@@ -292,13 +292,13 @@
   overflow: hidden;
 }
 .chat-model-picker:has(> .chat-model-picker-notice, > .chat-model-picker-status) { max-height: min(280px, calc(100vh - 16px)); }
-.chat-model-picker-notice { flex: none; margin: 6px 6px 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--warning); color: var(--text-primary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-notice { flex: none; margin: 6px 6px 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--warning); color: var(--text-primary); font: 400 12px/16px 'Inter', Arial, sans-serif; }
 .chat-model-picker-search { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
-.chat-model-picker-search > input { flex: 1; min-width: 0; background: transparent; color: var(--text-primary); font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif; outline: none; }
+.chat-model-picker-search > input { flex: 1; min-width: 0; background: transparent; color: var(--text-primary); font: 400 13px/20px 'Inter', Arial, sans-serif; outline: none; }
 .chat-model-picker-search:focus-within { box-shadow: inset 0 -2px 0 var(--focus-ring); }
 .chat-model-picker-list { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
-.chat-model-picker-group { padding: 6px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
-.chat-model-picker-option { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 4px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-group { padding: 6px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'Inter', Arial, sans-serif; }
+.chat-model-picker-option { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 4px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'Inter', Arial, sans-serif; }
 .chat-model-picker-option[data-active="true"] { background: var(--accent-muted); box-shadow: inset 2px 0 0 var(--accent); }
 @media (hover: hover) and (pointer: fine) {
   .chat-model-picker-option:hover:not([aria-disabled="true"]) { background: var(--accent-muted); }
@@ -306,15 +306,15 @@
 .chat-model-picker-option[aria-disabled="true"] { color: var(--text-secondary); }
 .chat-model-picker-check { flex: none; display: inline-flex; width: 12px; height: 18px; align-items: center; color: var(--accent); }
 .chat-model-picker-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.chat-model-picker-name { overflow-wrap: anywhere; font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
-.chat-model-picker-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Mono', monospace; }
-.chat-model-picker-badge { flex: none; margin-top: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-name { overflow-wrap: anywhere; font: 400 13px/18px 'Inter', Arial, sans-serif; }
+.chat-model-picker-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: 400 11px/14px 'JetBrains Mono', monospace; }
+.chat-model-picker-badge { flex: none; margin-top: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-secondary); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 .chat-model-picker-empty,
-.chat-model-picker-status { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--text-secondary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-status { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--text-secondary); font: 400 12px/16px 'Inter', Arial, sans-serif; }
 .chat-model-picker-status[data-tone="error"] { color: var(--danger); }
 .chat-model-picker-status > button { margin-left: auto; min-height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border-subtle); color: var(--text-primary); }
 .chat-model-picker-footer { flex: none; padding: 4px; border-top: 1px solid var(--border-subtle); }
-.chat-model-picker-footer > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-footer > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 400 13px/20px 'Inter', Arial, sans-serif; }
 @media (hover: hover) and (pointer: fine) {
   .chat-model-picker-footer > button:hover { background: var(--accent-muted); }
 }
@@ -325,7 +325,7 @@
 .chat-design-assistant > div:first-child { height: 11px; }
 .chat-design-assistant > div:first-child > span:first-child { background: var(--accent); }
 .chat-design-assistant > div:first-child > span:last-child {
-  font: 500 11px/1 'IBM Plex Mono', monospace;
+  font: 500 11px/1 'JetBrains Mono', monospace;
   letter-spacing: .1em;
   color: var(--text-secondary);
 }
@@ -364,7 +364,7 @@
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-elevated);
   box-shadow: 0 6px 20px color-mix(in srgb, var(--text-primary) 14%, transparent);
-  font: 400 12px/1.35 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.35 'Inter', Arial, sans-serif;
   color: var(--text-primary);
 }
 /* A success notice has nothing to click, and it floats over the action row that
@@ -412,9 +412,9 @@
   justify-content: space-between;
   gap: 8px;
   color: var(--text-primary);
-  font: 400 12px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.3 'Inter', Arial, sans-serif;
 }
-.chat-design-budget-quota-value { font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+.chat-design-budget-quota-value { font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); }
 .chat-design-budget-quota[data-budget-level="warning"] .chat-design-budget-quota-value { color: var(--warning); }
 .chat-design-budget-quota[data-budget-level="error"] .chat-design-budget-quota-value { color: var(--danger); }
 .chat-design-budget-bar {
@@ -434,7 +434,7 @@
   align-items: center;
   gap: 4px;
   color: var(--text-secondary);
-  font: 400 11px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1.3 'Inter', Arial, sans-serif;
 }
 .chat-design-budget-legend-swatch {
   width: 8px;
@@ -445,7 +445,7 @@
 .chat-design-budget-details { display: flex; flex-direction: column; gap: 8px; }
 .chat-design-budget-category-header {
   color: var(--text-secondary);
-  font: 500 11px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 11px/1.2 'Inter', Arial, sans-serif;
 }
 .chat-design-budget-row {
   display: flex;
@@ -453,12 +453,12 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--text-primary);
-  font: 400 11px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1.5 'Inter', Arial, sans-serif;
 }
 .chat-design-budget-row > dt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-design-budget-row > dd { flex: none; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+.chat-design-budget-row > dd { flex: none; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); }
 .chat-design-budget-row[data-budget-row="share"] { padding-left: 10px; color: var(--text-secondary); }
-.chat-design-budget-warning { color: var(--danger); font: 400 11px/1.4 'IBM Plex Sans', Arial, sans-serif; }
+.chat-design-budget-warning { color: var(--danger); font: 400 11px/1.4 'Inter', Arial, sans-serif; }
 /* Clean Context inside that panel: separated from the accounting above it,
  * and a column so the question it asks wraps instead of widening the panel. */
 .chat-design-clean-context {
@@ -482,7 +482,7 @@
   field-sizing: content;
   background: transparent;
   color: var(--text-primary);
-  font: 400 calc(14px * var(--companion-text-scale, 1))/1.4 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 calc(14px * var(--companion-text-scale, 1))/1.4 'Inter', Arial, sans-serif;
   outline: none;
 }
 .chat-design-input::placeholder { color: var(--text-secondary); }
@@ -512,7 +512,7 @@
   padding: 0 4px 0 6px;
   border-radius: 8px;
   color: var(--text-primary);
-  font: 500 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/16px 'Inter', Arial, sans-serif;
   white-space: nowrap;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -540,7 +540,7 @@
 @container (max-width: 119px) {
   .chat-model-trigger-lead { display: none; }
 }
-.chat-model-trigger-badge { flex: none; display: inline-flex; padding: 0 4px; border-radius: 6px; border: 1px solid var(--warning); color: var(--warning); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-trigger-badge { flex: none; display: inline-flex; padding: 0 4px; border-radius: 6px; border: 1px solid var(--warning); color: var(--warning); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 .chat-model-trigger-badge-icon { display: none; }
 /* Too narrow for the model name and the word together, the badge becomes its
    warning glyph so the model stays legible; the trigger's accessible name and
@@ -595,10 +595,10 @@
   border-radius: 6px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/1 'Inter', Arial, sans-serif;
 }
 .chat-context-range-submit:disabled { opacity: .4; }
-.chat-context-close { align-self: flex-start; min-height: 24px; padding: 0 4px; border-radius: 6px; color: var(--accent); font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; }
+.chat-context-close { align-self: flex-start; min-height: 24px; padding: 0 4px; border-radius: 6px; color: var(--accent); font: 400 12px/1 'Inter', Arial, sans-serif; }
 
 /* Empty thread: the document it is about, then starters that only fill the
    composer (DESIGN.md, Empty states / Nothing auto-sends). */
@@ -613,7 +613,7 @@
   color: var(--text-primary);
   text-align: left;
   overflow-wrap: anywhere;
-  font: 400 12px/1.35 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.35 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-starter:hover:not(:disabled) { border-color: var(--accent); }
@@ -624,7 +624,7 @@
    fill the composer and never send. */
 .chat-design-follow-ups { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-top: -8px; }
 .chat-design-follow-ups-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.chat-design-follow-ups-label { color: var(--text-secondary); font: 400 11px/1 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+.chat-design-follow-ups-label { color: var(--text-secondary); font: 400 11px/1 'JetBrains Mono', monospace; letter-spacing: .04em; }
 .chat-design-follow-ups-refresh {
   display: inline-flex;
   align-items: center;
@@ -649,7 +649,7 @@
   min-height: 24px;
   padding: 0 2px;
   color: var(--text-secondary);
-  font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-prompt-details-toggle:hover { color: var(--text-primary); }
@@ -665,8 +665,8 @@
   border-radius: 8px;
 }
 .chat-design-prompt-details-body[hidden] { display: none; }
-.chat-design-prompt-details-label { color: var(--text-secondary); font: 400 11px/1 'IBM Plex Mono', monospace; letter-spacing: .04em; }
-.chat-design-prompt-details-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-primary); font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif; }
+.chat-design-prompt-details-label { color: var(--text-secondary); font: 400 11px/1 'JetBrains Mono', monospace; letter-spacing: .04em; }
+.chat-design-prompt-details-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-primary); font: 400 12px/1.4 'Inter', Arial, sans-serif; }
 .chat-design-prompt-details-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .chat-design-prompt-details-actions > button {
   min-height: 24px;
@@ -674,7 +674,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   color: var(--text-primary);
-  font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-prompt-details-actions > button:hover:not(:disabled) { border-color: var(--accent); }
@@ -691,7 +691,7 @@
   padding: 4px 6px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  font: 400 11px/1.3 'JetBrains Mono', monospace;
 }
 .chat-design-param-token > dt { flex: none; color: var(--text-secondary); }
 .chat-design-param-token > dd { min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); }
@@ -710,7 +710,7 @@
   background: var(--bg-surface-elevated);
   box-shadow: var(--elevation-popover);
   color: var(--text-primary);
-  font: 400 11px/16px 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/16px 'Inter', Arial, sans-serif;
   transition: opacity 125ms var(--ease-out), transform 125ms var(--ease-out);
 }
 @starting-style {

@@ -9,8 +9,10 @@ license:
 - foliate-js (vendored subset in src/renderer/features/reader/adapters/foliate/),
   Copyright (c) 2022 John Factotum, MIT License. See that directory's LICENSE
   and VENDOR.md.
-- IBM Plex fonts (src/renderer/features/chat/fonts/), Copyright 2017 IBM Corp.,
-  SIL Open Font License 1.1. See that directory's LICENSE.txt.
+- Inter (Copyright 2016 The Inter Project Authors) and JetBrains Mono
+  (Copyright 2020 The JetBrains Mono Project Authors) fonts
+  (src/renderer/features/chat/fonts/), SIL Open Font License 1.1. See that
+  directory's LICENSE.txt.
 - Demo books shown in website/assets/screens/ are openly licensed works
   credited in website/PROVENANCE.md.
 
