@@ -36,7 +36,7 @@ export function FolderTreeItem({
       <div
         data-testid={`folder-drop-target-${node.id}`}
         {...dropProps}
-        className={`group flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+        className={`group flex items-center justify-between rounded-md px-2 py-1.5 text-base transition-colors ${
           isSelected
             ? 'bg-bg-surface font-semibold text-text-primary'
             : 'text-text-secondary hover:bg-bg-surface hover:text-text-primary'
@@ -71,7 +71,7 @@ export function FolderTreeItem({
             }}
             className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent rounded-sm"
           >
-            <AppIcon name="folder" size={13} className="shrink-0" />
+            <AppIcon name="folder" size={15} className="shrink-0" />
             <span className="truncate">{node.name}</span>
           </button>
         </div>
@@ -79,7 +79,7 @@ export function FolderTreeItem({
           {node.documentCount > 0 && (
             <span
               data-testid={`folder-count-${node.id}`}
-              className="rounded-full bg-border-subtle px-1.5 py-0.2 text-2xs text-text-secondary group-hover:hidden group-focus-within:hidden"
+              className="rounded-full bg-border-subtle px-1.5 py-0.2 text-xs text-text-secondary group-hover:hidden group-focus-within:hidden"
             >
               {node.documentCount}
             </span>

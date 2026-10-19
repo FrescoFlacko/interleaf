@@ -38,9 +38,9 @@ export function LibraryNavItem({
       data-testid={testId}
       {...dropProps}
       onClick={onSelect}
-      className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${activeClass} ${dropClass}`}
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-base font-medium transition-colors ${activeClass} ${dropClass}`}
     >
-      <AppIcon name={icon} className="shrink-0" />
+      <AppIcon name={icon} size={18} className="shrink-0" />
       <span>{label}</span>
     </button>
   );
