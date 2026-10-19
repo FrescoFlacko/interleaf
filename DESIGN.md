@@ -85,15 +85,24 @@ Balance novelty with clarity.
   outline the argument, and — when context is attached — a starter scoped to that
   context. Choosing a starter **fills the composer and focuses it**; it never
   sends.
-- The composer is one card. **Attached context lives inside it**, above the
-  text field, led by an **`@ Add context`** pill and the item count; its
-  page-range popover opens directly above the pill. Removable context chips
-  wrap below, ending with the whole-document toggle, which is the one place
-  that attachment is shown. The tool row below the field holds **one
-  searchable model picker** — model name first, provider second, grouped by
-  ready provider, in a short scrolling list — then web search (only when the
-  provider supports it) and the context-window meter, with a round Send/Stop
-  at the right. The row wraps rather than scrolls.
+- The composer is one card, and the prompt field (three lines or more) is its
+  main surface. **Attached context sits on a one-line shelf docked directly
+  on top of the card**: `Context`, the first attachment's label and `+N` for
+  the rest. Pressing it opens the full list in an anchored, keyboard-reachable
+  popover, where every item is shown whole and can be removed. An attached
+  whole document is shown once, listed first, and removed from that one
+  entry. The context-window meter ends the shelf and is drawn nowhere else.
+  With nothing attached, the shelf appears only while the meter has something
+  truthful to report (*No context attached*, never a fake 0%). Removal is
+  withheld while a turn streams or context is being cleaned, and an archived
+  conversation shows what it read without offering removal.
+- The tool row below the field holds an icon-only **Add context** button
+  (whose popover offers *Entire document*, then a PDF page range), **one
+  searchable model picker** with its reasoning effort (model name first,
+  provider second, grouped by ready provider, in a short scrolling list), web
+  search (only when the provider supports it), and a round Send/Stop at the
+  right. The row wraps rather than scrolls. Only one of these popovers is open
+  at a time, and Escape closes it and returns focus to its trigger.
 - The placeholder changes with the conversation: *Ask about this document…*
   before the first turn, *Ask a follow up…* after it.
 

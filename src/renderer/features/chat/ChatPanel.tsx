@@ -11,7 +11,8 @@ import { locationToAnchor } from '../reader/annotations/dom-anchors';
 import './chat-design.css';
 import { ChatGeneratingNotice, shouldShowGeneratingNotice } from './ChatGeneratingNotice';
 import { ChatComposer } from './ChatComposer';
-import { ChatContextBar } from './ChatContextBar';
+import { ChatAddContextMenu } from './ChatAddContextMenu';
+import { ChatContextShelf } from './ChatContextShelf';
 import { ChatEmptyThread } from './ChatEmptyThread';
 import { ChatErrorNotice } from './ChatErrorNotice';
 import { ChatHeader } from './ChatHeader';
@@ -145,6 +146,7 @@ export function ChatPanel() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
+  const addContextRef = useRef<HTMLButtonElement>(null);
   const prevViewRef = useRef(view);
   // Starters, follow-ups, Retry and Reuse prompt only ever fill the draft.
   const fillComposer = useComposerFill(composerRef, setDraft);
@@ -489,17 +491,27 @@ export function ChatPanel() {
                 sessionPlaceholder: state.composerPlaceholder,
                 hasMessages: state.messages.length > 0,
               })}
-              context={(
-                <ChatContextBar
+              shelf={(
+                <ChatContextShelf
+                  activeSession={activeSession}
+                  contextItems={state.contextItems}
+                  isStreaming={state.isStreaming}
+                  disabled={cleanContextControl.contextMutationsDisabled}
+                  cleanContext={cleanContextWiring}
+                  addContextRef={addContextRef}
+                  removeContext={state.removeContext}
+                />
+              )}
+              addContext={(
+                <ChatAddContextMenu
                   activeDocument={activeDocument}
                   currentPage={currentPage}
                   explicitLocation={explicitLocation}
-                  activeSession={activeSession}
                   contextItems={state.contextItems}
                   disabled={cleanContextControl.contextMutationsDisabled}
+                  triggerRef={addContextRef}
                   addEntireDocument={state.addEntireDocument}
                   addPageRange={state.addPageRange}
-                  removeContext={state.removeContext}
                 />
               )}
               composerRef={composerRef}
@@ -516,9 +528,6 @@ export function ChatPanel() {
               settingsOpen={settingsOpen}
               isStreaming={state.isStreaming}
               canSend={availability.canSend}
-              activeSession={activeSession}
-              contextItems={state.contextItems}
-              cleanContext={cleanContextWiring}
               webSearchSupported={webSearch.supported}
               webSearchEnabled={webSearch.enabled}
               onWebSearchChange={webSearch.setEnabled}

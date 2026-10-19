@@ -1,0 +1,125 @@
+/* Reader Chat's context shelf and Add context control (DESIGN.md, Inline
+ * context). Every selector here is Chat's own; the shared `.companion-composer`
+ * frame that Agent Mode also uses is left exactly as it is. */
+
+/* The shelf, then the composer card it is docked onto. */
+.chat-design-footer > .chat-composer-stack { flex: none; }
+.chat-composer-stack { display: flex; flex-direction: column; min-width: 0; }
+
+/* One line, inset from the card's corners and joined to its top edge, so it
+ * reads as a tab of the composer rather than a second box. */
+.chat-context-shelf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 32px;
+  margin: 0 10px;
+  padding: 2px 4px 2px 2px;
+  border: 1px solid var(--border-subtle);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+}
+.chat-context-shelf[data-budget-level="warning"] { border-color: color-mix(in srgb, var(--warning) 55%, var(--border-subtle)); }
+.chat-context-shelf[data-budget-level="error"] { border-color: color-mix(in srgb, var(--danger) 60%, var(--border-subtle)); }
+
+/* The summary takes the line's spare width; the first label is what gives way,
+ * so the kicker, the count and the caret stay whole at every width. */
+.chat-context-shelf-summary {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  text-align: left;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-context-shelf-summary:hover { background: var(--bg-primary); color: var(--text-primary); }
+}
+.chat-context-shelf-summary[aria-expanded="true"] { background: var(--bg-primary); }
+.chat-context-shelf-kicker { flex: none; font: 500 11px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-context-shelf-label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.chat-context-shelf-label[data-kind="entire_document"],
+.chat-context-shelf-label[data-kind="range"] { color: var(--accent); }
+.chat-context-shelf-label[data-kind="range"] { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+.chat-context-shelf-count { flex: none; font: 400 11px/16px 'IBM Plex Mono', monospace; }
+.chat-context-shelf-caret { flex: none; margin-left: auto; transition: transform var(--dur-fast) var(--ease-out); }
+.chat-context-shelf-summary[aria-expanded="true"] .chat-context-shelf-caret { transform: rotate(180deg); }
+.chat-context-shelf-empty { flex: 1 1 0; min-width: 0; margin: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The context-window wheel sits at the shelf's edge, quieter than a framed
+ * button until it is hovered or open. */
+.chat-context-shelf .chat-design-context-meter { border-color: transparent; background: transparent; }
+@media (hover: hover) and (pointer: fine) {
+  .chat-context-shelf .chat-design-context-meter:hover { border-color: var(--border-subtle); background: var(--bg-primary); }
+}
+.chat-context-shelf .chat-design-context-meter[aria-expanded="true"] { border-color: var(--accent); }
+
+/* Add context leads the tool row: a 28px icon button, the same height as Send. */
+.chat-add-context-trigger {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-add-context-trigger:hover:not(:disabled) { background: var(--bg-surface); color: var(--text-primary); }
+}
+.chat-add-context-trigger[aria-expanded="true"] { background: var(--bg-surface); color: var(--text-primary); }
+
+/* Entire document, the first choice in the Add context popover. */
+.chat-add-context-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+  text-align: left;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-add-context-option:hover:not(:disabled) { background: var(--bg-surface); }
+}
+.chat-add-context-option:disabled { color: var(--text-secondary); }
+.chat-add-context-option-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-add-context-option-note { flex: none; font-size: 11px; color: var(--text-secondary); }
+.chat-context-popover .chat-context-range { padding-top: 8px; border-top: 1px solid var(--border-subtle); }
+
+/* Every attachment, whole and removable, in a bounded scrolling list. */
+.chat-context-manage { gap: 8px; }
+.chat-context-manage-list { display: flex; flex-direction: column; gap: 2px; min-height: 0; max-height: 196px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.chat-context-manage-item { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 28px; padding: 0 2px 0 6px; border-radius: 6px; }
+@media (hover: hover) and (pointer: fine) {
+  .chat-context-manage-item:hover { background: var(--bg-surface); }
+}
+.chat-context-manage-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-context-manage-item[data-kind="entire_document"] .chat-context-manage-label { color: var(--accent); }
+.chat-context-manage-item[data-kind="range"] .chat-context-manage-label { color: var(--accent); font: 400 11px/16px 'IBM Plex Mono', monospace; }
+.chat-context-manage-item > button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-context-manage-item > button:hover:not(:disabled) { background: var(--bg-surface-elevated); color: var(--text-primary); }
+}
+.chat-context-manage-item > button:disabled { opacity: .4; }

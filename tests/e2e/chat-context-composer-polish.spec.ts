@@ -6,10 +6,11 @@ import { chooseChatModel, dismissOnboardingIfOpen, launchInterleaf, stubOpenDial
 import { makePdfFixture } from '../fixtures/document-fixtures';
 
 /**
- * Reader Chat's context row and composer, exercised through the real app.
+ * Reader Chat's context shelf and composer, exercised through the real app.
  *
  * Three things are held here that only the running product can show: the whole
- * document has exactly one control and that control presses both ways, a
+ * document is attached from Add context and then shown once on the shelf,
+ * where it is removed again, a
  * failed turn's words come back to the composer and its only Retry nudge just
  * refills the composer without sending, and the row stays contained when the window is zoomed to
  * 200%.
@@ -32,7 +33,7 @@ test.describe('Reader Chat context controls and composer recovery', () => {
     rmSync(fixtureDir, { recursive: true, force: true });
   });
 
-  test('offers one Entire document toggle, a fill-only Retry nudge, and returns a failed prompt to the composer', async () => {
+  test('attaches the entire document from Add context, shows it once on the shelf, offers a fill-only Retry nudge, and returns a failed prompt to the composer', async () => {
     const pdfPath = join(fixtureDir, 'Chat_Polish_Fixture.pdf');
     writeFileSync(pdfPath, makePdfFixture({
       title: 'Chat Polish Fixture',
@@ -93,18 +94,21 @@ test.describe('Reader Chat context controls and composer recovery', () => {
     const contextBar = chat.getByTestId('chat-context-bar');
     await expect(contextBar).toBeVisible();
 
-    // 1. The whole document has one representation, and it is a toggle.
-    const wholeDocument = contextBar.getByRole('button', { name: 'Entire document' });
-    await expect(wholeDocument).toHaveCount(1);
-    await expect(wholeDocument).toHaveAttribute('aria-pressed', 'false');
-
-    // 2. The Add trigger is the "@ Add context" pill with its specific name.
-    const addTrigger = contextBar.getByRole('button', { name: 'Add pages to AI context' });
+    // 1. Add context is the footer's icon button, named for what it opens.
+    const addTrigger = chat.getByRole('button', { name: 'Add context' });
     await expect(addTrigger).toBeVisible();
-    expect((await addTrigger.innerText()).replace(/\s+/gu, ' ').trim()).toBe('@ Add context');
+    expect((await addTrigger.innerText()).trim()).toBe('');
+    expect(await addTrigger.evaluate((element) => element.closest('.chat-design-controls') !== null)).toBe(true);
+    await expect(contextBar.getByRole('button', { name: 'Entire document' })).toHaveCount(0);
 
+    // 2. Entire document is its first action; attaching it closes the popover.
+    await addTrigger.click();
+    const addPopover = app.window.getByTestId('chat-pages-popover');
+    const wholeDocument = addPopover.getByRole('button', { name: 'Entire document' });
+    await expect(wholeDocument).toBeFocused();
     await wholeDocument.click();
-    await expect(wholeDocument).toHaveAttribute('aria-pressed', 'true');
+    await expect(addPopover).toHaveCount(0);
+    await expect(addTrigger).toBeFocused();
     const sessions = await app.window.evaluate(async (documentId) =>
       window.interleafAPI.chat.listSessions(documentId), fixtureDocument!.id);
     const session = sessions[0];
@@ -114,19 +118,27 @@ test.describe('Reader Chat context controls and composer recovery', () => {
         window.interleafAPI.chat.listContext(sessionId), session!.id);
       return items.filter((item) => item.kind === 'entire_document').length;
     }).toBe(1);
-    // Still exactly one control, and no separate removable chip for the same
-    // attachment.
-    await expect(contextBar.getByRole('button', { name: 'Entire document' })).toHaveCount(1);
-    await expect(contextBar.getByRole('button', { name: /Remove Entire document/ })).toHaveCount(0);
+    // Shown once, on the shelf; Add context now reports it as added.
+    const summary = contextBar.getByTestId('chat-context-summary');
+    await expect(summary).toHaveAccessibleName('Context, 1 item: Entire document');
+    await addTrigger.click();
+    await expect(addPopover.getByRole('button', { name: 'Entire document' })).toBeDisabled();
+    await expect(addPopover.getByRole('button', { name: 'Entire document' })).toHaveAccessibleDescription('Added');
+    await app.window.keyboard.press('Escape');
+    await expect(addPopover).toHaveCount(0);
 
-    // 3. Pressing it again removes the stored item through main.
-    await wholeDocument.click();
-    await expect(wholeDocument).toHaveAttribute('aria-pressed', 'false');
+    // 3. Its one shelf entry removes it through main, and focus lands on Add.
+    await summary.click();
+    const manage = app.window.getByTestId('chat-context-manage');
+    await expect(manage.getByText('Entire document', { exact: true })).toHaveCount(1);
+    await manage.getByRole('button', { name: 'Remove Entire document from AI context' }).click();
     await expect.poll(async () => {
       const items = await app.window.evaluate(async (sessionId) =>
         window.interleafAPI.chat.listContext(sessionId), session!.id);
       return items.filter((item) => item.kind === 'entire_document').length;
     }).toBe(0);
+    await expect(manage).toHaveCount(0);
+    await expect(addTrigger).toBeFocused();
 
     // 4. A successful turn, so the transcript carries a settled answer whose
     //    actions can be inspected for a retry control that must not be there.
@@ -217,11 +229,11 @@ test.describe('Reader Chat context controls and composer recovery', () => {
     expect(zoomed.barRight).toBeLessThanOrEqual(zoomed.panelRight + 1);
     expect(zoomed.sendRight).toBeLessThanOrEqual(zoomed.panelRight + 1);
     expect(zoomed.toolbarOverflowX).toBeLessThanOrEqual(1);
-    // This conversation has no web search and no reported context window, so
-    // the model picker is the whole row. Send is pinned to the
+    // This conversation has no web search, so Add context and the model
+    // picker are the whole row. Send is pinned to the
     // composer's right content edge, leaving the free space between the toolbar
     // and Send while maintaining at least the compact minimum gap without overlap.
-    expect(zoomed.controlCount).toBeGreaterThanOrEqual(1);
+    expect(zoomed.controlCount).toBeGreaterThanOrEqual(2);
     expect(zoomed.lastControlToSendGap).toBeGreaterThanOrEqual(4);
     expect(sendToComposerRightGap).toBeLessThanOrEqual(2);
     expect(sendToComposerRightGap).toBeGreaterThanOrEqual(-1);

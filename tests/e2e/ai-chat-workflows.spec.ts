@@ -102,9 +102,9 @@ test.describe('Phase 7 End-to-End Acceptance Workflows (E, F, G)', () => {
     await askAiButton.click();
     // 5. Prove: Chat panel opens, selected passage becomes context chip, and composer is focused
     await expect(app.window.getByRole('region', { name: 'AI research chat' })).toBeVisible();
-    const contextList = app.window.getByTestId('chat-context-list');
-    await expect(contextList).toBeVisible();
-    await expect(contextList.getByText(/Consensus algorithm passage to highlight/)).toBeVisible();
+    const contextSummary = app.window.getByTestId('chat-context-summary');
+    await expect(contextSummary).toBeVisible();
+    await expect(contextSummary.getByText(/Consensus algorithm passage to highlight/)).toBeVisible();
 
     const composer = app.window.getByLabel('Message Reader AI');
     await expect(composer).toBeFocused();
@@ -255,7 +255,7 @@ test.describe('Phase 7 End-to-End Acceptance Workflows (E, F, G)', () => {
     await expect(composer).toBeEnabled();
 
     // 6. Open the accessible Pages popover and enter page range 42 to 45
-    const pagesTrigger = app.window.getByRole('button', { name: 'Add pages to AI context' });
+    const pagesTrigger = app.window.getByRole('button', { name: 'Add context' });
     await pagesTrigger.click();
     await expect(app.window.getByTestId('chat-pages-popover')).toBeVisible();
     const startInput = app.window.getByLabel('Start page for context');
@@ -268,8 +268,8 @@ test.describe('Phase 7 End-to-End Acceptance Workflows (E, F, G)', () => {
     await expect(pagesTrigger).toBeFocused();
 
     // 7. Verify context chip "Pages 42–45" is displayed
-    const contextList = app.window.getByTestId('chat-context-list');
-    await expect(contextList.getByText('Pages 42–45')).toBeVisible();
+    const contextSummary = app.window.getByTestId('chat-context-summary');
+    await expect(contextSummary.getByText('Pages 42–45')).toBeVisible();
 
     // 8. Send question via UI
     await composer.fill('Summarize consensus protocol across these pages');
@@ -299,7 +299,7 @@ test.describe('Phase 7 End-to-End Acceptance Workflows (E, F, G)', () => {
       return sessions[0]!;
     }, pdfDoc!.id);
 
-    await expect(contextList.getByText('Pages 42–45')).toBeVisible();
+    await expect(contextSummary.getByText('Pages 42–45')).toBeVisible();
     const contextItems = await app.window.evaluate(async (sessionId) =>
       window.interleafAPI.chat.listContext(sessionId),
     activeSession.id);
@@ -337,10 +337,11 @@ test.describe('Phase 7 End-to-End Acceptance Workflows (E, F, G)', () => {
 
     // 13. Explicit removal — and only explicit removal — detaches the range.
     // The already-sent turn keeps its recorded sources afterwards.
-    await contextList
+    await contextSummary.click();
+    await app.window.getByTestId('chat-context-list')
       .getByRole('button', { name: 'Remove Pages 42–45 from AI context' })
       .click();
-    await expect(contextList.getByText('Pages 42–45')).toHaveCount(0);
+    await expect(app.window.getByTestId('chat-context-bar').getByText('Pages 42–45')).toHaveCount(0);
 
     await expect.poll(async () => {
       const items = await app.window.evaluate(async (sessionId) =>

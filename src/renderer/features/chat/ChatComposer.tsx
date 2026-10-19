@@ -1,23 +1,27 @@
 import type { ReactNode, RefObject } from 'react';
-import type { AIProviderId, AIProviderStatus, ChatContextItem, ChatSession, ReasoningEffort } from '@shared/types/ai';
+import type { AIProviderId, AIProviderStatus, ReasoningEffort } from '@shared/types/ai';
 import { usePromptHistory } from '../../hooks/use-prompt-history';
 import { ComposerShell } from '../../components/companion/ComposerShell';
 import { AppIcon } from '../../components/AppIcon';
 import type { ProviderDiscoveryState } from '../../stores/use-chat-store';
-import { ChatContextBudgetMeter } from './ChatContextBudgetMeter';
 import { ChatModelPicker } from './ChatModelPicker';
+import './chat-context-shelf.css';
 import { ChatWebSearchToggle } from './ChatWebSearchControl';
-import type { CleanContextWiring } from './ChatContextBudgetMeter';
 
 type ChatComposerProps = {
   readonly draft: string;
   readonly placeholder: string;
   /**
-   * The context row, painted inside the composer card above the field so what
-   * the next turn reads sits with the words being written (DESIGN.md, Inline
-   * context). Its page-range form is portalled, and stays outside this form.
+   * The context shelf, docked on top of the composer card so what the next
+   * turn reads sits with the words being written (DESIGN.md, Inline context).
+   * It carries the context-window control at its edge.
    */
-  readonly context: ReactNode;
+  readonly shelf: ReactNode;
+  /**
+   * The footer's Add context control. Its popover is portalled, and its
+   * page-range form keeps its submit from reaching this form.
+   */
+  readonly addContext: ReactNode;
   readonly composerRef: RefObject<HTMLTextAreaElement | null>;
   readonly composerDisabled: boolean;
   readonly providers: readonly AIProviderStatus[];
@@ -35,19 +39,6 @@ type ChatComposerProps = {
   readonly settingsOpen: boolean;
   readonly isStreaming: boolean;
   readonly canSend: boolean;
-  /**
-   * The session and pinned context the context-window wheel reports on. The
-   * wheel reads main's accounting for the last request this session sent; it is
-   * given the same inputs the context bar has, and computes nothing itself.
-   */
-  readonly activeSession: ChatSession | null;
-  readonly contextItems: readonly ChatContextItem[];
-  /**
-   * Whether this conversation can be compacted right now, and the request that
-   * would compact it. Passed straight to the context-window panel, where
-   * `Clean Context` is offered; the composer derives nothing from it.
-   */
-  readonly cleanContext: CleanContextWiring;
   /**
    * Whether the bound provider itself declares the hosted web-search path. The
    * control is absent — not merely disabled — for every other provider, so the
@@ -74,15 +65,16 @@ type ChatComposerProps = {
 };
 
 /**
- * One composer card: attached context, then the field, then a quiet tool row —
- * the model picker, web search and the context-window meter —
- * with Send/Stop at its right end. The row wraps rather than scrolls, so no
- * control is ever reachable only through a hidden scrollbar.
+ * The context shelf, then one composer card: the field, then a quiet tool row —
+ * Add context, the model picker and web search — with Send/Stop at its right
+ * end. The row wraps rather than scrolls, so no control is ever reachable only
+ * through a hidden scrollbar.
  */
 export function ChatComposer({
   draft,
   placeholder,
-  context,
+  shelf,
+  addContext,
   composerRef,
   composerDisabled,
   providers,
@@ -97,9 +89,6 @@ export function ChatComposer({
   settingsOpen,
   isStreaming,
   canSend,
-  activeSession,
-  contextItems,
-  cleanContext,
   webSearchSupported,
   webSearchEnabled,
   onWebSearchChange,
@@ -118,80 +107,75 @@ export function ChatComposer({
   });
 
   return (
-    <ComposerShell className="chat-design-composer">
-      {context}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          promptHistory.reset();
-          onSubmit();
-        }}
-        className="chat-design-composer-form"
-      >
-        <label htmlFor="chat-composer" className="sr-only">Message Reader AI</label>
-        <textarea
-          ref={composerRef}
-          id="chat-composer"
-          value={draft}
-          rows={2}
-          maxLength={100_000}
-          disabled={composerDisabled}
-          placeholder={placeholder}
-          onChange={(event) => { onDraftChange(event.target.value); }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-              event.preventDefault();
-              event.currentTarget.form?.requestSubmit();
-              return;
-            }
-            promptHistory.handleKeyDown(event);
+    <div className="chat-composer-stack">
+      {shelf}
+      <ComposerShell className="chat-design-composer">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            promptHistory.reset();
+            onSubmit();
           }}
-          className="chat-design-input"
-        />
-        <div className="chat-design-controls">
-          <ChatModelPicker
-            providers={providers}
-            readyProviders={readyProviders}
-            discovery={providerDiscovery}
-            currentProviderId={currentProviderId}
-            currentModelId={currentModelId}
-            currentReasoningEffort={currentReasoningEffort}
-            currentProviderReady={currentProviderReady}
-            openRouterConfiguredModel={openRouterConfiguredModel}
-            disabled={controlsDisabled}
-            settingsOpen={settingsOpen}
-            onSelectModel={onSelectModel}
-            onOpenProviderSettings={onOpenProviderSettings}
+          className="chat-design-composer-form"
+        >
+          <label htmlFor="chat-composer" className="sr-only">Message Reader AI</label>
+          <textarea
+            ref={composerRef}
+            id="chat-composer"
+            value={draft}
+            rows={3}
+            maxLength={100_000}
+            disabled={composerDisabled}
+            placeholder={placeholder}
+            onChange={(event) => { onDraftChange(event.target.value); }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+                return;
+              }
+              promptHistory.handleKeyDown(event);
+            }}
+            className="chat-design-input"
           />
-          <ChatWebSearchToggle
-            supported={webSearchSupported}
-            enabled={webSearchEnabled}
-            providerReady={currentProviderReady}
-            controlsDisabled={controlsDisabled}
-            onChange={onWebSearchChange}
-          />
-          {/* The meter reports on the conversation rather than on the pending
-            * submission, so it sits with the other per-session controls. */}
-          <ChatContextBudgetMeter
-            activeSession={activeSession}
-            contextItems={contextItems}
-            isStreaming={isStreaming}
-            cleanContext={cleanContext}
-          />
-          {/* Send and Stop are distinct shapes as well as names, never colour alone. */}
-          {isStreaming ? (
-            <button type="button" data-testid="stop-chat-button" aria-label="Stop" title="Stop" onClick={onStop}
-              className="chat-design-send" data-tone="stop">
-              <AppIcon name="stop" size={14} />
-            </button>
-          ) : (
-            <button type="submit" data-testid="send-chat-button" aria-label="Send" title="Send (Enter)" disabled={!canSend}
-              className="chat-design-send">
-              <AppIcon name="send" size={16} />
-            </button>
-          )}
-        </div>
-      </form>
-    </ComposerShell>
+          <div className="chat-design-controls">
+            {addContext}
+            <ChatModelPicker
+              providers={providers}
+              readyProviders={readyProviders}
+              discovery={providerDiscovery}
+              currentProviderId={currentProviderId}
+              currentModelId={currentModelId}
+              currentReasoningEffort={currentReasoningEffort}
+              currentProviderReady={currentProviderReady}
+              openRouterConfiguredModel={openRouterConfiguredModel}
+              disabled={controlsDisabled}
+              settingsOpen={settingsOpen}
+              onSelectModel={onSelectModel}
+              onOpenProviderSettings={onOpenProviderSettings}
+            />
+            <ChatWebSearchToggle
+              supported={webSearchSupported}
+              enabled={webSearchEnabled}
+              providerReady={currentProviderReady}
+              controlsDisabled={controlsDisabled}
+              onChange={onWebSearchChange}
+            />
+            {/* Send and Stop are distinct shapes as well as names, never colour alone. */}
+            {isStreaming ? (
+              <button type="button" data-testid="stop-chat-button" aria-label="Stop" title="Stop" onClick={onStop}
+                className="chat-design-send" data-tone="stop">
+                <AppIcon name="stop" size={14} />
+              </button>
+            ) : (
+              <button type="submit" data-testid="send-chat-button" aria-label="Send" title="Send (Enter)" disabled={!canSend}
+                className="chat-design-send">
+                <AppIcon name="send" size={16} />
+              </button>
+            )}
+          </div>
+        </form>
+      </ComposerShell>
+    </div>
   );
 }

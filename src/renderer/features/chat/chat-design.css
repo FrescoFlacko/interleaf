@@ -373,45 +373,9 @@
    Dismiss control, so that one stays clickable. */
 .chat-design-toast[data-tone="success"] { pointer-events: none; }
 .chat-design-toast[data-tone="error"] { border-color: var(--danger); color: var(--danger); }
-.chat-design-footer > .chat-design-context { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; }
-/* Inside the composer card the context row sits above the field; the card's
-   own gap separates them, so the row adds no trailing margin of its own. */
-.chat-design-composer > .chat-design-context { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.chat-design-composer > .chat-design-context .chat-design-chips { margin-bottom: 0; }
-.chat-design-composer > .chat-design-context .chat-design-chips:empty { display: none; }
 .chat-design-composer-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.chat-design-footer > .chat-design-composer { flex: none; }
-/* The summary carries the "@ Add context" pill first, then the count. Every
- * item keeps its intrinsic width; the count takes the one automatic margin, so
- * it sits at the far end. It is a companion meta line: sentence-case sans 11px. */
-.chat-design-context-summary { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 8px; min-width: 0; font: 400 11px/16px 'IBM Plex Sans', Arial, sans-serif; color: var(--text-secondary); }
-.chat-design-context-summary > span { flex: none; }
-.chat-design-context-summary > .chat-design-context-add + span { margin-left: auto; }
-/* "@ Add context": the pill that leads the context row inside the composer
- * card (DESIGN.md, Inline context). It keeps the 24px minimum target height
- * (WCAG 2.2 SC 2.5.8) and never wraps its short label. */
-.chat-design-context-add {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  color: var(--accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
-  white-space: nowrap;
-}
-.chat-design-context-add-at { font: 500 12px/1 'IBM Plex Mono', monospace; }
-@media (hover: hover) and (pointer: fine) {
-  .chat-design-context-add:hover:not(:disabled) { border-color: var(--accent); }
-}
-.chat-design-context-add[aria-expanded="true"] { border-color: var(--accent); }
-.chat-design-context-add:disabled { opacity: .4; }
-/* Context-window wheel, in the composer's control row with the other
- * session-level controls. The track is always drawn so the control keeps one
+/* Context-window wheel, at the edge of the context shelf (chat-context-shelf.css)
+ * beside what it reports on. The track is always drawn so the control keeps one
  * shape; the value arc appears only when main supplies a real model window, and
  * the accounting that keeps the glance honest lives in the panel it opens. The
  * 26px square matches Send's painted height and clears the 24px minimum target
@@ -505,40 +469,15 @@
   padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
 }
-.chat-design-chips { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; min-height: 0; max-height: 130px; overflow-y: auto; }
-.chat-design-chip { display: flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 8px 4px 8px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif; }
-.chat-design-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The remove target is 20px inside an 11px chip line, pulled back so the chip
- * keeps its height while the × stays easy to hit. */
-.chat-design-chip > button {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin: -4px -6px -4px -2px;
-  border-radius: 6px;
-  color: var(--text-secondary);
-}
-@media (hover: hover) and (pointer: fine) {
-  .chat-design-chip > button:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-surface-elevated); }
-}
-.chat-design-chip > button:disabled { opacity: .4; }
-.chat-design-chip[data-kind="range"] {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  font-family: 'IBM Plex Mono', monospace;
-}
 /* The prompt is readable text, so it follows the companion text-size
-   preference; `min-height` follows it too, or a larger line would be cropped
-   by the one-line resting height. The shorthand keeps the family and weight
-   and hands the size to the scale. */
+   preference, and it is the composer's primary surface: it rests at three
+   lines and grows with what is written. `min-height` follows the scale too, or
+   a larger line would be cropped by the resting height. The shorthand keeps
+   the family and weight and hands the size to the scale. */
 .chat-design-input {
   width: 100%;
-  min-height: calc(19.6px * var(--companion-text-scale, 1));
-  max-height: 140px;
+  min-height: calc(58.8px * var(--companion-text-scale, 1));
+  max-height: 200px;
   resize: none;
   field-sizing: content;
   background: transparent;
@@ -553,8 +492,8 @@
    the `.chat-design button:focus-visible` rule below. */
 .chat-design-input:focus,
 .chat-design-input:focus-visible { outline: none; box-shadow: none; }
-/* The tool row under the field: Add context, the model picker, web search and
-   the meter, with Send at the right end. The picker gives way first, down to
+/* The tool row under the field: Add context, the model picker and web search,
+   with Send at the right end. The picker gives way first, down to
    a short ellipsized name; past that the row wraps instead of scrolling, so
    nothing ever hides behind a scrollbar. */
 .chat-design-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
@@ -640,14 +579,13 @@
   .chat-design-header { padding: 8px 12px 6px; }
   .chat-design-messages { padding: 4px 12px 0; gap: 12px; }
   .chat-design-footer { padding: 8px 12px 10px; }
-  .chat-design-context-summary { margin-bottom: 6px; }
-  .chat-design-chips { max-height: 56px; margin-bottom: 6px; }
-  .chat-design-chips:empty { margin-bottom: 0; }
   .chat-design-composer { padding: 8px; gap: 8px; }
+  .chat-design-input { min-height: calc(39.2px * var(--companion-text-scale, 1)); max-height: 96px; }
 }
 
-/* Add context: portalled and anchored to its pill, like the model picker, so
-   a narrow or zoomed panel shrinks it instead of clipping it. */
+/* Add context and the shelf's attachment list: portalled and anchored to their
+   triggers, like the model picker, so a narrow or zoomed panel shrinks them
+   instead of clipping them. */
 .chat-context-popover { gap: 10px; }
 .chat-context-range { display: flex; flex-direction: column; gap: 6px; }
 .chat-context-range-submit {
