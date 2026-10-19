@@ -245,7 +245,7 @@ test.describe('Saved highlight click-to-edit (real BrowserWindow)', () => {
     await expectEditing(page, saved!.id, 'blue');
     await page.getByTestId(TOOLBAR).getByRole('button', { name: 'Ask AI' }).click();
     await expect(page.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByTestId('chat-context-list')).toContainText(HIGHLIGHTED);
+    await expect(page.getByTestId('chat-context-summary')).toContainText(HIGHLIGHTED);
     await expect(page.locator('#chat-composer')).toBeFocused();
     await expect(page.getByTestId(TOOLBAR)).toHaveCount(0);
     const chat = await page.evaluate(async (documentId) => {

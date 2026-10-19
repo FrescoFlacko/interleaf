@@ -2,8 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import axe from 'axe-core';
-import { ChatContextBar } from '../../src/renderer/features/chat/ChatContextBar';
-import { ChatContextBudgetMeter } from '../../src/renderer/features/chat/ChatContextBudgetMeter';
+import { createRef } from 'react';
+import { ChatAddContextMenu } from '../../src/renderer/features/chat/ChatAddContextMenu';
+import { ChatContextShelf } from '../../src/renderer/features/chat/ChatContextShelf';
 import { cleanContextControlState } from '../../src/renderer/features/chat/clean-context-readiness';
 import { createChatStore, type ChatStore } from '../../src/renderer/stores/use-chat-store';
 import { renderWithChatStore } from '../helpers/chat-store';
@@ -140,7 +141,7 @@ function controlFor(overrides: Overrides) {
 let getContextBudget: Mock;
 let listProviders: Mock;
 
-/** The composer's wheel, with the panel's Clean Context wiring attached. */
+/** The shelf's wheel, with the panel's Clean Context wiring attached. */
 async function openStatsPanel(overrides: Overrides = {}): Promise<{
   cleanContext: Mock;
   panel: HTMLElement;
@@ -149,11 +150,14 @@ async function openStatsPanel(overrides: Overrides = {}): Promise<{
   const cleanContext = overrides.cleanContext ?? vi.fn(() => Promise.resolve(true));
   const activeSession = overrides.activeSession === undefined ? session : overrides.activeSession;
   renderWithChatStore(chat,
-    <ChatContextBudgetMeter
+    <ChatContextShelf
       activeSession={activeSession}
       contextItems={[chip]}
       isStreaming={false}
+      disabled={controlFor(overrides).contextMutationsDisabled}
       cleanContext={{ control: controlFor(overrides), onClean: cleanContext }}
+      addContextRef={createRef<HTMLButtonElement>()}
+      removeContext={vi.fn(() => Promise.resolve())}
     />
   );
   const wheel = await screen.findByTestId('chat-context-budget');
@@ -161,21 +165,40 @@ async function openStatsPanel(overrides: Overrides = {}): Promise<{
   return { cleanContext: cleanContext as Mock, panel: screen.getByTestId('chat-context-budget-popover'), wheel };
 }
 
+/** The context shelf and the footer's Add context control, as the panel wires them. */
 function renderBar(overrides: Overrides = {}): void {
   const activeSession = overrides.activeSession === undefined ? session : overrides.activeSession;
+  const disabled = controlFor(overrides).contextMutationsDisabled;
+  const addContextRef = createRef<HTMLButtonElement>();
   renderWithChatStore(chat,
-    <ChatContextBar
-      activeDocument={activeDocument}
-      currentPage={3}
-      explicitLocation={null}
-      activeSession={activeSession}
-      contextItems={[chip]}
-      disabled={controlFor(overrides).contextMutationsDisabled}
-      addEntireDocument={vi.fn(() => Promise.resolve(true))}
-      addPageRange={vi.fn(() => Promise.resolve(true))}
-      removeContext={vi.fn(() => Promise.resolve())}
-    />
+    <>
+      <ChatContextShelf
+        activeSession={activeSession}
+        contextItems={[chip]}
+        isStreaming={false}
+        disabled={disabled}
+        cleanContext={{ control: controlFor(overrides), onClean: vi.fn(() => Promise.resolve(true)) }}
+        addContextRef={addContextRef}
+        removeContext={vi.fn(() => Promise.resolve())}
+      />
+      <ChatAddContextMenu
+        activeDocument={activeDocument}
+        currentPage={3}
+        explicitLocation={null}
+        contextItems={[chip]}
+        disabled={disabled}
+        triggerRef={addContextRef}
+        addEntireDocument={vi.fn(() => Promise.resolve(true))}
+        addPageRange={vi.fn(() => Promise.resolve(true))}
+      />
+    </>
   );
+}
+
+/** Opens a popover from its trigger and returns it. */
+function openFrom(triggerTestId: string, popoverTestId: string): HTMLElement {
+  act(() => { screen.getByTestId(triggerTestId).click(); });
+  return screen.getByTestId(popoverTestId);
 }
 
 describe('Clean Context control', () => {
@@ -192,15 +215,19 @@ describe('Clean Context control', () => {
     cleanup();
   });
 
-  it('is gone from the attached-context row, which keeps only what it names', () => {
+  it('is gone from the context shelf, which keeps only what it names and the wheel', async () => {
     renderBar();
     const bar = screen.getByTestId('chat-context-bar');
     expect(within(bar).queryByTestId('chat-clean-context-trigger')).toBeNull();
     expect(bar.textContent).not.toContain('Clean Context');
     const summary = screen.getByTestId('chat-context-summary');
-    expect(summary.textContent).toContain('Context ·');
-    expect(summary.textContent).toContain('1 item');
-    expect(within(summary).getByTestId('chat-pages-trigger')).toBeEnabled();
+    expect(summary).toHaveAccessibleName(`Context, 1 item: ${chip.displayLabel}`);
+    expect(summary.textContent).toContain(chip.displayLabel);
+    // Compaction is reached through the wheel at the shelf's edge, not a button of its own.
+    expect(await within(bar).findByTestId('chat-context-budget')).toBeTruthy();
+    // Adding context lives with the field, outside the shelf.
+    expect(within(bar).queryByTestId('chat-pages-trigger')).toBeNull();
+    expect(screen.getByTestId('chat-pages-trigger')).toBeEnabled();
   });
 
   it('is offered in the context-window panel as a text-only button named Clean Context', async () => {
@@ -326,22 +353,27 @@ describe('Clean Context control', () => {
     expect(cleanContext).toHaveBeenCalledTimes(1);
   });
 
-  it('renders nothing at all with neither figures nor a compaction to offer', async () => {
+  it('renders no wheel at all with neither figures nor a compaction to offer', async () => {
     getContextBudget.mockResolvedValue(null);
     renderWithChatStore(chat,
-      <ChatContextBudgetMeter
+      <ChatContextShelf
         activeSession={{ ...session, isArchived: true }}
         contextItems={[chip]}
         isStreaming={false}
+        disabled
         cleanContext={{
           control: controlFor({ activeSession: { ...session, isArchived: true } }),
           onClean: vi.fn(() => Promise.resolve(true)),
         }}
+        addContextRef={createRef<HTMLButtonElement>()}
+        removeContext={vi.fn(() => Promise.resolve())}
       />
     );
     await waitFor(() => { expect(getContextBudget).toHaveBeenCalled(); });
     expect(screen.queryByTestId('chat-context-budget')).toBeNull();
     expect(screen.queryByTestId('chat-clean-context-trigger')).toBeNull();
+    // The attachment is still named; only the claim about the window is absent.
+    expect(screen.getByTestId('chat-context-summary')).toHaveTextContent(chip.displayLabel);
   });
 
   it('shows the in-progress state and refuses a second run', async () => {
@@ -402,17 +434,20 @@ describe('Clean Context control', () => {
 
   it('withholds every context mutation of this conversation while it is cleaning', () => {
     // Main refuses all three while a compaction runs, and the commit clears the
-    // chips itself, so the bar must not offer them either.
+    // chips itself, so neither the shelf nor Add context may offer them.
     renderBar({ isCleaningContext: true });
     expect(screen.getByTestId('chat-pages-trigger')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Entire document' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: `Remove ${chip.displayLabel} from AI context` })).toBeDisabled();
+    // What is attached can still be read while it runs; it just cannot be changed.
+    const list = openFrom('chat-context-summary', 'chat-context-manage');
+    expect(within(list).getByRole('button', { name: `Remove ${chip.displayLabel} from AI context` })).toBeDisabled();
     cleanup();
 
     // And offers them again as soon as it is not.
     renderBar();
     expect(screen.getByTestId('chat-pages-trigger')).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Entire document' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: `Remove ${chip.displayLabel} from AI context` })).toBeEnabled();
+    const menu = openFrom('chat-pages-trigger', 'chat-pages-popover');
+    expect(within(menu).getByRole('button', { name: 'Entire document' })).toBeEnabled();
+    act(() => { screen.getByTestId('chat-context-summary').click(); });
+    expect(within(screen.getByTestId('chat-context-manage')).getByRole('button', { name: `Remove ${chip.displayLabel} from AI context` })).toBeEnabled();
   });
 });

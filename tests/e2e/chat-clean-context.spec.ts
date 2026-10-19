@@ -67,8 +67,8 @@ test.describe('Chat Clean Context and persistent attached context', () => {
     const budgetWheel = chat.getByTestId('chat-context-budget');
     const statsPanel = app.window.getByTestId('chat-context-budget-popover');
     const cleanTrigger = app.window.getByTestId('chat-clean-context-trigger');
-    // Compaction is offered in the context-window panel, never in the
-    // attached-context row.
+    // Compaction is offered in the context-window panel the shelf's wheel
+    // opens, never on the shelf line itself.
     await expect(contextBar.getByTestId('chat-clean-context-trigger')).toHaveCount(0);
     await expect(contextBar).not.toContainText('Clean Context');
     // Nothing has been packed yet, so the panel has no figures to show and says
@@ -85,7 +85,7 @@ test.describe('Chat Clean Context and persistent attached context', () => {
     await app.window.keyboard.press('Escape');
     await expect(statsPanel).toHaveCount(0);
 
-    await chat.getByRole('button', { name: 'Add pages to AI context' }).click();
+    await chat.getByRole('button', { name: 'Add context' }).click();
     await app.window.getByLabel('Start page for context').fill('1');
     await app.window.getByLabel('End page for context').fill('2');
     await app.window.getByRole('button', { name: 'Add range' }).click();
@@ -145,7 +145,7 @@ test.describe('Chat Clean Context and persistent attached context', () => {
     await expect.poll(async () => app.window.evaluate(async (sessionId) =>
       (await window.interleafAPI.chat.listContext(sessionId)).length, session!.id)).toBe(0);
     await expect(contextBar.getByText('Pages 1–2')).toHaveCount(0);
-    await expect(contextBar).toContainText('0 items');
+    await expect(contextBar.getByTestId('chat-context-summary')).toHaveText('No context attached');
     // Compaction, not deletion: every message is still on screen.
     await expect(chat.getByText('What does quorum replication require?')).toBeVisible();
     await expect(chat.getByText('And how does leader election relate?')).toBeVisible();

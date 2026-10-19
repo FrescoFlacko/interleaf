@@ -65,7 +65,7 @@ test.describe('Defect 23: TOC section context menu', () => {
 
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
-    await expect(chat.getByTestId('chat-context-list')).toContainText('Pages 1–3');
+    await expect(chat.getByTestId('chat-context-summary')).toContainText('Pages 1–3');
     const [session] = await app.window.evaluate(async (documentId) => window.interleafAPI.chat.listSessions(documentId), documentId);
     expect(session).toBeDefined();
     const contextItems = await app.window.evaluate(async (sessionId) => window.interleafAPI.chat.listContext(sessionId), session!.id);

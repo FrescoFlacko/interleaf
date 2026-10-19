@@ -3,17 +3,20 @@ import { createRef } from 'react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import type { AIProviderStatus, ChatContextItem, ChatSession } from '@shared/types/ai';
 import type { DocumentMetadata } from '@shared/types/document';
 import { ChatComposer } from '../../src/renderer/features/chat/ChatComposer';
-import { ChatContextBar } from '../../src/renderer/features/chat/ChatContextBar';
+import { ChatAddContextMenu } from '../../src/renderer/features/chat/ChatAddContextMenu';
+import { ChatContextShelf } from '../../src/renderer/features/chat/ChatContextShelf';
 import { createChatStore, type ChatStore } from '../../src/renderer/stores/use-chat-store';
 import { renderWithChatStore } from '../helpers/chat-store';
+import { stubBridge } from '../helpers/interleaf-api';
 
 let chat: ChatStore;
 beforeEach(() => {
   chat = createChatStore();
+  stubBridge({ chat: { getContextBudget: vi.fn(() => Promise.resolve(null)) } });
 });
 afterEach(() => {
   chat.dispose();
@@ -22,11 +25,11 @@ afterEach(() => {
 /**
  * The composer with several page ranges attached.
  *
- * Reported symptom: once a handful of page chips are pinned, the controls under
- * them stop lining up. Two causes are covered here — the chip row has to wrap
- * and bound itself rather than push the panel sideways, and the control row has
- * to give each control its own intrinsic width rather than reserve a slot that
- * paints one of them wider than its label.
+ * Reported symptom: once a handful of page chips were pinned, the controls under
+ * them stopped lining up. The shelf now keeps any number of attachments to one
+ * line — the first and a count — with the full list in a bounded popover, and
+ * the control row still gives each control its own intrinsic width rather than
+ * reserving a slot that paints one of them wider than its label.
  *
  * jsdom does no layout, so these assertions hold the rules and the structure
  * that produce the layout; the pixels are checked in the real window by
@@ -37,11 +40,15 @@ const chatStylesheet = readFileSync(
   resolve(__dirname, '../../src/renderer/features/chat/chat-design.css'),
   'utf8'
 );
+const shelfStylesheet = readFileSync(
+  resolve(__dirname, '../../src/renderer/features/chat/chat-context-shelf.css'),
+  'utf8'
+);
 
 /** The declarations of a rule, whitespace collapsed. */
-function rule(selector: string): string {
+function rule(selector: string, stylesheet = chatStylesheet): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-  const body = new RegExp(`(?:^|\\}|\\*/)\\s*${escaped}\\s*\\{([^}]*)\\}`, 'u').exec(chatStylesheet)?.[1];
+  const body = new RegExp(`(?:^|\\}|\\*/)\\s*${escaped}\\s*\\{([^}]*)\\}`, 'u').exec(stylesheet)?.[1];
   expect(body, `expected a rule for ${selector}`).toBeDefined();
   return (body ?? '').replace(/\s+/gu, ' ').trim();
 }
@@ -124,6 +131,7 @@ const shortNameProvider: AIProviderStatus = {
 };
 
 function renderComposerWithContext(): void {
+  const addContextRef = createRef<HTMLButtonElement>();
   renderWithChatStore(chat,
     <ChatComposer
       draft=""
@@ -142,12 +150,6 @@ function renderComposerWithContext(): void {
       settingsOpen={false}
       isStreaming={false}
       canSend
-      activeSession={session}
-      contextItems={pageRanges}
-      cleanContext={{
-        control: { present: true, canClean: false, isCleaning: false, contextMutationsDisabled: false, target: 'the current provider' },
-        onClean: vi.fn(() => Promise.resolve(false)),
-      }}
       webSearchSupported={false}
       webSearchEnabled={false}
       onWebSearchChange={vi.fn()}
@@ -158,17 +160,30 @@ function renderComposerWithContext(): void {
       onSelectModel={vi.fn()}
       onOpenProviderSettings={vi.fn()}
       onStop={vi.fn()}
-      context={(
-        <ChatContextBar
+      shelf={(
+        <ChatContextShelf
+          activeSession={session}
+          contextItems={pageRanges}
+          isStreaming={false}
+          disabled={false}
+          cleanContext={{
+            control: { present: true, canClean: false, isCleaning: false, contextMutationsDisabled: false, target: 'the current provider' },
+            onClean: vi.fn(() => Promise.resolve(false)),
+          }}
+          addContextRef={addContextRef}
+          removeContext={vi.fn(() => Promise.resolve())}
+        />
+      )}
+      addContext={(
+        <ChatAddContextMenu
           activeDocument={activeDocument}
           currentPage={12}
           explicitLocation={null}
-          activeSession={session}
           contextItems={pageRanges}
           disabled={false}
+          triggerRef={addContextRef}
           addEntireDocument={vi.fn(() => Promise.resolve(true))}
           addPageRange={vi.fn(() => Promise.resolve(true))}
-          removeContext={vi.fn(() => Promise.resolve())}
         />
       )}
     />
@@ -178,28 +193,31 @@ function renderComposerWithContext(): void {
 describe('chat composer with several attached page contexts', () => {
   afterEach(() => { cleanup(); });
 
-  it('keeps every chip in one wrapping, bounded row', () => {
+  it('keeps every attachment to one shelf line, with the whole list bounded on demand', () => {
     renderComposerWithContext();
-    const list = screen.getByTestId('chat-context-list');
-    expect(screen.getByTestId('chat-context-summary')).toHaveTextContent('Context · 6 items');
-    // The context row sits inside the composer card, above the field.
-    expect(screen.getByTestId('chat-context-bar').nextElementSibling?.querySelector('#chat-composer')).not.toBeNull();
+    const bar = screen.getByTestId('chat-context-bar');
+    const summary = screen.getByTestId('chat-context-summary');
+    expect(summary).toHaveAccessibleName('Context, 6 items: Pages 12–14');
+    expect(summary.querySelector('.chat-context-shelf-count')).toHaveTextContent('+5');
+    // The shelf is docked directly on top of the composer card, above the field.
+    expect(bar.nextElementSibling?.querySelector('#chat-composer')).not.toBeNull();
+    // One line however many are attached: the label gives way, nothing wraps.
+    expect(rule('.chat-context-shelf-label', shelfStylesheet)).toContain('white-space: nowrap');
+    expect(rule('.chat-context-shelf-label', shelfStylesheet)).toContain('text-overflow: ellipsis');
 
-    // All six are present and removable: none is dropped or clipped away by
-    // count, and the row grows downward into its own scroll instead.
+    // All six are present and removable in the list: none is dropped by count,
+    // and the list grows downward into its own scroll instead.
+    fireEvent.click(summary);
+    const list = screen.getByTestId('chat-context-list');
     for (const item of pageRanges) {
       expect(within(list).getByTitle(item.displayLabel)).toBeInTheDocument();
       expect(within(list).getByRole('button', { name: `Remove ${item.displayLabel} from AI context` })).toBeInTheDocument();
     }
-    expect(list).toHaveAttribute('data-context-list-layout', 'wrapping-chips');
-
-    const chips = rule('.chat-design-chips');
-    expect(chips).toContain('flex-wrap: wrap');
-    expect(chips).toContain('max-height: 130px');
-    expect(chips).toContain('overflow-y: auto');
+    const listRule = rule('.chat-context-manage-list', shelfStylesheet);
+    expect(listRule).toContain('max-height: 196px');
+    expect(listRule).toContain('overflow-y: auto');
     // Never sideways: a horizontal scroller here would hide attached context.
-    expect(chips).not.toContain('overflow-x');
-    expect(chips).not.toContain('nowrap');
+    expect(listRule).not.toContain('overflow-x');
   });
 
   it('wraps the tool row instead of scrolling it, with Send pinned right', () => {
@@ -209,8 +227,11 @@ describe('chat composer with several attached page contexts', () => {
     const row = picker.parentElement!;
     expect(row.className).toBe('chat-design-controls');
     expect(Array.from(row.children).map((child) => child.getAttribute('data-testid'))).toEqual([
-      'chat-model-picker', 'chat-context-budget', 'send-chat-button',
+      'chat-pages-trigger', 'chat-model-picker', 'send-chat-button',
     ]);
+    // The context-window wheel is the shelf's, not the tool row's.
+    expect(within(screen.getByTestId('chat-context-bar')).getByTestId('chat-context-budget')).toBeInTheDocument();
+    expect(screen.getAllByTestId('chat-context-budget')).toHaveLength(1);
 
     // A wrapping row: nothing reachable only through a hidden scrollbar.
     const controls = rule('.chat-design-controls');

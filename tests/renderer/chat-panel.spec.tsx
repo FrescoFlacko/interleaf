@@ -406,12 +406,14 @@ describe('ChatPanel', () => {
     expect(screen.queryByTestId('active-session-binding')).toBeNull();
     expect(screen.queryByTestId('active-session-title')).toBeNull();
 
+    // Attached context is one shelf line docked on the composer, its list
+    // opened on demand; the model picker stays in the footer below the field.
     const contextBar = screen.getByTestId('chat-context-bar');
-    const contextList = screen.getByTestId('chat-context-list');
-    expect(contextBar).toHaveAttribute('data-context-layout', 'wrapping-chips');
-    expect(contextBar).toHaveTextContent('Context · 1 item');
-    expect(contextList).toHaveAttribute('data-context-list-layout', 'wrapping-chips');
-    expect(contextList).toHaveClass('chat-design-chips');
+    expect(contextBar).toHaveAttribute('data-context-layout', 'shelf');
+    expect(screen.getByTestId('chat-context-summary')).toHaveAccessibleName('Context, 1 item: “Quorum consensus is guaranteed”');
+    expect(screen.queryByTestId('chat-context-list')).toBeNull();
+    expect(document.querySelector('.chat-design-controls')?.contains(screen.getByTestId('chat-model-picker'))).toBe(true);
+    expect(contextBar.compareDocumentPosition(screen.getByLabelText('Message Reader AI')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await waitFor(() => {
       expect(screen.getByText(/Quorum consensus is guaranteed by majority overlap/i)).toBeTruthy();
     });
@@ -975,7 +977,8 @@ describe('ChatPanel', () => {
 
   it('adds entire document and page range to context', async () => {
     renderWithChatStore(chat, <ChatPanel />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Add pages to AI context' }));
+    const trigger = await screen.findByRole('button', { name: 'Add context' });
+    fireEvent.click(trigger);
     fireEvent.click(await screen.findByRole('button', { name: 'Entire document' }));
     await waitFor(() => {
       expect(attachContext).toHaveBeenCalledWith(
@@ -984,8 +987,10 @@ describe('ChatPanel', () => {
         })
       );
     });
+    // Attaching it closes the popover; the range is one reopen away.
+    await waitFor(() => { expect(screen.queryByTestId('chat-pages-popover')).toBeNull(); });
 
-    // The popover stays open after the toggle, so the range is right there.
+    fireEvent.click(trigger);
     fireEvent.change(screen.getByLabelText('Start page for context'), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText('End page for context'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add range' }));
@@ -1001,10 +1006,10 @@ describe('ChatPanel', () => {
   it('validates reversed and out-of-bounds page ranges without sending chat actions', async () => {
     renderWithChatStore(chat, <ChatPanel />);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Add pages to AI context' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Add context' })).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pages to AI context' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add context' }));
     fireEvent.change(screen.getByLabelText('Start page for context'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('End page for context'), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add range' }));
@@ -1012,7 +1017,7 @@ describe('ChatPanel', () => {
     expect(attachContext).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add pages to AI context' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add context' }));
     fireEvent.change(screen.getByLabelText('Start page for context'), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText('End page for context'), { target: { value: '11' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add range' }));
@@ -1024,11 +1029,11 @@ describe('ChatPanel', () => {
 
   it('opens the Pages popover with keyboard semantics and returns focus on Escape or outside click', async () => {
     const { container } = renderWithChatStore(chat, <ChatPanel />);
-    const trigger = await screen.findByRole('button', { name: 'Add pages to AI context' });
+    const trigger = await screen.findByRole('button', { name: 'Add context' });
     trigger.focus();
     fireEvent.click(trigger);
     await waitFor(() => expect(screen.getByTestId('chat-pages-popover')).toBeVisible());
-    expect(screen.getByLabelText('Start page for context')).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Entire document' })).toHaveFocus();
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
     const results = await axe.run(container, {
@@ -1049,7 +1054,7 @@ describe('ChatPanel', () => {
 
   it('revalidates when the document page count changes and keeps duplicate range pins distinct', async () => {
     renderWithChatStore(chat, <ChatPanel />);
-    const trigger = await screen.findByRole('button', { name: 'Add pages to AI context' });
+    const trigger = await screen.findByRole('button', { name: 'Add context' });
     fireEvent.click(trigger);
     fireEvent.change(screen.getByLabelText('Start page for context'), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText('End page for context'), { target: { value: '4' } });
@@ -1079,7 +1084,8 @@ describe('ChatPanel', () => {
     await waitFor(() => {
       expect(attachContext).toHaveBeenCalledTimes(2);
     });
-    expect(screen.getAllByRole('button', { name: /Remove Context range from AI context/ })).toHaveLength(2);
+    fireEvent.click(screen.getByTestId('chat-context-summary'));
+    expect(await screen.findAllByRole('button', { name: /Remove Context range from AI context/ })).toHaveLength(2);
   });
 
   const reflowContextCases = [
@@ -1096,7 +1102,6 @@ describe('ChatPanel', () => {
     renderWithChatStore(chat, <ChatPanel />);
     // Without pages, Add context offers no page range.
     fireEvent.click(await screen.findByRole('button', { name: 'Add context' }));
-    expect(screen.queryByRole('button', { name: 'Add pages to AI context' })).toBeNull();
     expect(screen.queryByLabelText('Start page for context')).toBeNull();
     fireEvent.click(await screen.findByRole('button', { name: 'Entire document' }));
     await waitFor(() => {
@@ -1106,7 +1111,7 @@ describe('ChatPanel', () => {
     });
   });
 
-  it('keeps twenty pinned items in a wrapping list with reachable remove controls', async () => {
+  it('keeps twenty pinned items to one shelf line, with every remove control in its list', async () => {
     const manyContextItems = Array.from({ length: 20 }, (_, index) => ({
       ...sampleContext,
       id: `ctx-many-${String(index)}`,
@@ -1114,22 +1119,18 @@ describe('ChatPanel', () => {
     }));
     listContext.mockResolvedValueOnce(manyContextItems);
     renderWithChatStore(chat, <ChatPanel />);
-    await waitFor(() => {
-      expect(screen.getAllByRole('button', { name: /Remove Pages \d+–\d+ from AI context/ })).toHaveLength(20);
-    });
-    const contextBar = screen.getByTestId('chat-context-bar');
-    expect(contextBar).toHaveAttribute('data-context-layout', 'wrapping-chips');
-    expect(screen.getByTestId('chat-context-summary')).toHaveTextContent('Context · 20 items');
-    expect(screen.getByTestId('chat-context-list')).toHaveClass('chat-design-chips');
+    const summary = await screen.findByRole('button', { name: 'Context, 20 items: Pages 1–1' });
+    expect(summary.querySelector('.chat-context-shelf-count')).toHaveTextContent('+19');
+    expect(screen.getByTestId('chat-context-bar')).toHaveAttribute('data-context-layout', 'shelf');
+    fireEvent.click(summary);
+    const list = await screen.findByTestId('chat-context-list');
+    expect(within(list).getAllByRole('button', { name: /Remove Pages \d+–\d+ from AI context/ })).toHaveLength(20);
   });
 
   it('removes context item when remove button is clicked', async () => {
     renderWithChatStore(chat, <ChatPanel />);
-    await waitFor(() => {
-      expect(screen.getByText('“Quorum consensus is guaranteed”')).toBeTruthy();
-    });
-
-    const removeBtn = screen.getByRole('button', {
+    fireEvent.click(await screen.findByRole('button', { name: 'Context, 1 item: “Quorum consensus is guaranteed”' }));
+    const removeBtn = await screen.findByRole('button', {
       name: 'Remove “Quorum consensus is guaranteed” from AI context',
     });
     fireEvent.click(removeBtn);
@@ -1442,23 +1443,22 @@ describe('ChatPanel', () => {
     expect(screen.queryByText('Generating response…')).toBeNull();
   });
 
-  it('puts the context-window meter in the tool row, before Send', async () => {
+  it('puts the context-window meter once, at the shelf edge, and leaves the footer to Add, model and Send', async () => {
     renderWithChatStore(chat, <ChatPanel />);
     const meter = await screen.findByTestId('chat-context-budget');
     const send = screen.getByTestId('send-chat-button');
     const toolRow = document.querySelector('.chat-design-controls')!;
 
-    // The meter reports on the conversation, so it sits in the tool row under
-    // the prompt field with the picker, ahead of Send, which ends the row.
-    expect(toolRow.contains(meter)).toBe(true);
+    // The meter reports on what the next turn reads, so it ends the shelf line
+    // above the field, drawn exactly once.
+    expect(screen.getAllByTestId('chat-context-budget')).toHaveLength(1);
+    expect(screen.getByTestId('chat-context-bar').lastElementChild).toBe(meter);
+    expect(toolRow.contains(meter)).toBe(false);
+    // The footer: Add context first, the model picker with its effort, Send last.
+    expect(toolRow.firstElementChild).toBe(screen.getByTestId('chat-pages-trigger'));
     expect(toolRow.contains(screen.getByTestId('chat-model-picker'))).toBe(true);
     expect(toolRow.lastElementChild).toBe(send);
-    expect(meter.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    // It is the context window, not the attached-context chips: those keep
-    // their own bar above the composer.
-    expect(meter.closest('[data-testid="chat-context-bar"]')).toBeNull();
-    // Reachable from the keyboard in that group.
+    // Reachable from the keyboard.
     expect(meter.tagName).toBe('BUTTON');
     expect(meter).not.toHaveAttribute('tabindex', '-1');
   });

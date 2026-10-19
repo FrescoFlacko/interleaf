@@ -1,8 +1,8 @@
 import { expect, type Locator } from '@playwright/test';
 
 /**
- * Geometry of the chat composer and the attached-context row above it, read
- * from the real window.
+ * Geometry of the chat composer and the context shelf docked on it, read from
+ * the real window.
  *
  * The reported defect is a layout one — with several page contexts pinned, the
  * composer's controls stop lining up — so the evidence has to come from a
@@ -30,10 +30,14 @@ type ComposerAlignment = {
   };
   readonly panelOverflowX: number;
   readonly composerOverflowX: number;
-  readonly chipRows: number;
-  readonly chipCount: number;
-  readonly chipsOutside: number;
-  readonly chipsClipped: number;
+  /** The shelf's height: one line, however many items are attached. */
+  readonly shelfHeight: number;
+  /** The shelf hangs past the composer card it is docked on. */
+  readonly shelfOutside: boolean;
+  /** The shelf is not directly on top of the card. */
+  readonly shelfGap: number;
+  /** Shelf parts that must stay whole — the kicker, `+N`, the wheel — that are cut off. */
+  readonly shelfPartsClipped: readonly string[];
   readonly toolbarControls: readonly {
     readonly label: string;
     /** Width the wrapper paints beyond the control it holds. */
@@ -61,17 +65,19 @@ export async function measureComposerAlignment(region: Locator): Promise<Compose
   return region.evaluate((root: HTMLElement) => {
     const panel = root.closest<HTMLElement>('[data-testid="companion-panel"], [data-testid="compact-drawer-right"]') ?? root;
     const composer = root.querySelector<HTMLElement>('.chat-design-composer');
-    const list = root.querySelector<HTMLElement>('[data-testid="chat-context-list"]');
+    const shelf = root.querySelector<HTMLElement>('[data-testid="chat-context-bar"]');
     const toolbar = root.querySelector<HTMLElement>('.chat-design-controls');
     const send = root.querySelector<HTMLElement>('[data-testid="send-chat-button"]');
-    if (!composer || !list || !toolbar || !send) {
-      throw new Error('The chat composer and its context row were not both mounted in this region.');
+    if (!composer || !shelf || !toolbar || !send) {
+      throw new Error('The chat composer and its context shelf were not both mounted in this region.');
     }
     const panelRect = panel.getBoundingClientRect();
     const composerRect = composer.getBoundingClientRect();
-    const listRect = list.getBoundingClientRect();
+    const shelfRect = shelf.getBoundingClientRect();
     const sendRect = send.getBoundingClientRect();
-    const chips = [...list.querySelectorAll<HTMLElement>('.chat-design-chip')];
+    const wholeParts = [...shelf.querySelectorAll<HTMLElement>(
+      '.chat-context-shelf-kicker, .chat-context-shelf-count, [data-testid="chat-context-budget"]'
+    )];
     // The tool row ends with Send, which is measured on its own below.
     const controls = [...toolbar.children].filter((child): child is HTMLElement => child instanceof HTMLElement && child !== send);
     const rects = controls.map((control) => control.getBoundingClientRect());
@@ -85,14 +91,15 @@ export async function measureComposerAlignment(region: Locator): Promise<Compose
       },
       panelOverflowX: panel.scrollWidth - panel.clientWidth,
       composerOverflowX: composer.scrollWidth - composer.clientWidth,
-      // Wrapped rather than scrolled sideways: distinct top edges are rows.
-      chipRows: new Set(chips.map((chip) => Math.round(chip.getBoundingClientRect().top))).size,
-      chipCount: chips.length,
-      chipsOutside: chips.filter((chip) => {
-        const rect = chip.getBoundingClientRect();
-        return rect.right > listRect.right + 1 || rect.left < listRect.left - 1;
-      }).length,
-      chipsClipped: chips.filter((chip) => chip.getBoundingClientRect().height < 8).length,
+      shelfHeight: shelfRect.height,
+      // Either side of the shelf more than a pixel past the card's.
+      shelfOutside: Math.min(shelfRect.left - composerRect.left, composerRect.right - shelfRect.right) < -1,
+      shelfGap: composerRect.top - shelfRect.bottom,
+      shelfPartsClipped: wholeParts.filter((part) => {
+        const rect = part.getBoundingClientRect();
+        return rect.width < 1 || rect.left < shelfRect.left - 1 || rect.right > shelfRect.right + 1
+          || part.scrollWidth > part.clientWidth + 1;
+      }).map((part) => part.className || (part.getAttribute('data-testid') ?? 'shelf part')),
       toolbarControls: controls.map((control, index) => {
         const rect = rects[index]!;
         // A wrapper around a control must be exactly as wide as the control; an
@@ -156,9 +163,12 @@ export function expectComposerAligned(metrics: ComposerAlignment, label: string)
 
   expect(metrics.panelOverflowX, `${label}: the companion panel must not overflow sideways`).toBeLessThanOrEqual(1);
   expect(metrics.composerOverflowX, `${label}: the composer must not overflow sideways`).toBeLessThanOrEqual(1);
-  expect(metrics.chipRows, `${label}: the chips must wrap onto more than one row`).toBeGreaterThan(1);
-  expect(metrics.chipsOutside, `${label}: no chip may hang outside its row`).toBe(0);
-  expect(metrics.chipsClipped, `${label}: no chip may be collapsed to nothing`).toBe(0);
+  // One line however many are attached; the 32px line may grow with zoom-scaled
+  // text but never wraps to a second row.
+  expect(metrics.shelfHeight, `${label}: the context shelf must be one line`).toBeLessThanOrEqual(44);
+  expect(metrics.shelfOutside, `${label}: the shelf must not hang past the composer`).toBe(false);
+  expect(Math.abs(metrics.shelfGap), `${label}: the shelf must be docked on the composer`).toBeLessThanOrEqual(1);
+  expect(metrics.shelfPartsClipped, `${label}: the shelf's kicker, count and wheel must stay whole`).toEqual([]);
 
   const [first, ...rest] = metrics.toolbarControls;
   expect(first, `${label}: the control row must hold controls`).toBeDefined();
