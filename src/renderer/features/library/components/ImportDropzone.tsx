@@ -43,6 +43,12 @@ export function ImportDropzone({
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
+    // A second import is never started beside one already running.
+    if (isImporting) {
+      e.dataTransfer.dropEffect = 'none';
+      setIsDragOver(false);
+      return;
+    }
     setIsDragOver(true);
   }
 
@@ -59,7 +65,7 @@ export function ImportDropzone({
     e.stopPropagation();
     setIsDragOver(false);
 
-    if (e.dataTransfer.files.length > 0) {
+    if (!isImporting && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
       onImportDroppedFiles(files, storageMode);
     }

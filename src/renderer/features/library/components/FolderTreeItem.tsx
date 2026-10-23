@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FolderTree, Folder } from '@shared/types/document';
 import { AppIcon } from '../../../components/AppIcon';
-import { useDocumentDropTarget } from '../use-document-drag';
+import { useLibraryDropTarget, type FileDropHandler } from '../use-file-drop';
 
 type FolderTreeItemProps = {
   readonly node: FolderTree;
@@ -13,6 +13,8 @@ type FolderTreeItemProps = {
   readonly onDelete: (folder: Folder) => void;
   /** Accepts a book dropped on this folder. */
   readonly onDropDocument: (documentId: string, folderId: string) => void;
+  /** Imports files from the system dropped on this folder into it. */
+  readonly fileDrop?: FileDropHandler<string> | undefined;
 };
 
 export function FolderTreeItem({
@@ -24,9 +26,10 @@ export function FolderTreeItem({
   onRename,
   onDelete,
   onDropDocument,
+  fileDrop,
 }: FolderTreeItemProps) {
   const [expanded, setExpanded] = useState(true);
-  const { dropProps, dropClass } = useDocumentDropTarget(onDropDocument, node.id);
+  const { dropProps, dropClass } = useLibraryDropTarget(onDropDocument, node.id, fileDrop);
   const isSelected = selectedFolderId === node.id;
   const hasChildren = node.children.length > 0;
   const childListId = `folder-children-${node.id}`;
@@ -139,6 +142,7 @@ export function FolderTreeItem({
               onRename={onRename}
               onDelete={onDelete}
               onDropDocument={onDropDocument}
+              fileDrop={fileDrop}
             />
           ))}
         </ul>

@@ -102,6 +102,14 @@ choose the web-article action.
 
 This is also where the **Storage mode** choice lives.
 
+Once your library has books, you can still drop files anywhere on the library
+view: they are imported into the folder you are viewing, or into the library
+root from **All Documents** and the other sections. The view is outlined while
+files are held over it. You can also drop files straight onto a folder or
+subfolder in the sidebar to import them there, or onto **All Documents** to
+import them without a folder. These drops always make a **Managed Copy**. A
+drop is ignored while an earlier drop is still importing.
+
 ---
 
 ## Managed copy versus link in place
@@ -188,7 +196,8 @@ moving anything on disk.
 
 - **New** (*Create new folder*) in the Folders header creates one; folders can be
   nested with **Create New Subfolder**.
-- Drag a document card onto a folder to file it there.
+- Drag a document card onto a folder to file it there. Dropping files from
+  your computer onto a folder imports them into it (see [Drag and drop](#drag-and-drop)).
 - Drag it onto **All Documents** to take it out.
 - **Rename Folder** and **Delete Folder** are available on each folder.
 

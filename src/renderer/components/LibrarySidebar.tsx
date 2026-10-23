@@ -3,6 +3,7 @@ import { useLibraryStore, type LibrarySection } from '../stores/use-library-stor
 import { FolderTreeItem } from '../features/library/components/FolderTreeItem';
 import { LibraryNavItem } from '../features/library/components/LibraryNavItem';
 import { applyDocumentDrop } from '../features/library/use-document-drag';
+import { useFileImport } from '../features/library/use-file-drop';
 import { useLibraryDestination } from '../features/library/use-library-destination';
 import { AppIcon, type AppIconName } from './AppIcon';
 
@@ -38,6 +39,10 @@ export function LibrarySidebar() {
     applyDocumentDrop(documents, moveDocument, documentId, folderId);
   };
 
+  // Files dropped on a folder are imported into it, or — on All Documents — at
+  // the root; see `useFileImport`.
+  const fileDrop = useFileImport();
+
   // Semantic icons, not emoji: these tint from the button's own text token, so
   // the rail reads correctly in every theme.
   const navItems: { id: LibrarySection; label: string; icon: AppIconName; testId: string }[] = [
@@ -72,6 +77,7 @@ export function LibrarySidebar() {
                 goToDestination(item.id);
               }}
               onDropDocument={dropDocument}
+              fileDrop={fileDrop}
             />
           ))}
         </nav>
@@ -133,6 +139,7 @@ export function LibrarySidebar() {
                   onDropDocument={(documentId, folderId) => {
                     dropDocument(documentId, folderId);
                   }}
+                  fileDrop={fileDrop}
                 />
               ))}
             </ul>
