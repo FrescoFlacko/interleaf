@@ -47,8 +47,7 @@ For what each format supports once it is open, see
 Sometimes you only want to read a file, not keep it. **Open** reads a document
 where it is, without adding it to your library:
 
-- Choose **File ▸ Open…**, press `⌘ O` / `Ctrl + O`, or click the **Open file**
-  button in the header.
+- Choose **File ▸ Open…** or press `⌘ O` / `Ctrl + O`.
 - Double-clicking a supported file in your file manager, or choosing Interleaf
   under *Open With*, does the same.
 

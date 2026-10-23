@@ -47,7 +47,6 @@ Along the top, from left to right:
 | **Toggle Library sidebar** | Shows or hides the left sidebar. |
 | **Reading palette** | A row of palette buttons — Paper, Sepia, Moss, Ocean, Graphite, Midnight. See [Reading](reading.md#reading-palettes). |
 | **Toggle companion panel** | Shows or hides the right panel. Shortcut: `⌘ Shift + A` / `Ctrl + Shift + A`. |
-| **Open file** | Opens a document to read without adding it to your library. Shortcut: `⌘ O` / `Ctrl + O`. See [Open a file without importing it](adding-documents.md#open-a-file-without-importing-it). |
 | **Settings** | Opens the Settings dialog. |
 | **Show keyboard shortcuts** | Opens the shortcuts reference. Shortcut: `?`. |
 

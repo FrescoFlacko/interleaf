@@ -219,11 +219,22 @@ describe('opening files from the renderer', () => {
     expect(openDialog).toHaveBeenCalledTimes(1);
   });
 
-  it('offers an Open control in the header and reports a refusal in the shell', async () => {
+  it('keeps Open out of the header, which still offers its other controls', () => {
+    render(<AppHeader compact={false} />);
+    const header = screen.getByTestId('app-header');
+    expect(header.querySelector('[data-testid="open-file"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open file' })).toBeNull();
+    for (const id of ['theme-menu-trigger', 'open-settings', 'open-shortcuts']) {
+      expect(header.querySelector(`[data-testid="${id}"]`)).not.toBeNull();
+    }
+  });
+
+  it('reports a refusal from the Open dialog in the shell', async () => {
     const openDialog = vi.fn(() => Promise.reject(new Error('This file could not be read.')));
     stubBridge({ files: { openDialog } });
-    render(<><AppHeader compact={false} /><OpenFileNotice /></>);
-    fireEvent.click(screen.getByRole('button', { name: 'Open file' }));
+    render(<OpenFileNotice />);
+    await openFileFromDialog();
+    expect(openFileDialog).not.toHaveBeenCalled();
     expect((await screen.findByRole('alert')).textContent).toContain('This file could not be read.');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss error' }));
     expect(screen.queryByRole('alert')).toBeNull();

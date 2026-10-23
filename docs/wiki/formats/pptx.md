@@ -73,7 +73,7 @@ Interleaf's database.
 - A Word document renamed to `.pptx` (or a deck renamed to `.docx`) is refused:
   Interleaf checks what the file actually contains.
 - To read a deck someone sent you without adding it to your library, use
-  **Open file** rather than **Import**. See
+  **File ▸ Open…** (`⌘ O` / `Ctrl + O`) rather than **Import**. See
   [Adding documents](../adding-documents.md#open-a-file-without-importing-it).
 
 ---
