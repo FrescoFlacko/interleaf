@@ -357,7 +357,7 @@ describe('annotation renderer UX', () => {
     expect(jump).toHaveBeenCalledWith(highlight);
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
     fireEvent.change(screen.getByLabelText('Note text'), { target: { value: 'Useful connection' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
     await waitFor(() => {
       expect(update).toHaveBeenCalledWith({ documentId: 'doc-1', id: 'ann-highlight', note: 'Useful connection' });
     });
@@ -396,8 +396,9 @@ describe('annotation renderer UX', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(screen.getByTestId('location-note-composer')).toHaveTextContent('Current position · Page 2 of 5 · 40%');
     fireEvent.change(screen.getByRole('textbox', { name: 'Note at current location' }), { target: { value: 'Check this page' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
     await waitFor(() => {
       expect(create).toHaveBeenCalledWith(expect.objectContaining({
         documentId: 'doc-1',
@@ -447,19 +448,27 @@ describe('annotation renderer UX', () => {
     expect(results.violations).toEqual([]);
   });
 
-  it('says why an empty note cannot be saved, and drops the hint once there is text', () => {
+  it('says how an empty note behaves, and says when typed text is not yet saved', async () => {
     selectPassage();
     renderWithChatStore(chat, <AnnotationSelectionToolbar />);
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
 
     const field = screen.getByRole('textbox', { name: 'Note on selected text' });
-    expect(screen.getByTestId('selection-note-empty')).toHaveTextContent('Write something to save this note.');
-    expect(field.getAttribute('aria-describedby')).toBe('selection-note-empty');
-    expect(screen.getByRole('button', { name: 'Save note' })).toBeDisabled();
+    const status = screen.getByTestId('selection-note-save-status');
+    expect(status).toHaveTextContent('Saves as you type');
+    expect(field.getAttribute('aria-describedby')).toBe(status.id);
+    expect(screen.getByTestId('selection-note-quote')).toHaveTextContent('selected quote');
 
     fireEvent.change(field, { target: { value: 'A thought' } });
-    expect(screen.queryByTestId('selection-note-empty')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Save note' })).toBeEnabled();
+    expect(status).toHaveTextContent('Unsaved changes');
+    fireEvent.change(field, { target: { value: '   ' } });
+    // Back to nothing: there is nothing to save and nothing is claimed unsaved.
+    expect(status).toHaveTextContent('Saves as you type');
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+    });
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('shows a failed note save inside the note editor and keeps the draft', async () => {
@@ -469,20 +478,30 @@ describe('annotation renderer UX', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
     const field = screen.getByRole('textbox', { name: 'Note on selected text' });
     fireEvent.change(field, { target: { value: 'Keep me' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Note on selected text' });
     const alert = await within(dialog).findByRole('alert');
-    expect(alert).toHaveTextContent('The annotation could not be saved. Your note is still here, so you can try again.');
+    expect(alert).toHaveTextContent(/^The annotation could not be saved\.Your note is still here, so you can try again\./u);
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(field).toHaveValue('Keep me');
     // The recovery hint is its own line, not run on after the diagnostic text.
     const lines = Array.from(alert.querySelectorAll('p'), (line) => line.textContent);
     expect(lines).toEqual(['The annotation could not be saved.', 'Your note is still here, so you can try again.']);
     // A failed save describes the field; it does not call the note invalid.
-    expect(field.getAttribute('aria-describedby')).toBe(alert.id);
+    expect(field.getAttribute('aria-describedby')?.split(' ')).toContain(alert.id);
     expect(field.hasAttribute('aria-invalid')).toBe(false);
-    expect(screen.getByRole('button', { name: 'Save note' })).toBeEnabled();
+    expect(screen.getByTestId('selection-note-save-status')).toHaveTextContent('Not saved');
+    expect(within(alert).getByRole('button', { name: 'Retry' })).toBeEnabled();
+    expect(create).toHaveBeenCalledTimes(1);
+
+    // Retry is one more attempt, and success clears the error in place.
+    create.mockResolvedValue(annotation({ id: 'retried-note', type: 'note', note: 'Keep me', color: null }));
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => { expect(screen.getByTestId('selection-note-save-status')).toHaveTextContent('Saved'); });
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
   });
 
   it('keeps the toolbar inside the reader rather than over the companion panel', () => {
@@ -508,6 +527,14 @@ describe('annotation renderer UX', () => {
     reader.getBoundingClientRect = () => DOMRect.fromRect({ x: 200, y: 40, width: 800, height: 700 });
     document.body.appendChild(reader);
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1280 });
+    // The error appears inside the note card without re-rendering the toolbar;
+    // the browser's resize notice is what reports the wider box.
+    const notices: (() => void)[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notices.push(callback); }
+      observe(): void { /* the test delivers notices by hand */ }
+      disconnect(): void { /* nothing to release */ }
+    });
     // The error line is what widens the box; the measurement follows it.
     const measure = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       if (this.dataset.testid !== 'annotation-selection-toolbar') return DOMRect.fromRect({ x: 0, y: 0, width: 0, height: 0 });
@@ -521,11 +548,13 @@ describe('annotation renderer UX', () => {
     expect(toolbar.style.left).toBe('572px');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), { target: { value: 'Keep me' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
     await screen.findByTestId('selection-note-error');
+    act(() => { for (const notify of notices) notify(); });
     // Reader right edge 1000, less the 700 px box and the 8 px margin.
     await waitFor(() => { expect(toolbar.style.left).toBe('292px'); });
     measure.mockRestore();
+    vi.unstubAllGlobals();
     reader.remove();
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
   });
@@ -593,7 +622,7 @@ describe('annotation renderer UX', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), {
       target: { value: 'Keyboard note' },
     });
-    const save = screen.getByRole('button', { name: 'Save note' });
+    const save = screen.getByRole('button', { name: /^Done/u });
     save.focus();
     fireEvent.keyDown(save, { key: 'Enter' });
     fireEvent.click(save);
@@ -866,7 +895,7 @@ describe('annotation renderer UX', () => {
       fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), {
         target: { value: 'Focused note' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
       await waitFor(() => {
         expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: 'note', note: 'Focused note' }));
       });
@@ -967,7 +996,7 @@ describe('annotation renderer UX', () => {
       fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), {
         target: { value: 'Focused note' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
       await waitFor(() => { expect(useAnnotationStore.getState().selection).toBeNull(); });
       expect(useUiStore.getState()).toMatchObject({
         focusMode: true,

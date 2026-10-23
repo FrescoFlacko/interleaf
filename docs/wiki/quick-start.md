@@ -121,8 +121,9 @@ rather than copying it: [Adding documents](adding-documents.md).
 5. Under **Highlight**, click one of the five colour swatches. Hover or
    keyboard-focus a swatch and its name appears beside it — *Yellow*, *Blue*,
    *Green*, *Pink*, *Purple*.
-6. Click **Add note** to attach a note to that passage. Type it under **Note on
-   selected text** and choose **Save note**.
+6. Click **Add note** to attach a note to that passage. Type it in the note
+   card. It saves as you type. Choose **Done** (or press `⌘ Enter` /
+   `Ctrl + Enter`) when you have finished.
 7. The same toolbar also offers **Copy**, **Ask AI** and **Submit to agent**.
 8. Press `⌘ Shift + N` / `Ctrl + Shift + N` to open **Annotations** in the right
    panel and see everything you have saved.

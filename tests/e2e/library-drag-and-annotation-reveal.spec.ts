@@ -108,7 +108,7 @@ test.describe('Annotation reveal and library drag-to-folder', () => {
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill(TALL_NOTE_BODY);
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
 
@@ -186,7 +186,7 @@ test.describe('Annotation reveal and library drag-to-folder', () => {
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill(TALL_NOTE_BODY);
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
     await highlight(HIGHLIGHT_PHRASE);

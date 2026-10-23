@@ -243,7 +243,7 @@ test.describe('Website screenshots from an isolated demo library', () => {
     await selectPdfPhrase(app, 43, 'reduced the n-disk Tower of Hanoi problem to two instances');
     await app.window.getByTestId('annotation-selection-toolbar').getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill('Recursion Fairy: trust the smaller instances, never unroll them.');
-    await app.window.getByRole('button', { name: 'Save note' }).click();
+    await app.window.getByRole('button', { name: /^Done/u }).click();
     await openCompanionTab(app, /Annotations/u);
     await expect(app.window.getByTestId('annotation-row')).toHaveCount(4);
     await shoot(app, 'reader-annotations');

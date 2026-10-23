@@ -32,12 +32,12 @@ afterEach(() => {
  * Cmd+Enter (macOS) / Ctrl+Enter (Windows, Linux) commits a note from inside
  * the field the reader is typing in.
  *
- * What these tests are actually for: the shortcut must be the SAME save, not a
- * second one. Every case below either proves the chord reaches the exact
- * validation and persistence call the Save button makes, or proves a press
- * that is not that chord is left alone — plain Enter still types a newline, a
- * composing IME still owns its Enter, and a draft the button would refuse is
- * refused here too, without a duplicate write.
+ * What these tests are actually for: the shortcut must be the SAME commit as
+ * the note composer's Done button, not a second one. Every case below either
+ * proves the chord reaches the exact validation and persistence call Done
+ * makes, or proves a press that is not that chord is left alone — plain Enter
+ * still types a newline, a composing IME still owns its Enter, and a blank
+ * draft creates nothing, without a duplicate write.
  */
 
 const now = '2026-09-20T12:00:00.000Z';
@@ -185,10 +185,11 @@ describe('note save shortcut', () => {
       return screen.getByRole('textbox', { name: 'Note on selected text' });
     }
 
-    it('creates the selection note from Cmd+Enter exactly as the Save button does', async () => {
+    it('creates the selection note from Cmd+Enter exactly as the Done button does', async () => {
       create.mockResolvedValue(savedNote({ note: 'typed in the field' }));
       const field = openSelectionNote();
-      expect(screen.getByTestId('selection-note-shortcut-hint')).toHaveTextContent(/to save$/u);
+      expect(screen.getByTestId('selection-note-shortcut-hint')).toHaveTextContent('⌘/Ctrl ↵');
+      expect(screen.getByRole('button', { name: /^Done/u })).toHaveAttribute('aria-keyshortcuts', 'Meta+Enter Control+Enter');
       fireEvent.change(field, { target: { value: 'typed in the field' } });
       fireEvent.keyDown(field, COMMAND_ENTER);
 
@@ -224,16 +225,21 @@ describe('note save shortcut', () => {
       expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
     });
 
-    it('refuses a blank draft on the shortcut, and takes no newline for it either', () => {
+    it('creates nothing from a blank draft on the shortcut, and takes no newline for it either', async () => {
       const field = openSelectionNote();
       fireEvent.change(field, { target: { value: '   ' } });
 
       const claimed = fireEvent.keyDown(field, COMMAND_ENTER);
 
-      expect(create).not.toHaveBeenCalled();
-      expect(screen.getByRole('button', { name: 'Save note' })).toBeDisabled();
       // The chord was consumed, so the whitespace draft gains no newline.
       expect(claimed).toBe(false);
+      // Done on an empty note closes it without writing anything.
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+      });
+      expect(create).not.toHaveBeenCalled();
+      // Nothing was made, so the passage and its toolbar stay for another action.
+      expect(useAnnotationStore.getState().selection).not.toBeNull();
     });
 
     it('writes one note when the chord is pressed twice while the first save is in flight', async () => {
@@ -244,7 +250,7 @@ describe('note save shortcut', () => {
 
       fireEvent.keyDown(field, COMMAND_ENTER);
       fireEvent.keyDown(field, COMMAND_ENTER);
-      fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
       expect(create).toHaveBeenCalledTimes(1);
 
       settle(savedNote({ note: 'only once' }));
@@ -262,7 +268,7 @@ describe('note save shortcut', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
       const field = screen.getByRole('textbox', { name: 'Note at current location' });
       fireEvent.change(field, { target: { value: 'come back to this page' } });
-      expect(screen.getByTestId('location-note-shortcut-hint')).toHaveTextContent(/to save$/u);
+      expect(screen.getByTestId('location-note-shortcut-hint')).toHaveTextContent('⌘/Ctrl ↵');
       fireEvent.keyDown(field, COMMAND_ENTER);
 
       await waitFor(() => {
@@ -274,13 +280,15 @@ describe('note save shortcut', () => {
         }));
       });
       expect(create).toHaveBeenCalledTimes(1);
-      // A saved location note closes its own popover, as the button path does.
+      // A saved location note closes its own popover, as Done does.
       await waitFor(() => {
         expect(screen.queryByRole('dialog', { name: 'Note at current location' })).toBeNull();
       });
     });
 
     it('commits an Annotations-panel edit from the shortcut, and refuses to empty a note', async () => {
+      // A note annotation is its text: Done on an emptied note keeps the editor
+      // open and says why, rather than writing or closing.
       update.mockResolvedValue(savedNote({ note: 'revised' }));
       renderWithChatStore(chat, <AnnotationBrowser />);
       const edit = await screen.findByRole('button', { name: /edit/iu });

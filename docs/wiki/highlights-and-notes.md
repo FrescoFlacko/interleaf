@@ -44,14 +44,27 @@ The same toolbar also offers:
 
 ## Notes
 
-There are two kinds, and they behave differently.
+There are two kinds, and they behave differently. Both open the same small
+note card, in your reading font.
+
+Notes save themselves as you type: a moment after you pause, the card's status
+changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
+
+- **Done**, or `⌘ Enter` / `Ctrl + Enter`, saves the latest text and closes
+  the card.
+- `Esc`, the **×** in the corner, or clicking elsewhere also save the latest
+  text before they close it.
+- Plain `Enter` starts a new line.
+- A card you close without typing anything creates no note.
+- If a save fails, the card stays open with your text and says why. Choose
+  **Retry**, or **Discard** to give up the unsaved text.
 
 ### A note on selected text
 
 1. Select the passage.
 2. Click **Add note** in the selection toolbar.
-3. Type under **Note on selected text**.
-4. Click **Save note** (or **Cancel** to discard).
+3. Type in the note card. The passage you selected is quoted above your text.
+4. Click **Done** when you have finished.
 
 The note is anchored to that passage, so it travels with the text.
 
@@ -61,8 +74,9 @@ Use this when there is nothing in particular to select — a thought about the
 page as a whole.
 
 1. Click **Note** in the reader toolbar.
-2. Type under **Note at current location**.
-3. Click **Save**.
+2. Type in the note card. Its top line shows where you are: the page and how
+   far through the document.
+3. Click **Done**.
 
 In the Annotations browser, the two are labelled *Text note* and *Location note*.
 
@@ -111,7 +125,11 @@ on a crowded row cannot destroy an annotation.
 
 ## Editing and deleting
 
-Editing is inline: choose **Edit**, change the text, and save — or **Cancel**.
+Editing is inline. Choose **Edit** and change the text. A note's text, or a
+highlight's note, opens in the same note card and saves as you type. Choose
+**Done** when you have finished. Emptying a highlight's note removes the
+note but keeps the highlight. A note needs some text, so to remove a note,
+delete it instead. A bookmark's label still has **Save** and **Cancel**.
 
 Deleting asks *Delete this annotation? This cannot be undone.* There is no undo
 afterwards, so the confirmation is the only safety net.

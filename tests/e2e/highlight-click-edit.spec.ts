@@ -150,7 +150,7 @@ async function saveNoteOn(page: Page, needle: string): Promise<void> {
   const toolbar = page.getByTestId(TOOLBAR);
   await toolbar.getByRole('button', { name: /note/i }).click();
   await page.locator('#selection-note').fill(NOTE_BODY);
-  await toolbar.getByRole('button', { name: 'Save note' }).click();
+  await toolbar.getByRole('button', { name: /^Done/u }).click();
   await expect(toolbar).toBeHidden();
 }
 

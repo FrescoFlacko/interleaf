@@ -1,0 +1,205 @@
+/*
+ * The margin sticky note (`NoteComposer.tsx`). Colours come from the active
+ * palette's `--note-*` roles (`palette-note-tokens.ts`), so every theme gets a
+ * paper card of its own and the contrast tests cover what is painted here.
+ */
+
+.note-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--note-border);
+  /* A sheet with one corner pinned: the upper-left sits square on the margin. */
+  border-radius: 4px 14px 14px 14px;
+  background: var(--note-surface);
+  color: var(--text-primary);
+  box-shadow: var(--note-shadow);
+  text-align: left;
+}
+
+.note-composer[data-variant='inline'] {
+  box-shadow: var(--note-shadow-inline);
+}
+
+/* The field is borderless, so keyboard focus is drawn on the whole card. */
+.note-composer:has(.note-composer__field:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.note-composer__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+}
+
+.note-composer__context-icon {
+  flex: none;
+}
+
+.note-composer__context {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.note-composer__icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px -6px -4px 0;
+  border-radius: 6px;
+  color: var(--text-secondary);
+}
+
+.note-composer__icon-button:hover,
+.note-composer__done:hover {
+  background: var(--note-control-hover);
+  color: var(--text-primary);
+}
+
+.note-composer__quote {
+  margin: 0;
+  padding: 1px 0 1px 10px;
+  border-left: 2px solid var(--note-quote-rail);
+  color: var(--text-secondary);
+  font-family: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.note-composer__field {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(1.5em * 3);
+  max-height: min(40vh, calc(1.5em * 12));
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  resize: none;
+  /* Grows with its content up to the max height, then scrolls. */
+  field-sizing: content;
+}
+
+.note-composer__field:focus,
+.note-composer__field:focus-visible {
+  outline: none;
+}
+
+.note-composer[data-variant='inline'] .note-composer__field {
+  min-height: calc(1.5em * 2);
+}
+
+.note-composer__field::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+.note-composer[data-note-font='sans'] .note-composer__field {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.note-composer[data-note-font='dyslexic'] .note-composer__field {
+  font-family: OpenDyslexic, 'comic sans ms', sans-serif;
+}
+
+.note-composer__error {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--danger);
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+}
+
+.note-composer__error p {
+  margin: 0;
+}
+
+.note-composer__error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.note-composer__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.note-composer__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+}
+
+.note-composer[data-save-status='saved'] .note-composer__status {
+  color: var(--success);
+}
+
+.note-composer__done {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.note-composer__done[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.note-composer__kbd {
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--text-2xs);
+  font-weight: 500;
+}

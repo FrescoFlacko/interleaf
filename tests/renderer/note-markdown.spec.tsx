@@ -147,16 +147,29 @@ describe('saved note Markdown rendering', () => {
   });
 
   it('edits the raw Markdown source and saves it unchanged', async () => {
-    update.mockResolvedValue(savedNote(NOTE_SOURCE));
+    const revised = `${NOTE_SOURCE}\n- Third item with [a link](https://example.com)`;
+    update.mockResolvedValue(savedNote(revised));
     await renderBrowserWith(NOTE_SOURCE);
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     expect(screen.getByLabelText('Note text')).toHaveValue(NOTE_SOURCE);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    // The Markdown source is written verbatim: no rendering, no escaping.
+    fireEvent.change(screen.getByLabelText('Note text'), { target: { value: revised } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
     await waitFor(() => {
-      expect(update).toHaveBeenCalledWith({ documentId: 'doc-1', id: 'ann-note', note: NOTE_SOURCE });
+      expect(update).toHaveBeenCalledWith({ documentId: 'doc-1', id: 'ann-note', note: revised });
     });
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes an unchanged Markdown note without rewriting it', async () => {
+    await renderBrowserWith(NOTE_SOURCE);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
+    await waitFor(() => { expect(screen.queryByLabelText('Note text')).toBeNull(); });
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('keeps raw HTML, images, unsafe links, and citation-like text inert in saved notes', async () => {

@@ -167,7 +167,7 @@ Standings are updated after every fixture.
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill('Longest run of the season.');
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
 
     await expect.poll(async () =>
       app.window.evaluate(async (docId) =>

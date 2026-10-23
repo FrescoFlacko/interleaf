@@ -1,10 +1,12 @@
 /**
- * The keyboard shortcut that saves a note from inside its own editor.
+ * The keyboard shortcut that commits a note from inside its own editor.
  *
- * Three editors create or edit note text — the selection toolbar's "Save note",
- * the reader header's location note, and the Annotations panel's inline edit —
- * and a reader who has just finished typing should not have to leave the field
- * to commit it. The chord is Cmd+Enter on macOS and Ctrl+Enter elsewhere, which
+ * Three editors create or edit note text — the selection toolbar's note, the
+ * reader header's location note, and the Annotations panel's inline edit — and
+ * all three are the autosaving note composer, where the chord is Done: write the
+ * newest text and close. The Annotations panel's bookmark label editor still
+ * saves explicitly, with the same chord on its Save button. A reader who has
+ * just finished typing should not have to leave the field to commit it. The chord is Cmd+Enter on macOS and Ctrl+Enter elsewhere, which
  * is what the app-level router already treats as the same command modifier
  * (`use-shortcuts.ts`), so accepting either here keeps one rule rather than a
  * per-panel dialect. Only the visible hint is platform-specific.
@@ -85,15 +87,6 @@ export function noteSaveShortcutOutcome(
 }
 
 /**
- * Whether a note editor's Save action can run right now: there is something to
- * save, and no save is already in flight. The Save button's `disabled` state and
- * the shortcut's `canSave` gate are the same question, so they ask it here.
- */
-export function canSaveNoteDraft(draft: string, saving: boolean): boolean {
-  return draft.trim().length > 0 && !saving;
-}
-
-/**
  * Applies the outcome to a real keydown in a note field.
  *
  * The three editors all do the same thing with it — leave an unclaimed press to
@@ -122,3 +115,6 @@ export function handleNoteSaveShortcut(
  * deprecated `navigator.platform` or a user-agent sniff.
  */
 export const NOTE_SAVE_SHORTCUT_HINT = '⌘/Ctrl + ↵ to save';
+
+/** The same chord, shown inside the note composer's Done button. */
+export const NOTE_DONE_SHORTCUT_HINT = '⌘/Ctrl ↵';

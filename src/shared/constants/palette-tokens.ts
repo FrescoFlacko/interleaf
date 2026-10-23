@@ -4,6 +4,7 @@ import { PALETTE_COLOR_TOKENS, type PaletteTokens } from './palette-token-types'
 import { parseCssColor, toRgba } from './palette-color';
 import type { PaletteAppearance, PaletteId } from './palettes';
 import { paletteInfo } from './palette-lookup';
+import { noteCssVariables } from './palette-note-tokens';
 
 /** Every palette's tokens. Typed by id, so a missing palette is a compile error. */
 export const PALETTE_TOKENS: Readonly<Record<PaletteId, PaletteTokens>> = {
@@ -51,6 +52,7 @@ export function paletteCssVariables(id: PaletteId): CssVariables {
   variables['--on-warning'] = onStatus;
   variables['--elevation-popover'] = SHADOWS[appearance].popover;
   variables['--elevation-dialog'] = SHADOWS[appearance].dialog;
+  Object.assign(variables, noteCssVariables(id, tokens, appearance));
   return variables;
 }
 
