@@ -86,7 +86,7 @@ test.describe('Open a file without adding it to the library', () => {
 
     // Open File reads the chosen file where it is.
     await stubOpenDialog(app, [notesPath]);
-    await page.getByTestId('open-file').click();
+    await page.getByTestId('library-open-file').click();
     await expect(page.getByTestId('reader-view')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Observations' })).toBeVisible();
     await expect(page.getByText(OPENED_MARKER)).toBeVisible();
@@ -198,7 +198,7 @@ test.describe('Open a file without adding it to the library', () => {
     const disguised = join(fixtureDir, 'Disguised.docx');
     writeFileSync(disguised, makePdfFixture({ title: 'Disguised', author: 'Interleaf QA', pageLines: [['Not a Word file.']] }));
     await stubOpenDialog(app, [disguised]);
-    await page.getByTestId('open-file').click();
+    await page.getByTestId('library-open-file').click();
     await expect(page.getByTestId('open-file-error')).toBeVisible();
     await expect(page.getByTestId('pdf-canvas-p1')).toBeVisible();
     await evidence('open-file-refused.png');
