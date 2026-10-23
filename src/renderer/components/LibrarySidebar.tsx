@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
 import { useLibraryStore, type LibrarySection } from '../stores/use-library-store';
-import { openFileFromDialog } from '../stores/use-open-file-store';
-import { useUiStore } from '../stores/use-ui-store';
 import { FolderTreeItem } from '../features/library/components/FolderTreeItem';
 import { LibraryNavItem } from '../features/library/components/LibraryNavItem';
 import { applyDocumentDrop } from '../features/library/use-document-drag';
@@ -57,46 +55,26 @@ export function LibrarySidebar() {
       className="flex h-full w-full min-w-0 flex-col justify-between bg-bg-primary"
     >
       <div className="flex flex-col gap-6 p-4 overflow-y-auto">
-        <div className="flex flex-col gap-1">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Library
-            </h2>
-            {/* Reads a file in place without importing it. The compact drawer
-                covers the reader, so it closes before the file opens. */}
-            <button
-              type="button"
-              data-testid="library-open-file"
-              title="Open a file to read without adding it to your library (Ctrl+O)"
-              aria-label="Open file"
-              onClick={() => {
-                useUiStore.getState().setCompactActivePanel(null);
-                void openFileFromDialog();
+        {/* Navigation items */}
+        <nav aria-label="Library sections" className="flex flex-col gap-1">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            Library
+          </h2>
+          {navItems.map((item) => (
+            <LibraryNavItem
+              key={item.id}
+              label={item.label}
+              icon={item.icon}
+              testId={item.testId}
+              isActive={activeSection === item.id}
+              acceptsDrop={item.id === 'all'}
+              onSelect={() => {
+                goToDestination(item.id);
               }}
-              className="flex shrink-0 items-center justify-center rounded-md p-1 text-text-secondary hover:bg-bg-surface hover:text-text-primary"
-            >
-              {/* One step smaller than the 18px nav icons below it. */}
-              <AppIcon name="library-open-file" size={16} />
-            </button>
-          </div>
-          {/* Navigation items */}
-          <nav aria-label="Library sections" className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <LibraryNavItem
-                key={item.id}
-                label={item.label}
-                icon={item.icon}
-                testId={item.testId}
-                isActive={activeSection === item.id}
-                acceptsDrop={item.id === 'all'}
-                onSelect={() => {
-                  goToDestination(item.id);
-                }}
-                onDropDocument={dropDocument}
-              />
-            ))}
-          </nav>
-        </div>
+              onDropDocument={dropDocument}
+            />
+          ))}
+        </nav>
 
         {/* Folders hierarchy */}
         <div className="flex flex-col gap-2">

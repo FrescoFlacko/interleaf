@@ -17,8 +17,6 @@ import { useLibraryStore } from '../../src/renderer/stores/use-library-store';
 import { useShortcuts } from '../../src/renderer/hooks/use-shortcuts';
 import { AppHeader } from '../../src/renderer/components/AppHeader';
 import { OpenFileNotice } from '../../src/renderer/components/OpenFileNotice';
-import { LibrarySidebar } from '../../src/renderer/components/LibrarySidebar';
-import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 
 function metadata(id: string): DocumentMetadata {
   return {
@@ -49,7 +47,6 @@ function deferred<T>(): { readonly promise: Promise<T>; readonly resolve: (value
 
 const INITIAL_READER = useReaderStore.getState();
 const INITIAL_LIBRARY = useLibraryStore.getState();
-const INITIAL_UI = useUiStore.getState();
 
 describe('opening files from the renderer', () => {
   const openDocument = vi.fn(() => Promise.resolve());
@@ -67,7 +64,6 @@ describe('opening files from the renderer', () => {
     cleanup();
     useReaderStore.setState(INITIAL_READER, true);
     useLibraryStore.setState(INITIAL_LIBRARY, true);
-    useUiStore.setState(INITIAL_UI, true);
   });
 
   it('reads the chosen file and does nothing when the dialog is cancelled', async () => {
@@ -223,39 +219,22 @@ describe('opening files from the renderer', () => {
     expect(openDialog).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps Open out of the header and offers it in the Library rail, which reads without importing', async () => {
-    const openDialog = vi.fn(() => Promise.resolve(metadata('chosen')));
-    stubBridge({ files: { openDialog } });
-    useLibraryStore.setState({ loadFolders: () => Promise.resolve(), loadSummary: () => Promise.resolve() });
-    useUiStore.setState({ compactActivePanel: 'left' });
-    render(<><AppHeader compact /><LibrarySidebar /></>);
+  it('keeps Open out of the header, which still offers its other controls', () => {
+    render(<AppHeader compact={false} />);
     const header = screen.getByTestId('app-header');
     expect(header.querySelector('[data-testid="open-file"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open file' })).toBeNull();
     for (const id of ['theme-menu-trigger', 'open-settings', 'open-shortcuts']) {
       expect(header.querySelector(`[data-testid="${id}"]`)).not.toBeNull();
     }
-
-    const control = screen.getByTestId('library-open-file');
-    expect(control).toBe(screen.getByRole('button', { name: 'Open file' }));
-    expect(control.title).toContain('without adding it to your library');
-    // Icon-only: the folder glyph is decorative and the aria-label names the action.
-    expect(control.textContent).toBe('');
-    const icon = control.querySelector('[data-icon]');
-    expect(icon?.getAttribute('data-icon')).toBe('library-open-file');
-    expect(icon?.getAttribute('aria-hidden')).toBe('true');
-    fireEvent.click(control);
-    await vi.waitFor(() => { expect(openDocument).toHaveBeenCalledWith('chosen'); });
-    expect(openDialog).toHaveBeenCalledTimes(1);
-    expect(openFileDialog).not.toHaveBeenCalled();
-    expect(useUiStore.getState().compactActivePanel).toBeNull();
   });
 
-  it('reports a refusal from the Library rail control in the shell', async () => {
+  it('reports a refusal from the Open dialog in the shell', async () => {
     const openDialog = vi.fn(() => Promise.reject(new Error('This file could not be read.')));
     stubBridge({ files: { openDialog } });
-    useLibraryStore.setState({ loadFolders: () => Promise.resolve(), loadSummary: () => Promise.resolve() });
-    render(<><LibrarySidebar /><OpenFileNotice /></>);
-    fireEvent.click(screen.getByRole('button', { name: 'Open file' }));
+    render(<OpenFileNotice />);
+    await openFileFromDialog();
+    expect(openFileDialog).not.toHaveBeenCalled();
     expect((await screen.findByRole('alert')).textContent).toContain('This file could not be read.');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss error' }));
     expect(screen.queryByRole('alert')).toBeNull();

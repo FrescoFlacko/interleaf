@@ -25,7 +25,6 @@ import FileAddIcon from '@hugeicons/core-free-icons/FileAddIcon';
 import Files02Icon from '@hugeicons/core-free-icons/Files02Icon';
 import Folder01Icon from '@hugeicons/core-free-icons/Folder01Icon';
 import FolderAddIcon from '@hugeicons/core-free-icons/FolderAddIcon';
-import FolderOpenIcon from '@hugeicons/core-free-icons/FolderOpenIcon';
 import FolderRemoveIcon from '@hugeicons/core-free-icons/FolderRemoveIcon';
 import FullScreenIcon from '@hugeicons/core-free-icons/FullScreenIcon';
 import Globe02Icon from '@hugeicons/core-free-icons/Globe02Icon';
@@ -64,7 +63,6 @@ const APP_ICONS = {
   'more-horizontal': MoreHorizontalIcon,
   search: Search01Icon,
   'open-file': BookOpen01Icon,
-  'library-open-file': FolderOpenIcon,
   'import-from-files': File01Icon,
   'import-from-web': Globe02Icon,
   'web-search': Globe02Icon,
