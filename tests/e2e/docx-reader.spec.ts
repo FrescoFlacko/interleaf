@@ -137,6 +137,9 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
     const selectionToolbar = app.window.getByTestId('annotation-selection-toolbar');
     await expect(selectionToolbar).toBeVisible();
     await selectionToolbar.getByRole('button', { name: 'Blue highlight' }).click();
+    // A highlight is saved in place; the reader opens Annotations to see it.
+    await expect(selectionToolbar).toBeHidden();
+    await app.window.getByRole('tab', { name: 'Annotations' }).click();
     await expect(app.window.getByRole('tabpanel', { name: 'Annotations' })).toBeVisible();
     await expect(app.window.getByText('“unique searchable phrase”')).toBeVisible();
     await expect.poll(async () => app.window.evaluate(() => {
