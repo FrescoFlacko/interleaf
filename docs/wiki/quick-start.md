@@ -100,8 +100,7 @@ an AI provider is actually ready). Dismiss it with **Got it**.
 Supported file types are **.pdf**, **.epub**, **.mobi**, **.azw**, **.azw3**,
 **.docx**, **.pptx**, **.md** and **.markdown**.
 
-Just want to read a file once? **Open** (`⌘ O` / `Ctrl + O`, or the **Open file**
-button in the header) reads it without adding it to your library, and discards
+Just want to read a file once? **Open** (**File ▸ Open…**, `⌘ O` / `Ctrl + O`) reads it without adding it to your library, and discards
 its highlights and notes when you close it. See
 [Open a file without importing it](adding-documents.md#open-a-file-without-importing-it). To capture an article from the web
 instead, use the small caret next to **+ Import** and choose **From web URL…**.

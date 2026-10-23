@@ -84,9 +84,13 @@ test.describe('Open a file without adding it to the library', () => {
     await expect(page.getByTestId('success-banner')).toBeVisible();
     expect(await listLibrary(page)).toEqual(['Kept Book']);
 
-    // Open File reads the chosen file where it is.
+    // File ▸ Open… reads the chosen file where it is.
     await stubOpenDialog(app, [notesPath]);
-    await page.getByTestId('open-file').click();
+    await app.electronApp.evaluate(({ Menu }) => {
+      const item = Menu.getApplicationMenu()?.getMenuItemById('file-open');
+      if (!item) throw new Error('The File menu has no Open… item.');
+      item.click();
+    });
     await expect(page.getByTestId('reader-view')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Observations' })).toBeVisible();
     await expect(page.getByText(OPENED_MARKER)).toBeVisible();
@@ -197,8 +201,9 @@ test.describe('Open a file without adding it to the library', () => {
     // A file that is not what its name says is refused, and the reader keeps its document.
     const disguised = join(fixtureDir, 'Disguised.docx');
     writeFileSync(disguised, makePdfFixture({ title: 'Disguised', author: 'Interleaf QA', pageLines: [['Not a Word file.']] }));
+    // The Cmd/Ctrl+O shortcut opens the same dialog from the window.
     await stubOpenDialog(app, [disguised]);
-    await page.getByTestId('open-file').click();
+    await page.keyboard.press('ControlOrMeta+o');
     await expect(page.getByTestId('open-file-error')).toBeVisible();
     await expect(page.getByTestId('pdf-canvas-p1')).toBeVisible();
     await evidence('open-file-refused.png');

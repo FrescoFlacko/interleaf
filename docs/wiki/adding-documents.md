@@ -47,8 +47,7 @@ For what each format supports once it is open, see
 Sometimes you only want to read a file, not keep it. **Open** reads a document
 where it is, without adding it to your library:
 
-- Choose **File ▸ Open…**, press `⌘ O` / `Ctrl + O`, or click the **Open file**
-  button in the header.
+- Choose **File ▸ Open…** or press `⌘ O` / `Ctrl + O`.
 - Double-clicking a supported file in your file manager, or choosing Interleaf
   under *Open With*, does the same.
 
@@ -102,6 +101,14 @@ that line does not list them. You can drop files onto it, use **Select Documents
 choose the web-article action.
 
 This is also where the **Storage mode** choice lives.
+
+Once your library has books, you can still drop files anywhere on the library
+view: they are imported into the folder you are viewing, or into the library
+root from **All Documents** and the other sections. The view is outlined while
+files are held over it. You can also drop files straight onto a folder or
+subfolder in the sidebar to import them there, or onto **All Documents** to
+import them without a folder. These drops always make a **Managed Copy**. A
+drop is ignored while an earlier drop is still importing.
 
 ---
 
@@ -189,7 +196,8 @@ moving anything on disk.
 
 - **New** (*Create new folder*) in the Folders header creates one; folders can be
   nested with **Create New Subfolder**.
-- Drag a document card onto a folder to file it there.
+- Drag a document card onto a folder to file it there. Dropping files from
+  your computer onto a folder imports them into it (see [Drag and drop](#drag-and-drop)).
 - Drag it onto **All Documents** to take it out.
 - **Rename Folder** and **Delete Folder** are available on each folder.
 

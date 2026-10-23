@@ -1,5 +1,8 @@
 import { AppIcon, type AppIconName } from '../../../components/AppIcon';
-import { useDocumentDropTarget } from '../use-document-drag';
+import { useLibraryDropTarget, type FileDropHandler } from '../use-file-drop';
+
+/** What a computed view, which takes no drops, hands its drop target. */
+const NO_DROPS = { onDropDocument: undefined, fileDrop: undefined } as const;
 
 /**
  * One destination in the library rail.
@@ -7,6 +10,7 @@ import { useDocumentDropTarget } from '../use-document-drag';
  * All Documents is the library root, so a book dropped on it leaves whichever
  * folder it was in; the other entries are computed views, not places a book can
  * be put, and `acceptsDrop` is false for them, which leaves their drags alone.
+ * Files from the system dropped on All Documents are imported at the root.
  */
 export function LibraryNavItem({
   label,
@@ -16,6 +20,7 @@ export function LibraryNavItem({
   acceptsDrop,
   onSelect,
   onDropDocument,
+  fileDrop,
 }: {
   readonly label: string;
   readonly icon: AppIconName;
@@ -25,9 +30,11 @@ export function LibraryNavItem({
   readonly onSelect: () => void;
   /** Called with no folder: the book is removed from the one it is in. */
   readonly onDropDocument: (documentId: string, folderId: null) => void;
+  /** Imports dropped files at the root; ignored where `acceptsDrop` is false. */
+  readonly fileDrop?: FileDropHandler<null>;
 }) {
-  const handler = acceptsDrop ? onDropDocument : undefined;
-  const { dropProps, dropClass } = useDocumentDropTarget(handler, null);
+  const drops = acceptsDrop ? { onDropDocument, fileDrop } : NO_DROPS;
+  const { dropProps, dropClass } = useLibraryDropTarget(drops.onDropDocument, null, drops.fileDrop);
   const activeClass = isActive
     ? 'bg-bg-surface font-semibold text-text-primary'
     : 'text-text-secondary hover:bg-bg-surface hover:text-text-primary';
