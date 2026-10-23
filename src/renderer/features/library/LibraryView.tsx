@@ -9,6 +9,7 @@ import { DocumentListItem } from './components/DocumentListItem';
 import { ImportDropzone } from './components/ImportDropzone';
 import { bridge } from '../../app/api-client';
 import { LibraryHeaderControls } from './components/LibraryHeaderControls';
+import { useLibraryViewFileDrop } from './use-file-drop';
 
 export function LibraryView() {
   const activeSection = useLibraryStore((s) => s.activeSection);
@@ -74,6 +75,9 @@ export function LibraryView() {
     !errorMessage &&
     totalDocuments === 0 &&
     documents.length === 0;
+  // Files dropped anywhere on a populated library import into the folder being
+  // viewed; the first-run hero is its own drop zone, so the view stands down.
+  const fileDrop = useLibraryViewFileDrop(showFirstRunImport);
 
   function getSectionTitle(): string {
     switch (activeSection) {
@@ -205,7 +209,11 @@ export function LibraryView() {
 
       {/* Content area. The shell's reader viewport is the one main landmark
           that contains this view, so this is a plain container. */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div
+        data-testid="library-file-drop-target"
+        {...fileDrop.dropProps}
+        className={`flex-1 overflow-y-auto p-6 ${fileDrop.dropClass}`}
+      >
         <div className="flex flex-col gap-6">
           {/* First-run import hero is shown only after the authoritative
               library summary confirms that there are zero books. */}

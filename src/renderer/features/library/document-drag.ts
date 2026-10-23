@@ -28,6 +28,18 @@ export function isDocumentDrag(dataTransfer: DataTransfer | null): boolean {
 }
 
 /**
+ * Whether this drag carries files from the operating system to import.
+ *
+ * A library book never carries files, but the check excludes ours explicitly
+ * anyway, so a book drag can never be read as an import. Only the presence of
+ * files is decided here; what they are is validated by the main process.
+ */
+export function isFileDrag(dataTransfer: DataTransfer | null): boolean {
+  if (dataTransfer === null || isDocumentDrag(dataTransfer)) return false;
+  return [...dataTransfer.types].includes('Files');
+}
+
+/**
  * Reads the dragged document id, or `null` if this drag is not one of ours.
  *
  * Drag data is renderer input like any other, so the string is bounded here and

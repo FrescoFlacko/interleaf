@@ -71,6 +71,8 @@ Two sections, plus a footer.
 folder*) to add one. Folders are labels, not places on disk: moving a document
 into a folder does not move the file. Drag a document from the library grid onto
 a folder to file it there, or onto **All Documents** to take it out of a folder.
+Files dropped from your computer onto a folder are imported into it; see
+[Drag and drop](adding-documents.md#drag-and-drop).
 
 **Total Books** in the footer shows how many documents your library contains.
 

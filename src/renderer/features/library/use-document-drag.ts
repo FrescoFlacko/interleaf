@@ -15,7 +15,7 @@ import { isDocumentDrag, readDocumentDragPayload, setDocumentDragPayload } from 
  */
 
 /** The tint a surface wears while a book is held over it, in every theme. */
-const DROP_TARGET_CLASS = 'bg-accent/10 ring-2 ring-accent';
+export const DROP_TARGET_CLASS = 'bg-accent/10 ring-2 ring-accent';
 
 /** The dragged card's own state while it is in flight. */
 const DRAG_SOURCE_CLASS = `opacity-60 ${DROP_TARGET_CLASS}`;
