@@ -73,10 +73,10 @@ export function LibrarySidebar() {
                 useUiStore.getState().setCompactActivePanel(null);
                 void openFileFromDialog();
               }}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary"
+              className="flex shrink-0 items-center justify-center rounded-md p-1 text-text-secondary hover:bg-bg-surface hover:text-text-primary"
             >
-              <AppIcon name="open-file" size={13} className="shrink-0" />
-              Open file
+              {/* One step smaller than the 18px nav icons below it. */}
+              <AppIcon name="library-open-file" size={16} />
             </button>
           </div>
           {/* Navigation items */}

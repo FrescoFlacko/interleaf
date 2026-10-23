@@ -60,7 +60,7 @@ Along the top, from left to right:
 
 Two sections, plus a footer.
 
-**Library** — an **Open file** button beside the heading opens a document to
+**Library** — the **Open file** (folder) icon beside the heading opens a document to
 read without adding it to your library (shortcut: `⌘ O` / `Ctrl + O`; see
 [Open a file without importing it](adding-documents.md#open-a-file-without-importing-it)),
 then four saved views:

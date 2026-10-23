@@ -238,6 +238,11 @@ describe('opening files from the renderer', () => {
     const control = screen.getByTestId('library-open-file');
     expect(control).toBe(screen.getByRole('button', { name: 'Open file' }));
     expect(control.title).toContain('without adding it to your library');
+    // Icon-only: the folder glyph is decorative and the aria-label names the action.
+    expect(control.textContent).toBe('');
+    const icon = control.querySelector('[data-icon]');
+    expect(icon?.getAttribute('data-icon')).toBe('library-open-file');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
     fireEvent.click(control);
     await vi.waitFor(() => { expect(openDocument).toHaveBeenCalledWith('chosen'); });
     expect(openDialog).toHaveBeenCalledTimes(1);
