@@ -9,7 +9,7 @@
 
 Interleaf provides first-class support for six document formats (PDF, EPUB, MOBI/KF8, DOCX, PPTX, Markdown) through decoupled reader engines; PPTX reuses the DOCX engine (§D2).
 
-Every supported format can also be opened without adding it to the library (File ▸ Open…, Cmd/Ctrl+O, the header Open file control, or the operating system's *Open With*). Extensions are matched case-insensitively and the same validation as import applies; the file is read from a private staged copy and the original is never modified (ADR 0014).
+Every supported format can also be opened without adding it to the library (File ▸ Open…, Cmd/Ctrl+O, the Library sidebar Open file control, or the operating system's *Open With*). Extensions are matched case-insensitively and the same validation as import applies; the file is read from a private staged copy and the original is never modified (ADR 0014).
 
 Across every format, interactive media is permanently unsupported. Audio,
 video, executable embeds, frames, forms, and document-supplied canvas programs
