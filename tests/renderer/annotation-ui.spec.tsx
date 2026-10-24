@@ -215,7 +215,8 @@ describe('annotation renderer UX', () => {
       });
     });
     expect(useAnnotationStore.getState().selection).toBeNull();
-    expect(useUiStore.getState()).toMatchObject({ rightOpen: true, rightTab: 'annotations' });
+    // Saved in place: the companion stays closed on the tab it had.
+    expect(useUiStore.getState()).toMatchObject({ rightOpen: false, rightTab: 'chat' });
   });
 
   it('shows the five highlight actions as real painted swatches that name themselves on hover and focus', async () => {
