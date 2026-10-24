@@ -12,6 +12,7 @@ import { useChatStore } from '../../../stores/use-chat-store';
 import { useAgentStore } from '../../../stores/use-agent-store';
 import { NoteComposer, type NoteComposerClose, type NoteComposerHandle } from '../../../components/note/NoteComposer';
 import { createThenUpdateNote } from '../../../hooks/note-persistence';
+import { newNoteDraftKey } from '../../../hooks/note-drafts';
 import type { NotePersistResult } from '../../../hooks/note-autosave';
 import { bridge } from '../../../app/api-client';
 import { Button } from '../../../components/ui/button';
@@ -35,15 +36,14 @@ type AnnotationSelectionToolbarProps = {
  * opening its own composer and autosave session.
  */
 type SelectionNoteSession = {
-  readonly key: number;
+  /** The note's draft, which is also the composer's key. */
+  readonly key: string;
   /** The toolbar target it was opened on, compared by identity when it closes. */
   readonly selection: object;
   readonly documentId: string;
   readonly quote: string | null;
   readonly persist: (text: string, id: string | null) => Promise<NotePersistResult>;
 };
-
-let selectionNoteSequence = 0;
 
 export function AnnotationSelectionToolbar({ editing: reopened = null }: AnnotationSelectionToolbarProps) {
   const { selection, editing, resetKey, label: toolbarLabel } = useSelectionToolbarTarget(reopened);
@@ -287,9 +287,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
     const anchor = selection.anchor;
     const documentId = activeDocument.id;
     const blocked = boundError ?? 'Highlights and notes could not be mapped to document segments deterministically. Use Ask AI for this selection.';
-    selectionNoteSequence += 1;
     setNoteSession({
-      key: selectionNoteSequence,
+      key: newNoteDraftKey('selection'),
       selection,
       documentId,
       quote: anchor?.quote.exact ?? null,
@@ -513,6 +512,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
             variant="popover"
             role="dialog"
             testIdPrefix="selection-note"
+            draftKey={noteSession.key}
+            documentId={noteSession.documentId}
             autosave={{ initialText: '', initialId: null, allowEmpty: false, persist: noteSession.persist }}
             ignoreOutside={[noteButtonRef]}
             onClose={closeNote}

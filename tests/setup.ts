@@ -3,6 +3,7 @@ import { afterEach } from 'vitest';
 import { installTestBridge } from './helpers/interleaf-api';
 import { installFramePlatform, installRendererPlatform } from './helpers/renderer-platform';
 import { resetAgentFollowUps } from '../src/renderer/stores/agent-follow-up-drafts';
+import { resetNoteDrafts } from '../src/renderer/hooks/note-drafts';
 
 // Production always runs with the preload bridge, so every test does too.
 installTestBridge();
@@ -17,6 +18,8 @@ if (typeof window !== 'undefined') {
     window.CSS.highlights.clear();
     // A run's follow-up draft lives for the window, as a fresh window's does.
     resetAgentFollowUps();
+    // So is a kept note draft.
+    resetNoteDrafts();
   });
 }
 

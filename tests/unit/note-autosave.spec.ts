@@ -125,7 +125,6 @@ describe('NoteAutosaveSession', () => {
     expect(note.status.kind).toBe('idle');
     await vi.advanceTimersByTimeAsync(5_000);
     await expect(note.flush()).resolves.toBe('empty');
-    note.close();
     await settle();
     expect(persist).not.toHaveBeenCalled();
   });
@@ -203,44 +202,25 @@ describe('NoteAutosaveSession', () => {
     note.input('unwanted');
     note.discard();
     await vi.advanceTimersByTimeAsync(5_000);
-    note.close();
-    await settle();
+    await expect(note.flush()).resolves.toBe('clean');
     expect(persist).not.toHaveBeenCalled();
     expect(note.dirty).toBe(false);
   });
 
-  it('writes the newest text on close, after any write in flight, without reporting to a gone listener', async () => {
-    const { calls, persist } = controlledPersist();
-    const note = session({ persist });
-    const listener = vi.fn();
-    note.subscribe(listener);
-
-    note.input('first');
-    await vi.advanceTimersByTimeAsync(800);
-    note.input('first and last');
-    const reports = listener.mock.calls.length;
-    note.close();
-    // The pending debounce no longer matters: close owns the final write.
-    await vi.advanceTimersByTimeAsync(5_000);
-    expect(calls).toHaveLength(1);
-
-    calls[0]!.resolve({ ok: true, id: 'ann-1' });
-    await settle();
-    expect(calls).toHaveLength(2);
-    expect(calls[1]).toMatchObject({ text: 'first and last', id: 'ann-1' });
-    calls[1]!.resolve({ ok: true, id: 'ann-1' });
-    await settle();
-    expect(listener).toHaveBeenCalledTimes(reports);
-  });
-
-  it('closes a clean session without writing', async () => {
+  it('reports to every subscriber until it unsubscribes', async () => {
     const persist = vi.fn(() => Promise.resolve<NotePersistResult>({ ok: true, id: 'ann-1' }));
-    const note = session({ persist, initialText: 'same', initialId: 'ann-1' });
+    const note = session({ persist });
+    const first = vi.fn();
+    const second = vi.fn();
+    const stopFirst = note.subscribe(first);
+    note.subscribe(second);
 
-    note.input('same  ');
-    expect(note.status.kind).toBe('saved');
-    note.close();
-    await vi.advanceTimersByTimeAsync(5_000);
-    expect(persist).not.toHaveBeenCalled();
+    note.input('text');
+    expect(first).toHaveBeenLastCalledWith({ kind: 'pending' });
+    stopFirst();
+    const reports = first.mock.calls.length;
+    await note.flush();
+    expect(first).toHaveBeenCalledTimes(reports);
+    expect(second).toHaveBeenLastCalledWith({ kind: 'saved' });
   });
 });

@@ -43,7 +43,16 @@ type NoteComposerProps = {
   readonly role: 'dialog' | 'group';
   /** Prefix for the `*-shortcut-hint` test id the editors already expose. */
   readonly testIdPrefix: string;
+  /**
+   * The draft the composer shows (`note-drafts.ts`). A draft still saving or
+   * kept after a failure is continued; otherwise one is made from `autosave`.
+   */
+  readonly draftKey: string;
+  /** The document the note belongs to, so a kept draft returns with its book. */
+  readonly documentId: string;
   readonly autosave: NoteAutosaveOptions;
+  /** False when the card is shown without the reader asking, so focus stays put. */
+  readonly autoFocus?: boolean;
   /** Elements whose pointer presses are not "outside", such as the invoking button. */
   readonly ignoreOutside?: readonly RefObject<HTMLElement | null>[];
   readonly onClose: (close: NoteComposerClose) => void;
@@ -71,6 +80,8 @@ function statusText(status: NoteSaveStatus, closing: boolean): string {
  * is no Save or Cancel. Done, Cmd/Ctrl+Enter, Escape, the close icon and a
  * click elsewhere each write the newest text first and close only once it is
  * stored; if the write fails the card stays open with the text and a Retry.
+ * When the card goes away for another reason (another row, another book), the
+ * draft is still written, and a failed one is kept to be shown again.
  * Plain Enter is a newline.
  */
 export function NoteComposer({
@@ -83,13 +94,16 @@ export function NoteComposer({
   variant,
   role,
   testIdPrefix,
+  draftKey,
+  documentId,
   autosave,
+  autoFocus = true,
   ignoreOutside = [],
   onClose,
   handle,
 }: NoteComposerProps) {
-  const { session, status } = useNoteAutosave(autosave);
-  const [text, setText] = useState(autosave.initialText);
+  const { session, status } = useNoteAutosave(draftKey, autosave, { documentId, label, context, quote });
+  const [text, setText] = useState(session.text);
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -197,7 +211,7 @@ export function NoteComposer({
       <textarea
         ref={fieldRef}
         id={fieldId}
-        autoFocus
+        autoFocus={autoFocus}
         maxLength={100_000}
         value={text}
         placeholder="Write a note…"

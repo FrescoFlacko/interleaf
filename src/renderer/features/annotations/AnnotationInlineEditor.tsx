@@ -3,6 +3,7 @@ import type { Annotation } from '@shared/types/annotation';
 import { NoteComposer, type NoteComposerClose } from '../../components/note/NoteComposer';
 import { NOTE_SAVE_SHORTCUT_HINT, handleNoteSaveShortcut } from '../../hooks/note-save-shortcut';
 import { updateNoteText } from '../../hooks/note-persistence';
+import { noteDraftKeyForAnnotation } from '../../hooks/note-drafts';
 import { useAnnotationStore } from '../../stores/use-annotation-store';
 
 type AnnotationInlineEditorProps = {
@@ -18,7 +19,9 @@ type AnnotationInlineEditorProps = {
  * A note's text, or a highlight's note, is edited in the autosaving note
  * composer with the row's real metadata and quote. Emptying a highlight's note
  * clears it; a note annotation is its text, so it cannot be emptied here (it is
- * deleted from the row menu instead). A bookmark's label keeps its explicit
+ * deleted from the row menu instead). Every editor of one annotation continues
+ * the same draft, so leaving a row while it saves and coming back writes in
+ * order and shows the newest text. A bookmark's label keeps its explicit
  * Save and Cancel, since a label is a short name rather than a note.
  */
 export function AnnotationInlineEditor({ annotation, context, onClose }: AnnotationInlineEditorProps) {
@@ -33,6 +36,8 @@ export function AnnotationInlineEditor({ annotation, context, onClose }: Annotat
       variant="inline"
       role="group"
       testIdPrefix="annotation-edit"
+      draftKey={noteDraftKeyForAnnotation(annotation.id)}
+      documentId={annotation.documentId}
       autosave={{
         initialText: annotation.note ?? '',
         initialId: annotation.id,

@@ -21,21 +21,37 @@ export type NewNoteTarget = {
   readonly validate?: () => string | null;
 };
 
-function failure(before: string | null, fallback: string): NotePersistResult {
-  const after = useAnnotationStore.getState().error;
-  // The store reports a thrown request; an update of a row that no longer
-  // exists resolves to null without one.
-  if (after !== null && after !== before) return { ok: false, message: after };
-  return { ok: false, message: fallback };
+/**
+ * Runs a store request and returns the error it recorded. The store reports a
+ * thrown request in `error`, even when that is the message already showing (a
+ * Retry that fails the same way); an update of a row that no longer exists
+ * resolves to null without one.
+ */
+async function withRecordedError<T>(request: () => Promise<T>): Promise<{ readonly value: T; readonly error: string | null }> {
+  let error: string | null = null;
+  const stop = useAnnotationStore.subscribe((state, previous) => {
+    if (state.error !== null && (state.error !== previous.error || state.annotations === previous.annotations)) error = state.error;
+  });
+  try {
+    const value = await request();
+    return { value, error };
+  } finally {
+    stop();
+  }
+}
+
+function failure(error: string | null, fallback: string): NotePersistResult {
+  return { ok: false, message: error ?? fallback };
 }
 
 /** Saves the text of an existing annotation's note; empty text clears it. */
 export function updateNoteText(documentId: string): NotePersist {
   return async (text, id) => {
     if (id === null) return { ok: false, message: 'This note could not be found.', retryable: false };
-    const before = useAnnotationStore.getState().error;
-    const updated = await useAnnotationStore.getState().update({ documentId, id, note: text === '' ? null : text });
-    return updated ? { ok: true, id: updated.id } : failure(before, 'This note no longer exists, so it could not be saved.');
+    const { value: updated, error } = await withRecordedError(() =>
+      useAnnotationStore.getState().update({ documentId, id, note: text === '' ? null : text })
+    );
+    return updated ? { ok: true, id: updated.id } : failure(error, 'This note no longer exists, so it could not be saved.');
   };
 }
 
@@ -46,15 +62,14 @@ export function createThenUpdateNote(target: NewNoteTarget): NotePersist {
     if (id !== null) return update(text, id);
     const invalid = target.validate?.() ?? null;
     if (invalid !== null) return { ok: false, message: invalid, retryable: false };
-    const before = useAnnotationStore.getState().error;
-    const created = await useAnnotationStore.getState().create({
+    const { value: created, error } = await withRecordedError(() => useAnnotationStore.getState().create({
       documentId: target.documentId,
       type: 'note',
       anchor: target.anchor,
       ...(target.selectedText === undefined ? {} : { selectedText: target.selectedText }),
       note: text,
       ...(target.isLocationNote === true ? { isLocationNote: true } : {}),
-    }, { keepSelection: target.keepSelection === true });
-    return created ? { ok: true, id: created.id } : failure(before, 'Could not create note.');
+    }, { keepSelection: target.keepSelection === true }));
+    return created ? { ok: true, id: created.id } : failure(error, 'Could not create note.');
   };
 }

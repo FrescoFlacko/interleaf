@@ -21,8 +21,9 @@
  *     one more attempt.
  *
  * The session is plain TypeScript with an injected `persist`, so the races
- * above are tested without React. `use-note-autosave.ts` binds it to a
- * component's lifetime.
+ * above are tested without React. A session belongs to a note draft
+ * (`note-drafts.ts`), which outlives the editor showing it, and
+ * `use-note-autosave.ts` binds an editor to that draft.
  */
 
 const NOTE_AUTOSAVE_DELAY_MS = 800;
@@ -81,7 +82,7 @@ export class NoteAutosaveSession {
   private generation = 0;
   private failedGeneration = -1;
   private current: NoteSaveStatus = { kind: 'idle' };
-  private listener: ((status: NoteSaveStatus) => void) | null = null;
+  private readonly listeners = new Set<(status: NoteSaveStatus) => void>();
 
   constructor(private readonly options: NoteAutosaveOptions) {
     this.latest = options.initialText;
@@ -107,9 +108,10 @@ export class NoteAutosaveSession {
     return normalizeNoteText(this.latest) !== this.persisted;
   }
 
-  /** Starts reporting status changes; `null` stops them. */
-  subscribe(listener: ((status: NoteSaveStatus) => void) | null): void {
-    this.listener = listener;
+  /** Reports status changes until the returned function is called. */
+  subscribe(listener: (status: NoteSaveStatus) => void): () => void {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
   }
 
   /** Records an edit and schedules a save after the reader pauses. */
@@ -147,16 +149,6 @@ export class NoteAutosaveSession {
     this.generation += 1;
   }
 
-  /**
-   * The editor is going away. Unsaved text is still written, in the background
-   * and after any write in flight, so closing never loses the newest edit.
-   */
-  close(): void {
-    this.listener = null;
-    if (this.dirty) void this.flush();
-    else this.clearTimer();
-  }
-
   private clearTimer(): void {
     if (this.timer === null) return;
     clearTimeout(this.timer);
@@ -165,7 +157,7 @@ export class NoteAutosaveSession {
 
   private setStatus(status: NoteSaveStatus): void {
     this.current = status;
-    this.listener?.(status);
+    for (const listener of this.listeners) listener(status);
   }
 
   private async drain(forced: boolean): Promise<NoteFlushResult> {

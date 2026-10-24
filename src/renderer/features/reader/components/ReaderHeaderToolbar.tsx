@@ -9,6 +9,9 @@ import { Select } from '../../../components/ui/select';
 import { LINE_SPACING_OPTIONS, MARGIN_OPTIONS, parseZoomChoice, zoomOptions, zoomSelectValue } from './reader-display-options';
 import { NoteComposer, type NoteComposerClose, type NoteComposerHandle } from '../../../components/note/NoteComposer';
 import { createThenUpdateNote, type NewNoteTarget } from '../../../hooks/note-persistence';
+import type { NoteAutosaveOptions } from '../../../hooks/note-autosave';
+import { newNoteDraftKey, type NoteDraft } from '../../../hooks/note-drafts';
+import { useRetainedNoteDraft } from '../../../hooks/use-note-autosave';
 
 
 const REFLOWABLE_FORMATS: ReadonlySet<string> = new Set(['epub', 'mobi', 'docx', 'pptx', 'markdown']);
@@ -19,13 +22,19 @@ function isReflowableFormat(format: string | undefined): boolean {
 
 /**
  * One opening of the location note: where it will be written and the position
- * it names, both read once when the Note button is pressed. `key` gives every
- * opening a fresh composer and autosave session.
+ * it names, both read once when the Note button is pressed. `key` is the note's
+ * draft, so every opening gets a fresh composer and autosave session. A kept
+ * draft (one whose write failed after its editor went away) opens here too,
+ * with its own context and quote and without taking focus.
  */
 type LocationNoteSession = {
-  readonly key: number;
-  readonly target: NewNoteTarget;
+  readonly key: string;
+  readonly documentId: string;
+  readonly label: string;
   readonly context: string;
+  readonly quote: string | null;
+  readonly target: NewNoteTarget | null;
+  readonly recovered: boolean;
 };
 
 /** "Current position · Page 3 of 12 · 21%", from the reader's real position only. */
@@ -34,6 +43,15 @@ function locationNoteContext(page: number, pageCount: number, progress: number):
   if (Number.isFinite(progress)) parts.push(`${String(Math.round(Math.min(1, Math.max(0, progress)) * 100))}%`);
   return parts.join(' · ');
 }
+
+/** A kept draft, shown again in the location note's place. */
+function recoveredNoteSession(draft: NoteDraft): LocationNoteSession {
+  return { key: draft.key, ...draft.meta, target: null, recovered: true };
+}
+
+/** A kept draft is never recreated: if it is gone, nothing is written. */
+const GONE_DRAFT: NoteAutosaveOptions['persist'] = () =>
+  Promise.resolve({ ok: false, message: 'This note is no longer available.', retryable: false });
 
 /** The composer for one opening of the location note; nothing before the first opening. */
 function LocationNoteComposer({ session, handle, buttonRef, onClose }: {
@@ -49,17 +67,21 @@ function LocationNoteComposer({ session, handle, buttonRef, onClose }: {
       handle={handle}
       fieldId="location-note"
       panelId="location-note-popover"
-      label="Note at current location"
+      label={session.label}
       context={session.context}
       contextIcon="add-note"
+      quote={session.quote}
       variant="popover"
       role="dialog"
       testIdPrefix="location-note"
+      draftKey={session.key}
+      documentId={session.documentId}
+      autoFocus={!session.recovered}
       autosave={{
         initialText: '',
         initialId: null,
         allowEmpty: false,
-        persist: createThenUpdateNote(session.target),
+        persist: session.target ? createThenUpdateNote(session.target) : GONE_DRAFT,
       }}
       ignoreOutside={[buttonRef]}
       onClose={onClose}
@@ -112,10 +134,22 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
   }, [currentPage]);
 
   // An open note belongs to the book it was opened in. Leaving that book
-  // closes it; unmounting writes any unsaved text to that book, not this one.
+  // closes it; its unsaved text is still written to that book, not this one,
+  // and if that write fails the draft is kept for when the reader returns.
+  const activeDocumentId = activeDocument?.id ?? null;
+  const noteDocumentId = locationNote?.documentId;
   useEffect(() => {
-    if (locationNoteOpen && locationNote?.target.documentId !== activeDocument?.id) setLocationNoteOpen(false);
-  }, [activeDocument, locationNote, locationNoteOpen]);
+    if (locationNoteOpen && noteDocumentId !== activeDocumentId) setLocationNoteOpen(false);
+  }, [activeDocumentId, noteDocumentId, locationNoteOpen]);
+
+  // A kept draft for this book is shown again, with Retry and Discard, as soon
+  // as the note's place is free. It does not take focus.
+  const retainedDraft = useRetainedNoteDraft(activeDocumentId);
+  useEffect(() => {
+    if (locationNoteOpen || retainedDraft === null) return;
+    setLocationNote(recoveredNoteSession(retainedDraft));
+    setLocationNoteOpen(true);
+  }, [locationNoteOpen, retainedDraft]);
 
   useEffect(() => {
     if (!displaySettingsOpen) return;
@@ -179,15 +213,19 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
   const openLocationNote = (): void => {
     if (!activeDocument || !adapter) return;
     const reading = adapter.getReadingLocation();
-    setLocationNote((previous) => ({
-      key: (previous?.key ?? 0) + 1,
+    setLocationNote({
+      key: newNoteDraftKey('location'),
+      documentId: activeDocument.id,
+      label: 'Note at current location',
+      context: locationNoteContext(adapter.getCurrentPage(), pageCount, reading.progress),
+      quote: null,
       target: {
         documentId: activeDocument.id,
         anchor: locationToAnchor(explicitNavigationLocation ?? reading.location),
         isLocationNote: true,
       },
-      context: locationNoteContext(adapter.getCurrentPage(), pageCount, reading.progress),
-    }));
+      recovered: false,
+    });
     setLocationNoteOpen(true);
   };
 
@@ -200,7 +238,7 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
     setLocationNoteOpen(false);
     if (reason === 'done' && annotationId !== null && locationNote) {
       showRightTab('annotations');
-      requestAnnotationReveal(locationNote.target.documentId, annotationId);
+      requestAnnotationReveal(locationNote.documentId, annotationId);
     }
     if (reason !== 'outside') window.queueMicrotask(() => { locationNoteButtonRef.current?.focus(); });
   };
