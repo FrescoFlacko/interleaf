@@ -23,7 +23,11 @@ is never modified.
 1. Select text in the reader. The **Selection actions** toolbar appears next to
    your selection.
 2. Under the word **Highlight**, click one of the five colour swatches.
-3. The highlight is saved immediately.
+3. The highlight is saved immediately and painted on the page. The toolbar
+   closes and you keep reading: the companion panel stays as it was — closed,
+   or open on whichever tab you had — and on a narrow window the companion
+   drawer does not open. To see your highlights, open the **Annotations** tab
+   yourself (see [The Annotations browser](#the-annotations-browser)).
 
 The five colours are **Yellow**, **Blue**, **Green**, **Pink** and **Purple**.
 Yellow is the default. Colour is never the only cue: hovering or
@@ -77,7 +81,11 @@ changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
 3. Type in the note card. The passage you selected is quoted above your text.
 4. Click **Done** when you have finished.
 
-The note is anchored to that passage, so it travels with the text.
+The note is anchored to that passage, so it travels with the text. Unlike a
+highlight, a note finished with **Done** opens the Annotations panel and
+scrolls the new note into view (except in Focus Mode, which stays
+distraction-free). Saving as you type, and closing the card any other way,
+leave the panels as they were.
 
 ### A note at your current location
 

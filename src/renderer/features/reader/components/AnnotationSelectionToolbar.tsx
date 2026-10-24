@@ -172,10 +172,11 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   };
 
   /**
-   * A created highlight or note opens Annotations — but not while Focus Mode is
-   * on, which the reader chose and which these two actions deliberately keep.
-   * Below 920px `showRightTab` opens the companion drawer, which would appear
-   * over the distraction-free reader and inert it.
+   * A note finished with Done opens Annotations — but not while Focus Mode is
+   * on, which the reader chose and which note-taking deliberately keeps. Below 920px
+   * `showRightTab` opens the companion drawer, which would appear over the
+   * distraction-free reader and inert it. A highlight never calls this: it is
+   * saved and painted in place, leaving the companion and its tab as they were.
    *
    * Opening the tab is not enough on its own: the panel keeps whatever scroll
    * position it had, so a reader deep in a long note would be shown the middle
@@ -265,7 +266,6 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
       color,
     });
     if (created) {
-      showAnnotationsUnlessFocusMode(created.id);
       clear();
       focusReaderAfterClear();
     } else {
