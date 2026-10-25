@@ -182,6 +182,15 @@ const updates: InterleafAPI['updates'] = {
   onState: () => noSubscription(),
 };
 
+const diagnostics: InterleafAPI['diagnostics'] = {
+  collect: () => unstubbed('diagnostics.collect'),
+  preview: () => unstubbed('diagnostics.preview'),
+  analyze: () => unstubbed('diagnostics.analyze'),
+  cancel: () => unstubbed('diagnostics.cancel'),
+  exportReport: () => unstubbed('diagnostics.exportReport'),
+  discard: () => unstubbed('diagnostics.discard'),
+};
+
 function buildApi(overrides: BridgeStubs): InterleafAPI {
   return {
     app: { ...app, ...overrides.app },
@@ -198,6 +207,7 @@ function buildApi(overrides: BridgeStubs): InterleafAPI {
     agent: { ...agent, ...overrides.agent },
     clipboard: { ...clipboard, ...overrides.clipboard },
     updates: { ...updates, ...overrides.updates },
+    diagnostics: { ...diagnostics, ...overrides.diagnostics },
   };
 }
 

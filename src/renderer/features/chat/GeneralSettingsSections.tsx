@@ -7,6 +7,7 @@ import type { SelectOption } from '../../components/ui/select-model';
 import { PrivacyPolicy } from './PrivacyPolicy';
 import type { SettingsSectionProps } from './PreferenceSettingsSections';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { DiagnosticsSection } from './DiagnosticsSection';
 
 /** Reader-facing names for the sort orders the library already supports. */
 const DEFAULT_VIEW_OPTIONS: readonly SelectOption<AppSettings['library']['defaultView']>[] = [
@@ -150,6 +151,7 @@ export function AdvancedSettingsSection({ settings, onChange }: SettingsSectionP
           <span className="mt-1 block text-2xs leading-relaxed">Adds detailed records to the existing bounded, redacted local log, which you can export from General. Document bodies, prompts, context packets, credentials, and raw agent output stay excluded. Takes effect immediately; no restart is needed.</span>
         </span>
       </label>
+      <DiagnosticsSection />
     </section>
   );
 }

@@ -477,6 +477,25 @@ Release tooling (`electron.update-release.ts`) signs, stages a draft, verifies
 it and promotes it; see [Packaging ▸ Stable updates](PACKAGING.md#stable-updates).
 No database schema change is involved.
 
+### 10. Private diagnostics
+`src/main/diagnostics/` owns Settings › Advanced › *Run diagnostics*:
+- `packet.ts` builds the allowlisted packet.
+- `sanitize.ts` sanitizes free text.
+- `report.ts` holds the fixed playbook and the report.
+- `diagnostics-service.ts` holds the owner-scoped handles, analysis and export.
+
+`src/main/ipc/diagnostics-handlers.ts` binds each call to the invoking
+sender's id and drops that sender's handles when it is destroyed. Main also
+drops them on main-frame navigation and at shutdown. Running analyses join the
+`chatStreams` live-work count, so restart and update wait for them.
+
+The renderer reaches the service only through `window.interleafAPI.diagnostics`
+(`src/preload/diagnostics-bridge.ts`) and `use-diagnostics-store.ts`. It holds
+the packet text, the issue and the report preview, never a path or credential.
+Nothing is persisted and there is no schema change. See
+[SECURITY.md › Diagnostics](SECURITY.md#diagnostics) and
+[AI_ARCHITECTURE.md §1.2a](AI_ARCHITECTURE.md#12a-private-diagnostics-analysis).
+
 ---
 
 ## 6. Architecture Change and Residual-Risk Governance

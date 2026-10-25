@@ -82,6 +82,13 @@ import type { ClipboardWriteResult } from './clipboard';
 import type { MermaidRenderRequest, MermaidRenderResult } from './mermaid';
 import type { OpenExternalResult } from '../schemas/external-link';
 import type { OpenRouterCredentialStatus } from '../schemas/credential-preview';
+import type {
+  DiagnosticsAnalyzeResult,
+  DiagnosticsCollectResult,
+  DiagnosticsExportResult,
+  DiagnosticsPreviewResult,
+  DiagnosticsProviderId,
+} from '../schemas/diagnostics';
 
 /**
  * The narrow, typed API surface exposed to the renderer as
@@ -275,6 +282,21 @@ export type InterleafAPI = {
     restart(): Promise<UpdateRestartResult>;
     openReleasePage(): Promise<UpdateReleasePageResult>;
     onState(callback: (state: UpdateState) => void): () => void;
+  };
+  /**
+   * Private diagnostics, owned by main. `collect` returns an opaque handle for
+   * the packet main built; every later call names only that handle. Nothing
+   * leaves the computer unless the user explicitly analyzes with a provider,
+   * and `exportReport` opens main's own save dialog.
+   */
+  readonly diagnostics: {
+    collect(): Promise<DiagnosticsCollectResult>;
+    /** Sanitizes the issue text and returns the exact report analysis and export use. */
+    preview(handle: string, issue: string): Promise<DiagnosticsPreviewResult>;
+    analyze(handle: string, providerId: DiagnosticsProviderId, modelId: string | null): Promise<DiagnosticsAnalyzeResult>;
+    cancel(handle: string): Promise<void>;
+    exportReport(handle: string): Promise<DiagnosticsExportResult>;
+    discard(handle: string): Promise<void>;
   };
 };
 

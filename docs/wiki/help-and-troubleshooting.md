@@ -149,6 +149,35 @@ question, try the [FAQ](faq.md).
 - **Settings ▸ Advanced** has *Record diagnostic debug logging*, and the
   Settings dialog has **Export Debug Log** at the bottom. Turn logging on,
   reproduce the problem, then export.
+- **Settings ▸ Advanced ▸ Run diagnostics** builds a private report without
+  needing an open document or AI:
+  1. Choose **Run diagnostics**. You see the exact packet first. It holds
+     Interleaf, Electron, Chrome and Node versions, OS family and
+     architecture, packaging, each provider's readiness and counts of known
+     log failure codes. Main uses fixed local diagnostics and readiness probes;
+     raw log messages, settings, credentials, library or SQLite content,
+     documents, notes, chats, environment, host or user names, or other files
+     are never included in the packet or shared. Status checks may connect to
+     configured providers, but diagnostics packets leave this device only if you
+     explicitly choose to analyze or export.
+  2. Optionally describe the problem, then choose **Review report**. Emails,
+     paths and secret-shaped text are removed. Still read it yourself, because
+     the result is not guaranteed to be anonymous.
+  3. Optionally pick a ready, tool-free provider and model, then choose
+     **Analyze with …**. That sends the reviewed packet and description once,
+     with no history, sources, web search or tools, and the provider may
+     process and keep them under its own terms. Analysis uses a supported
+     tool-free CLI provider, such as Claude Code. ChatGPT (subscription) is not
+     offered because it retains a tool surface. OpenRouter and local-server
+     analysis are disabled because their cancellation is not yet safe.
+     Collection and export are always available.
+     Nothing is chosen for you, and opening the screen sends nothing.
+  4. **Export report** saves exactly the report shown, through the save
+     dialog. Nothing is uploaded.
+
+  It is most useful for provider detection or sign-in, imports, startup,
+  packaging, updates and agent preparation. The analysis is a guide, not a
+  diagnosis.
 - Check the [FAQ](faq.md) for whether the behaviour is intentional.
 - If you are comfortable with the code, the technical documents live one
   directory up: [Architecture](../ARCHITECTURE.md),

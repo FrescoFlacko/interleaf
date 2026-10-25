@@ -356,6 +356,27 @@ child environments. Diagnostics are bounded and redacted; durable application
 logs exclude raw stdout/stderr and confidential bodies, while session events may
 show bounded redacted output for run monitoring.
 
+**Private diagnostics** (Settings › Advanced › *Run diagnostics*) builds a
+small, allowlisted packet in the main process. It contains app and runtime
+versions, OS family and architecture, packaging, provider readiness states and
+counts of known log failure codes. Main uses fixed local diagnostics and readiness
+probes; raw log messages, settings, credentials, library contents, documents, notes,
+chats, environment, host or user names, or arbitrary files are never included in the
+packet or shared. Status checks may connect to configured providers, but diagnostics
+packets leave this device only if you explicitly choose to analyze or export. You
+review the packet and an optional issue description. Interleaf removes emails,
+paths and secret-shaped text from that description, but you should still read
+it before sharing. Asking for analysis is optional and explicit. It sends the
+reviewed packet once to a supported tool-free CLI provider you choose (such as
+Claude Code), without history, sources, web search or tools, and that provider
+may process it under its own terms. ChatGPT (subscription) is not offered because
+it retains a tool surface. OpenRouter and local-server analysis are disabled
+because their cancellation is not yet safe. Collection and export are always
+available. The answer is treated as
+untrusted text. **Export report** saves exactly the previewed report through the
+native save dialog. Nothing is uploaded, and the report is not guaranteed to be
+anonymous. *Export Debug Log* is unchanged.
+
 Review [docs/SECURITY.md](docs/SECURITY.md) for the threat model, CSP,
 sanitization, IPC, path, credential, prompt-injection, and agent controls.
 
@@ -376,6 +397,11 @@ sanitization, IPC, path, credential, prompt-injection, and agent controls.
   an overwrite.
 - **Secure key storage unavailable:** configure a supported OS keychain/secret
   service. Interleaf fails closed instead of storing the raw key.
+- **Need to report a problem:** open Settings › Advanced › *Run diagnostics*.
+  Review the packet, then optionally ask a tool-free provider for analysis and
+  export the report locally. It helps with provider detection or sign-in,
+  imports, startup, packaging, updates and agent preparation. It does not
+  promise a root cause. Read the report before you share it.
 
 ## Contributing
 

@@ -669,6 +669,70 @@ records adds detail to the same bounded, redacted local log and never widens
 what may be written. The native export dialog writes a bounded,
 re-sanitized bundle and accepts no renderer-provided destination path.
 
+**Private diagnostics.** The code is in `src/main/diagnostics/`, behind the
+sender-validated `diagnostics:*` channels.
+
+- **Packet.** Main builds the packet against the strict
+  `diagnosticsPacketSchema`. It holds:
+  - the version from app metadata (`app.getVersion()` in packaged builds,
+    main-owned package metadata in development), plus Electron, Chrome and Node
+    versions;
+  - the OS family and architecture, and the packaging;
+  - per provider, only the id, enum states and capability booleans;
+  - log availability, with counts by level and allowlisted event codes from a
+    bounded scan of the redacted durable log.
+
+  Main inspects local log records to count known failure codes and checks
+  provider readiness locally; raw log messages, settings, credentials, library or
+  SQLite content, documents, annotations, chats, the environment, host or user names,
+  custom executable paths or labels, identifiers, or arbitrary files are never included
+  in the packet or shared. Status checks may connect to configured providers, but diagnostics
+  packets leave this device only if you explicitly choose to analyze or export.
+- **Handle.** The renderer receives an opaque UUID handle that only the
+  window that collected it can use. Main limits handles to 4, expires them
+  after 30 minutes, and drops them on dismissal, navigation, window
+  destruction and shutdown. In-flight collection operations track owner generations
+  across awaits to prevent resurrection of disposed or superseded handles.
+- **Issue text.** The optional issue text (≤ 2,000 chars) is sanitized in
+  main for secret shapes, emails, paths, URL credentials and queries, and
+  control or bidi characters.
+- **Analysis.** Analysis happens only on an explicit request. Main re-checks
+  the chosen provider (available, connected, `toolFreeMode`, a resolvable
+  model, not excluded) and fails closed. Only supported tool-free CLI transports
+  qualify (Claude Code, Pi and Omp when they report `toolFreeMode`). Codex is
+  excluded because it retains a tool surface. Both HTTP inference transports are
+  excluded at eligibility and again at request time, before any registry,
+  readiness, model or adapter access, even for a forged request:
+  - OpenRouter: its credential lookup is awaited late, so a request cancelled
+    during that wait can still be sent, and its stream parser does not reject
+    `tool_calls` responses.
+  - Local server (loopback): its adapter has the same cancellation-safety gap.
+  - The operation is reserved synchronously before any await, so it counts
+    toward concurrency limits, update-restart and shutdown drains at once. A
+    cancel during verification stops the run before `streamChat`; the CLI
+    adapter registers its cancellation before preparing its workspace or
+    resolving its binary, so a cancel then never spawns the CLI. Cancellation
+    or timeout waits at most 500 ms for the user, but the run stays counted
+    until the provider's own cancel settles; shutdown waits a bounded 2 s.
+    This bounds Interleaf's waits; it is not a proof that a CLI process has
+    exited.
+  - It sends one fixed playbook plus the reviewed packet and issue through
+    `AIProviderRegistry`/`streamChat`, with `webSearch: false` and no history,
+    sources or tools.
+  - Limits: 2 concurrent analyses, 120 s full deadline across verification and streaming,
+    20,000 stream events and bounded text. Eligible transports run without tools.
+    A failure, a timeout or a stale handle discards the answer.
+  - The answer is untrusted. Main re-sanitizes it, neutralizes code fences,
+    bounds it, and returns it only as inert text.
+  - Running analyses and cleaning operations count as live chat work for restart and shutdown.
+- **Export.** Export never calls a provider. It writes exactly the previewed
+  report through the native main-owned save dialog, as an owner-only bounded
+  file. The renderer never supplies a path.
+- **Privacy limits.** Analysis goes to the chosen CLI provider's service under
+  its terms; Interleaf does not control that CLI's own network use. Sanitizing
+  is best-effort, so the UI asks the user to review the report and promises no
+  anonymity.
+
 This is distinct from the persisted agent event stream: the session UI may show
 bounded, redacted stdout/stderr events so the user can monitor a run, while
 durable application diagnostics exclude raw streams by design.

@@ -33,7 +33,7 @@ const LOG_CATEGORIES = [
 export type LogCategory = (typeof LOG_CATEGORIES)[number];
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 
-type LogLevel = (typeof LOG_LEVELS)[number];
+export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export const LOG_LIMITS = {
   maxMessageLength: 2_000,
@@ -410,7 +410,30 @@ export class DurableLogSink {
     }
   }
 
-  private async readSanitizedLogs(): Promise<string> {
+  /**
+   * Visits the category, level and message of each retained record, oldest
+   * first, for a summary computed inside main. Metadata is never read out and
+   * the visit stops after `maxRecords` well-formed records.
+   */
+  async scanRecords(
+    visit: (category: LogCategory, level: LogLevel, message: string) => void,
+    maxRecords: number,
+  ): Promise<{ readonly scanned: number; readonly truncated: boolean }> {
+    await this.flush();
+    let scanned = 0;
+    for (const path of await this.managedPaths()) {
+      for (const line of (await readFile(path, 'utf8')).split('\n')) {
+        const record = line.trim().length === 0 ? null : parseRecordHeader(line);
+        if (record === null) continue;
+        if (scanned >= maxRecords) return { scanned, truncated: true };
+        scanned += 1;
+        visit(record.category, record.level, record.message);
+      }
+    }
+    return { scanned, truncated: false };
+  }
+
+  private async managedPaths(): Promise<string[]> {
     await ensureRestrictedDirectory(this.directory);
     await validateManagedLogFiles(this.directory, this.retainedRotatedFiles);
     const paths: string[] = [];
@@ -419,9 +442,12 @@ export class DurableLogSink {
       if (await exists(path)) paths.push(path);
     }
     if (await exists(this.currentPath)) paths.push(this.currentPath);
+    return paths;
+  }
 
+  private async readSanitizedLogs(): Promise<string> {
     let output = '';
-    for (const path of paths) {
+    for (const path of await this.managedPaths()) {
       const text = await readFile(path, 'utf8');
       for (const line of text.split('\n')) {
         if (line.trim().length === 0) continue;
@@ -433,6 +459,18 @@ export class DurableLogSink {
       }
     }
     return output;
+  }
+}
+
+function parseRecordHeader(line: string): { readonly category: LogCategory; readonly level: LogLevel; readonly message: string } | null {
+  try {
+    const parsed = parsePortableJson(line);
+    if (!isPortableRecord(parsed)) return null;
+    const { category, level, message } = parsed;
+    if (!isLogCategory(category) || !isLogLevel(level) || typeof message !== 'string') return null;
+    return { category, level, message };
+  } catch {
+    return null;
   }
 }
 
@@ -486,7 +524,8 @@ async function unlinkIfRegular(path: string): Promise<void> {
   await unlink(path);
 }
 
-async function writeRestrictedFile(destinationPath: string, contents: string): Promise<void> {
+/** Writes a user-chosen export file owner-only, refusing symlinked or non-regular targets. */
+export async function writeRestrictedFile(destinationPath: string, contents: string): Promise<void> {
   if (destinationPath.length === 0 || destinationPath.includes('\0')) throw new Error('Invalid debug log destination.');
   const parent = dirname(destinationPath);
   const parentInfo = await lstat(parent);

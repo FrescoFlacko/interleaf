@@ -59,6 +59,7 @@ export function makeIpcDeps(overrides: Partial<IpcDispatcherDeps> = {}): IpcDisp
     mermaid: unstubbed('mermaid'),
     openFiles: noOpenFiles(),
     updates: unstubbed('updates'),
+    diagnostics: unstubbed('diagnostics'),
     ...overrides,
   };
 }

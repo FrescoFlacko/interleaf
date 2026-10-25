@@ -130,6 +130,15 @@ import type { ClipboardWriteResult } from '../types/clipboard';
 import { mermaidRenderRequestSchema } from './mermaid';
 import type { MermaidRenderResult } from '../types/mermaid';
 import type { UpdateReleasePageResult, UpdateRestartResult, UpdateState } from './updates';
+import {
+  diagnosticsAnalyzeRequestSchema,
+  diagnosticsHandleRequestSchema,
+  diagnosticsIssueRequestSchema,
+  type DiagnosticsAnalyzeResult,
+  type DiagnosticsCollectResult,
+  type DiagnosticsExportResult,
+  type DiagnosticsPreviewResult,
+} from './diagnostics';
 
 export type AppInfo = {
   name: string;
@@ -252,6 +261,12 @@ export const ipcRequestSchemas = {
   [IPC.updatesDownload]: undefined,
   [IPC.updatesRestart]: undefined,
   [IPC.updatesOpenReleasePage]: undefined,
+  [IPC.diagnosticsCollect]: undefined,
+  [IPC.diagnosticsPreview]: diagnosticsIssueRequestSchema,
+  [IPC.diagnosticsAnalyze]: diagnosticsAnalyzeRequestSchema,
+  [IPC.diagnosticsCancel]: diagnosticsHandleRequestSchema,
+  [IPC.diagnosticsExport]: diagnosticsHandleRequestSchema,
+  [IPC.diagnosticsDiscard]: diagnosticsHandleRequestSchema,
 } as const satisfies Readonly<Record<IpcChannel, z.ZodType | undefined>>;
 
 /** Result type per channel. */
@@ -349,6 +364,12 @@ type IpcResults = {
   readonly [IPC.updatesDownload]: UpdateState;
   readonly [IPC.updatesRestart]: UpdateRestartResult;
   readonly [IPC.updatesOpenReleasePage]: UpdateReleasePageResult;
+  readonly [IPC.diagnosticsCollect]: DiagnosticsCollectResult;
+  readonly [IPC.diagnosticsPreview]: DiagnosticsPreviewResult;
+  readonly [IPC.diagnosticsAnalyze]: DiagnosticsAnalyzeResult;
+  readonly [IPC.diagnosticsCancel]: undefined;
+  readonly [IPC.diagnosticsExport]: DiagnosticsExportResult;
+  readonly [IPC.diagnosticsDiscard]: undefined;
 };
 
 type IpcRequestSchemas = typeof ipcRequestSchemas;

@@ -153,7 +153,7 @@ Open Settings from the header. The navigation rail on the left has ten entries:
 | **Agent Working Directories** | Save folders the agent is allowed to work in, and assign a default folder per profile. |
 | **Agent Sandboxing** | *Default execution mode* for new agent runs. |
 | **Privacy** | *Confirm before opening external links*. |
-| **Advanced** | *Record diagnostic debug logging*. |
+| **Advanced** | *Record diagnostic debug logging*, and **Private diagnostics** (*Run diagnostics*; see [Help and troubleshooting](help-and-troubleshooting.md#still-stuck)). |
 
 At the bottom of the dialog: **Export Debug Log** and **Done**.
 

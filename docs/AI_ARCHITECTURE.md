@@ -306,6 +306,31 @@ Boundaries:
   a reader can see a claim came from the web rather than from the open
   document.
 
+### 1.2a Private diagnostics analysis
+
+Settings › Advanced › *Run diagnostics* reuses the provider abstraction for one
+non-chat request (`src/main/diagnostics/`).
+
+- **Eligibility.** A provider qualifies only when it is available, connected,
+  reports `toolFreeMode=true`, lists a model, and is not excluded. Main enforces
+  this both during eligibility listing and at request-time validation; an
+  excluded id is rejected before any registry, readiness, model or adapter call.
+  Only tool-free CLI transports qualify (Claude Code, Pi and Omp when ready and
+  reporting `toolFreeMode`), offered without pre-selection. Codex is excluded
+  because it retains a tool surface. Both HTTP transports are excluded:
+  OpenRouter because a request cancelled during its late credential await can
+  still be sent and its parser does not reject `tool_calls`, and the local
+  loopback server because its adapter has the same cancellation-safety gap.
+  `CliAIProvider` registers a request's cancellation before preparing its
+  workspace or resolving its binary.
+- **Request.** `streamChat` gets a fixed diagnostics playbook as the system
+  prompt and one user message: the reviewed packet plus the sanitized issue,
+  in escaped elements. It runs with `webSearch: false` and no history, sources,
+  document context or tools.
+- **Answer.** Eligible provider transports run without tools. The answer is
+  bounded by events, length and time, then re-sanitized,
+  stripped of runnable fences, and shown as inert text in the report preview.
+  It never creates a chat, citation or session.
 ---
 
 ### 1.3 Chats about files opened without importing

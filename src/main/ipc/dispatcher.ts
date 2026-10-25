@@ -31,6 +31,7 @@ import type { AgentService } from '../agents/agent-service';
 import type { ClipboardService } from '../clipboard/clipboard-service';
 import type { MermaidRenderService } from '../documents/mermaid/mermaid-render-service';
 import { buildUpdateHandlers, type UpdateHandlerDeps } from './update-handlers';
+import { buildDiagnosticsHandlers, type DiagnosticsHandlerDeps } from './diagnostics-handlers';
 import { isSenderAllowed, sanitizeSenderForLog, type SenderEvent, type SenderRule } from './sender-validation';
 import {
   assertLibraryDocument,
@@ -63,7 +64,7 @@ export type AppInfoProviderResult = {
   };
 };
 
-export type IpcDispatcherDeps = UpdateHandlerDeps & {
+export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
   readonly settings: SettingsRepository;
   /**
    * The guided-onboarding verdict main latched at startup. A getter rather than
@@ -401,6 +402,7 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'reader:render-mermaid': (req) => deps.mermaid.render(req),
     'clipboard:write-text': (req) => deps.clipboard.writeText(req.text),
     ...buildUpdateHandlers(deps),
+    ...buildDiagnosticsHandlers(deps),
   };
 }
 

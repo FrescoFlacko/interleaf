@@ -4,8 +4,10 @@ import { writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { APP_NAME, APP_TAGLINE } from '@shared/constants/brand';
 import { InterleafDatabase, DATABASE_FILE_NAME } from './db/database';
-import { configureDurableLogging, createLogger, flushDurableLogs, resetDurableLogging, setDurableDebugLogging, type DurableLogSink } from './logging/logger';
-import { createDebugLogExporter } from './logging/debug-log-export';
+import { configureDurableLogging, createLogger, flushDurableLogs, resetDurableLogging, setDurableDebugLogging, writeRestrictedFile, type DurableLogSink } from './logging/logger';
+import { createDebugLogExporter, type DebugLogSaveDialog } from './logging/debug-log-export';
+import { DiagnosticsService } from './diagnostics/diagnostics-service';
+import { processEnvironment, resolveDiagnosticsAppVersion } from './diagnostics/packet';
 import { IPC_EVENTS } from '@shared/constants/ipc';
 import { resolveAppPaths } from './app/paths';
 import { brandEnvFlagEnabled } from './app/brand-env';
@@ -115,6 +117,7 @@ let mermaidRenderService: MermaidRenderService | null = null;
 let durableLogSink: DurableLogSink | null = null;
 let openFiles: OpenFileManager | null = null;
 let updates: UpdateController | null = null;
+let diagnostics: DiagnosticsService | null = null;
 // Operating-system open requests can arrive before app ready (macOS
 // `open-file`, the launch command line); they wait here for the renderer.
 const openFileRequests = new OpenFileRequestQueue();
@@ -132,6 +135,11 @@ function createAndAttachMainWindow(): BrowserWindow {
     log: securityLog,
   });
   attachMainWindowLifecycle(window, mediaScopeId);
+  // A reload or navigation leaves no page to own diagnostics handles.
+  const ownerId = window.webContents.id;
+  window.webContents.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) diagnostics?.disposeOwner(ownerId);
+  });
   // Item C: main, not the renderer, names the window that may take over agent
   // sessions a destroyed window left behind. This is the only caller.
   agentService?.adoptMainWindow(window.webContents.id);
@@ -540,18 +548,26 @@ async function bootstrap(): Promise<void> {
   });
   installPermissionGuards(session.defaultSession, securityLog);
 
-  const exportDebugLog = createDebugLogExporter(
-    durableLogSink,
-    async (parentWindow, options) => {
-      const result = parentWindow === null
-        ? await dialog.showSaveDialog({ ...options, filters: options.filters.map((filter) => ({ ...filter, extensions: [...filter.extensions] })) })
-        : await dialog.showSaveDialog(parentWindow, { ...options, filters: options.filters.map((filter) => ({ ...filter, extensions: [...filter.extensions] })) });
-      return {
-        canceled: result.canceled,
-        ...(result.filePath.length === 0 ? {} : { filePath: result.filePath }),
-      };
-    },
-  );
+  const showSaveDialog: DebugLogSaveDialog = async (parentWindow, options) => {
+    const result = parentWindow === null
+      ? await dialog.showSaveDialog({ ...options, filters: options.filters.map((filter) => ({ ...filter, extensions: [...filter.extensions] })) })
+      : await dialog.showSaveDialog(parentWindow, { ...options, filters: options.filters.map((filter) => ({ ...filter, extensions: [...filter.extensions] })) });
+    return {
+      canceled: result.canceled,
+      ...(result.filePath.length === 0 ? {} : { filePath: result.filePath }),
+    };
+  };
+  const exportDebugLog = createDebugLogExporter(durableLogSink, showSaveDialog);
+  const liveDiagnostics = new DiagnosticsService({
+    environment: processEnvironment(resolveDiagnosticsAppVersion(app), app.isPackaged),
+    logs: durableLogSink,
+    now: () => new Date(),
+    providers: aiProviders,
+    showSaveDialog: (options) => showSaveDialog(lifecycleCoordinator.mainWindow, options),
+    writeFile: writeRestrictedFile,
+    log: createLogger('app'),
+  });
+  diagnostics = liveDiagnostics;
 
   // The isolated renderer is created on the first diagram and recreated after
   // any termination, so an application that never opens one never starts it.
@@ -576,13 +592,14 @@ async function bootstrap(): Promise<void> {
     releaseSingleInstanceLock: () => { app.releaseSingleInstanceLock(); },
     activeWork: createActiveWork({
       agentSessions: [() => liveAgents.liveWork()],
-      chatStreams: [() => libraryChat.liveWork(), () => liveOpenFiles.liveChatWork()],
+      chatStreams: [() => libraryChat.liveWork(), () => liveOpenFiles.liveChatWork(), () => liveDiagnostics.activeCount()],
       imports: [() => library.importAdmission.liveWork(), () => liveOpenFiles.liveOpens()],
       closeAdmission: [
         () => { libraryChat.closeAdmission(); },
         () => { liveOpenFiles.closeAdmission(); },
         () => { liveAgents.closeAdmission(); },
         () => { library.importAdmission.close(); },
+        () => { liveDiagnostics.closeAdmission(); },
       ],
     }),
     requestQuitForUpdate: (install, closeAdmission) => shutdownBarrier.requestQuitForUpdate(install, closeAdmission),
@@ -607,6 +624,7 @@ async function bootstrap(): Promise<void> {
     log: securityLog,
     parentWindow: () => lifecycleCoordinator.mainWindow,
     exportDebugLog,
+    diagnostics: liveDiagnostics,
     // The only path out of the application for a link found in a document. The
     // dispatcher has already re-validated the target; `shell` is reached from
     // main alone, never from the renderer.
@@ -687,6 +705,10 @@ async function drainServices(): Promise<void> {
   lifecycleCoordinator.startShutdown();
   updates?.dispose();
   updates = null;
+  // Before the providers it borrows are shut down with the chat services; the
+  // wait for its provider stops is bounded, never indefinite.
+  await diagnostics?.shutdown();
+  diagnostics = null;
   try {
     // Open files first: their chat services borrow the provider registry
     // that the library chat service shuts down.

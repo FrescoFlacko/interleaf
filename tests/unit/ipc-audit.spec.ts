@@ -13,6 +13,8 @@ import type { CloneableValue } from '@shared/models/portable';
 import type { InterleafAPI } from '@shared/types/api';
 import { UNCONFIGURED_CREDENTIAL_STATUS } from '../helpers/credential-status';
 
+const DIAGNOSTICS_HANDLE = '550e8400-e29b-41d4-a716-446655440001';
+
 describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
   const senderRule = createSenderRule({ indexHtmlPath: '/out/renderer/index.html', devUrl: 'http://localhost:5173' });
   const validEvent = { senderFrame: { url: senderRule.allowedProductionFileUrl } } as Pick<IpcMainInvokeEvent, 'senderFrame'>;
@@ -116,6 +118,20 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
           currentVersion: '0.5.0', channel: 'stable', support: 'development', automaticChecks: true, lastCheckedAt: null, phase: { status: 'idle' },
         }] as const),
         [IPC.updatesRestart, { outcome: 'not-ready' }],
+        // Every diagnostics result is validated in full at the bridge.
+        [IPC.diagnosticsCollect, {
+          handle: DIAGNOSTICS_HANDLE,
+          packet: {
+            format: 'interleaf-diagnostics/1', collectedAt: '2026-09-12T00:00:00.000Z',
+            app: { version: '0.13.0', electron: '40.1.0', chrome: '140.0.0.0', node: '22.20.0', packaging: 'development' },
+            os: { family: 'darwin', arch: 'arm64' }, providers: [],
+            logs: { available: false, scannedRecords: 0, truncated: false, counts: [], signals: [] },
+          },
+          packetText: '{}', providers: [],
+        }],
+        [IPC.diagnosticsPreview, { issue: '', report: 'report' }],
+        [IPC.diagnosticsAnalyze, { status: 'failed', reason: 'cancelled' }],
+        [IPC.diagnosticsExport, { status: 'cancelled' }],
         [IPC.updatesOpenReleasePage, { opened: true }],
       ]);
       const ipc: PreloadIpc = {
@@ -288,13 +304,19 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       await api.updates.restart(); last(IPC.updatesRestart, undefined);
       await api.updates.openReleasePage(); last(IPC.updatesOpenReleasePage, undefined);
       await api.app.openExternal('https://example.com/a'); last(IPC.appOpenExternal, { url: 'https://example.com/a' });
+      await api.diagnostics.collect(); last(IPC.diagnosticsCollect, undefined);
+      await api.diagnostics.preview(DIAGNOSTICS_HANDLE, 'issue'); last(IPC.diagnosticsPreview, { handle: DIAGNOSTICS_HANDLE, issue: 'issue' });
+      await api.diagnostics.analyze(DIAGNOSTICS_HANDLE, 'claude', 'sonnet'); last(IPC.diagnosticsAnalyze, { handle: DIAGNOSTICS_HANDLE, providerId: 'claude', modelId: 'sonnet' });
+      await api.diagnostics.cancel(DIAGNOSTICS_HANDLE); last(IPC.diagnosticsCancel, { handle: DIAGNOSTICS_HANDLE });
+      await api.diagnostics.exportReport(DIAGNOSTICS_HANDLE); last(IPC.diagnosticsExport, { handle: DIAGNOSTICS_HANDLE });
+      await api.diagnostics.discard(DIAGNOSTICS_HANDLE); last(IPC.diagnosticsDiscard, { handle: DIAGNOSTICS_HANDLE });
       expect(sent).toEqual([]); expect(calls).toHaveLength(IPC_CHANNELS.length); expect(new Set(calls.map((call) => call.channel))).toEqual(new Set(IPC_CHANNELS));
     });
 
     it('exposes only the declared namespace surface and no raw or generic bridge', () => {
       const { api } = setup();
       const exposed = new Set(Object.keys(api));
-      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'files', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
+      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
       for (const key of ['ipcRenderer', 'require', 'process', 'invoke', 'send', 'on']) expect(exposed.has(key)).toBe(false);
       const expectedNamespaces: readonly (readonly [keyof InterleafAPI, readonly string[]])[] = [
         ['app', ['exportDebugLog', 'getInfo', 'onBeforeClose', 'openExternal']],
@@ -312,6 +334,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         ['files', ['onCommand', 'openDialog', 'openPending']],
         ['reader', ['renderMermaid']],
         ['clipboard', ['writeText']],
+        ['diagnostics', ['analyze', 'cancel', 'collect', 'discard', 'exportReport', 'preview']],
         ['updates', ['check', 'download', 'getState', 'onState', 'openReleasePage', 'restart']],
       ];
       expect(expectedNamespaces.map(([namespace]) => namespace).sort()).toEqual([...exposed].sort());

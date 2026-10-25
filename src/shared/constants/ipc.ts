@@ -157,6 +157,19 @@ export const IPC = {
   updatesDownload: 'updates:download',
   updatesRestart: 'updates:restart',
   updatesOpenReleasePage: 'updates:open-release-page',
+
+  /**
+   * Private diagnostics. Main collects the packet and returns an opaque handle
+   * bound to it and to the asking window; every later step names only that
+   * handle. Export opens a native save dialog in main; the renderer never
+   * supplies a path, and nothing is sent anywhere unless the user analyzes.
+   */
+  diagnosticsCollect: 'diagnostics:collect',
+  diagnosticsPreview: 'diagnostics:preview',
+  diagnosticsAnalyze: 'diagnostics:analyze',
+  diagnosticsCancel: 'diagnostics:cancel',
+  diagnosticsExport: 'diagnostics:export',
+  diagnosticsDiscard: 'diagnostics:discard',
 } as const;
 export const IPC_EVENTS = {
   appBeforeClose: 'app:before-close',

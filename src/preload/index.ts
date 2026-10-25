@@ -13,6 +13,7 @@ import { hasOnlyKeys, isPlainRecord } from './guards';
 import { isAgentEvent, isChatSessionTitleChanged, isChatStreamEvent } from './wire-guards';
 import { createFilesBridge } from './files-bridge';
 import { createUpdatesBridge } from './updates-bridge';
+import { createDiagnosticsBridge } from './diagnostics-bridge';
 import {
   aiProviderIdSchema,
   aiProviderStatusListSchema,
@@ -513,6 +514,7 @@ export function createInterleafApi(
     writeText: (text: string) => invoke(IPC.clipboardWriteText, { text }),
   },
   updates: createUpdatesBridge(invoke, ipc),
+  diagnostics: createDiagnosticsBridge(invoke),
   };
 }
 
