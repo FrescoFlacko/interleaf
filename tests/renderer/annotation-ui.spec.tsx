@@ -587,8 +587,9 @@ describe('annotation renderer UX', () => {
 
     height = 680;
     act(() => { for (const notify of notices) notify(); });
-    // Reader top 40 plus the 8 px margin; the 680 px box now ends at 728, inside the reader's 740.
-    expect(toolbar.style.top).toBe('48px');
+    // It grows down from its top-left and moves up only by the least that
+    // fits: the 680 px box now ends 8 px above the reader's foot at 740.
+    expect(toolbar.style.top).toBe('52px');
     expect(note).toHaveFocus();
     measure.mockRestore();
     vi.unstubAllGlobals();

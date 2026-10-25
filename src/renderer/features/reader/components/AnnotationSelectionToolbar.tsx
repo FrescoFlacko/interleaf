@@ -16,7 +16,8 @@ import { newNoteDraftKey } from '../../../hooks/note-drafts';
 import type { NotePersistResult } from '../../../hooks/note-autosave';
 import { bridge } from '../../../app/api-client';
 import { Button } from '../../../components/ui/button';
-import { selectionToolbarBounds, selectionToolbarPosition } from './selection-toolbar-position';
+import { selectionToolbarBounds, selectionToolbarStyle, toolbarAnchor, type ToolbarAnchor } from './selection-toolbar-position';
+import { liveSelectionRange, paintSelectionNote } from '../annotations/selection-note-paint';
 import type { HighlightEditing } from '../annotations/use-highlight-edit';
 import {
   DeleteHighlightButton,
@@ -43,7 +44,17 @@ type SelectionNoteSession = {
   readonly documentId: string;
   readonly quote: string | null;
   readonly persist: (text: string, id: string | null) => Promise<NotePersistResult>;
+  /** Where the toolbar was when the note opened; the open box grows from there. */
+  readonly anchor: ToolbarAnchor;
+  /** The passage, kept marked while the note field holds focus. */
+  readonly range: Range | null;
 };
+
+/** Where an open note grows from and what it marks, while it is open on `selection`. */
+function openNoteTarget(noteOpen: boolean, session: SelectionNoteSession | null, selection: object | null): { anchor: ToolbarAnchor | null; range: Range | null } {
+  if (!noteOpen || session?.selection !== selection) return { anchor: null, range: null };
+  return { anchor: session.anchor, range: session.range };
+}
 
 export function AnnotationSelectionToolbar({ editing: reopened = null }: AnnotationSelectionToolbarProps) {
   const { selection, editing, resetKey, label: toolbarLabel } = useSelectionToolbarTarget(reopened);
@@ -97,6 +108,22 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
     return () => { observer.disconnect(); };
   }, [selection]);
 
+  // The note field takes focus and collapses the browser selection, so the
+  // passage keeps a temporary mark of its own for as long as the note is open
+  // on it. Closing, a new selection, a document change or unmounting clears it.
+  const { anchor: openAt, range: paintRange } = openNoteTarget(noteOpen, noteSession, selection);
+  useEffect(() => (paintRange ? paintSelectionNote(paintRange) : undefined), [paintRange]);
+
+  // An open note stays where it opened, so a window resize is the one thing
+  // that re-clamps it; nothing else re-renders the toolbar then.
+  const [, setViewportVersion] = useState(0);
+  useEffect(() => {
+    if (!noteOpen) return;
+    const reclamp = (): void => { setViewportVersion((version) => version + 1); };
+    window.addEventListener('resize', reclamp);
+    return () => { window.removeEventListener('resize', reclamp); };
+  }, [noteOpen]);
+
   /**
    * The bare toolbar is itself a top layer (`hasOpenTopLayer`), so Escape has
    * to mean something here or it would be swallowed with nothing to show for
@@ -126,10 +153,12 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   if (!selection || !activeDocument) return null;
   const readerRect = document.querySelector<HTMLElement>('[data-reader-focus-target="true"]')?.getBoundingClientRect() ?? null;
   const bounds = selectionToolbarBounds(readerRect, { width: window.innerWidth, height: window.innerHeight });
-  const { left, top, maxWidth } = selectionToolbarPosition(selection.clientRect, {
+  const size = {
     width: toolbarSize.width > 0 ? toolbarSize.width : 420,
     height: toolbarSize.height > 0 ? toolbarSize.height : (noteOpen ? 180 : 44),
-  }, bounds);
+  };
+  const placement = selectionToolbarStyle(selection.clientRect, openAt, size, bounds);
+  const { left, top } = placement;
 
   const clear = (): void => {
     setSelection(null, null);
@@ -303,6 +332,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
             keepSelection: true,
           })
         : () => Promise.resolve({ ok: false, message: blocked, retryable: false }),
+      anchor: toolbarAnchor({ left, top }),
+      range: editing ? null : liveSelectionRange(document.querySelector('[data-reader-focus-target="true"]'), selection.selectedText),
     });
     setNoteOpen(true);
   };
@@ -397,7 +428,7 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
       data-editing-annotation-id={editing?.annotation.id}
       data-note-open={noteOpen ? 'true' : undefined}
       className={`fixed z-50 rounded-lg border p-2 text-xs ${noteOpen ? 'note-surface-panel' : 'border-border-subtle bg-bg-primary shadow-xl'}`}
-      style={{ left, top, maxWidth }}
+      style={placement}
     >
       <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
         <div className="flex items-center gap-1 shrink-0">

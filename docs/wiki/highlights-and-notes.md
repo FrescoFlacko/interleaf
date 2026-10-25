@@ -82,7 +82,12 @@ changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
 1. Select the passage.
 2. Click **Add note** in the selection toolbar.
 3. The toolbar expands to hold the note. Type below the passage you selected,
-   which is quoted above your text.
+   which is quoted above your text. The toolbar keeps its top-left corner
+   where it was and grows downward as you type, even if that covers the
+   passage. It moves only when it would not otherwise fit in the reader,
+   and then only as far as it must. The passage stays marked in the page
+   while you type. The mark is not a highlight and goes away when the note
+   closes.
 4. Click **Done** when you have finished.
 
 The note is anchored to that passage, so it travels with the text. Unlike a
