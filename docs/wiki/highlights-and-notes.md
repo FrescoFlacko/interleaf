@@ -48,8 +48,9 @@ The same toolbar also offers:
 
 ## Notes
 
-There are two kinds, and they behave differently. Both open the same small
-note card, in your reading font.
+There are two kinds, and they behave differently. Both use the same note card,
+in your reading font. A note on selected text opens inside the selection
+toolbar itself, below its buttons, and the toolbar's **×** closes it.
 
 Notes save themselves as you type: a moment after you pause, the card's status
 changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
@@ -80,7 +81,8 @@ changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
 
 1. Select the passage.
 2. Click **Add note** in the selection toolbar.
-3. Type in the note card. The passage you selected is quoted above your text.
+3. The toolbar expands to hold the note. Type below the passage you selected,
+   which is quoted above your text.
 4. Click **Done** when you have finished.
 
 The note is anchored to that passage, so it travels with the text. Unlike a

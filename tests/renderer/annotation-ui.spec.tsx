@@ -415,11 +415,11 @@ describe('annotation renderer UX', () => {
     const { unmount } = renderWithChatStore(chat, <AnnotationSelectionToolbar />);
     const selectionInvoker = screen.getByRole('button', { name: 'Add note' });
     fireEvent.click(selectionInvoker);
-    const selectionDialog = screen.getByRole('dialog', { name: 'Note on selected text' });
-    expect(selectionDialog).toBeInTheDocument();
+    const selectionNote = screen.getByRole('group', { name: 'Note on selected text' });
+    expect(selectionNote).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Note on selected text' }), { key: 'Escape' });
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+      expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull();
       expect(selectionInvoker).toHaveFocus();
     });
     unmount();
@@ -440,11 +440,11 @@ describe('annotation renderer UX', () => {
     });
   });
 
-  it('passes a WCAG audit with the selection note dialog expanded', async () => {
+  it('passes a WCAG audit with the selection note expanded', async () => {
     selectPassage();
     const { container } = renderWithChatStore(chat, <AnnotationSelectionToolbar />);
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
-    await screen.findByRole('dialog', { name: 'Note on selected text' });
+    await screen.findByRole('group', { name: 'Note on selected text' });
     const results = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } });
     expect(results.violations).toEqual([]);
   });
@@ -467,7 +467,7 @@ describe('annotation renderer UX', () => {
     expect(status).toHaveTextContent('Saves as you type');
     fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+      expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull();
     });
     expect(create).not.toHaveBeenCalled();
   });
@@ -481,7 +481,7 @@ describe('annotation renderer UX', () => {
     fireEvent.change(field, { target: { value: 'Keep me' } });
     fireEvent.click(screen.getByRole('button', { name: /^Done/u }));
 
-    const dialog = await screen.findByRole('dialog', { name: 'Note on selected text' });
+    const dialog = await screen.findByRole('group', { name: 'Note on selected text' });
     const alert = await within(dialog).findByRole('alert');
     expect(alert).toHaveTextContent(/^The annotation could not be saved\.Your note is still here, so you can try again\./u);
     expect(screen.getAllByRole('alert')).toHaveLength(1);
@@ -502,7 +502,7 @@ describe('annotation renderer UX', () => {
     await waitFor(() => { expect(screen.getByTestId('selection-note-save-status')).toHaveTextContent('Saved'); });
     expect(create).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Note on selected text' })).toBeInTheDocument();
   });
 
   it('keeps the toolbar inside the reader rather than over the companion panel', () => {
@@ -1041,7 +1041,7 @@ describe('annotation renderer UX', () => {
       fireEvent.keyDown(screen.getByRole('textbox', { name: 'Note on selected text' }), { key: 'Escape' });
 
       await waitFor(() => {
-        expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+        expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull();
         expect(invoker).toHaveFocus();
       });
       // The note editor owns that Escape: the passage and Focus Mode both stay.

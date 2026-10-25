@@ -28,9 +28,32 @@
 }
 
 /* The field is borderless, so keyboard focus is drawn on the whole card. */
-.note-composer:has(.note-composer__field:focus-visible) {
+.note-composer:not([data-variant='embedded']):has(.note-composer__field:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/*
+ * Embedded: the note is the lower half of a panel that already paints the
+ * note surface, border and shadow (the selection panel), so it draws no card.
+ * Focus is a rule under the writing area instead of a ring round the panel.
+ */
+.note-composer[data-variant='embedded'] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.note-composer[data-variant='embedded'] .note-composer__field {
+  padding-bottom: 4px;
+  box-shadow: inset 0 -1px 0 var(--note-border);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.note-composer[data-variant='embedded'] .note-composer__field:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--focus-ring);
 }
 
 .note-composer__head {
@@ -202,4 +225,23 @@
   font-family: inherit;
   font-size: var(--text-2xs);
   font-weight: 500;
+}
+
+/*
+ * A panel that expands to hold an embedded note (the selection panel) takes
+ * the note surface as a whole, so its actions and the note read as one sheet.
+ * The body spans the panel's width, set by its action row, without widening it.
+ */
+.note-surface-panel {
+  border-color: var(--note-border);
+  background: var(--note-surface);
+  box-shadow: var(--note-shadow);
+}
+
+.note-surface-panel__body {
+  width: 0;
+  min-width: 100%;
+  margin-top: 8px;
+  padding: 10px 2px 0;
+  border-top: 1px solid var(--note-border);
 }

@@ -222,7 +222,7 @@ describe('note save shortcut', () => {
       expect(plain).toBe(true);
       expect(shifted).toBe(true);
       expect(composing).toBe(true);
-      expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Note on selected text' })).toBeInTheDocument();
     });
 
     it('creates nothing from a blank draft on the shortcut, and takes no newline for it either', async () => {
@@ -235,7 +235,7 @@ describe('note save shortcut', () => {
       expect(claimed).toBe(false);
       // Done on an empty note closes it without writing anything.
       await waitFor(() => {
-        expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+        expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull();
       });
       expect(create).not.toHaveBeenCalled();
       // Nothing was made, so the passage and its toolbar stay for another action.

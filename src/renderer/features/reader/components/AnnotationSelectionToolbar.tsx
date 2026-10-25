@@ -65,6 +65,7 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   const [focusedColorLabel, setFocusedColorLabel] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const noteButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [toolbarSize, setToolbarSize] = useState({ width: 0, height: 0 });
   const recolorHighlight = useRecolorHighlight(editing, { setActionError, setStatus: setCopyStatus });
   useFocusOnKeyboardOpen(editing, toolbarRef);
@@ -335,9 +336,14 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   const chooseColor = (color: HighlightColor): Promise<void> =>
     editing ? recolorHighlight(color) : createHighlight(color);
 
-  /** Close returns focus to what reopened a highlight, as Escape does. */
+  /**
+   * Close returns focus to what reopened a highlight, as Escape does. While the
+   * note is expanded it is the note's only close: it writes the newest text
+   * and closes the note as Escape would.
+   */
   const closeToolbar = (): void => {
-    if (editing) editing.close('close-button');
+    if (noteOpen) noteHandleRef.current?.requestClose('close');
+    else if (editing) editing.close('close-button');
     else clear();
   };
 
@@ -389,7 +395,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
       role="toolbar"
       aria-label={toolbarLabel}
       data-editing-annotation-id={editing?.annotation.id}
-      className="fixed z-50 rounded-lg border border-border-subtle bg-bg-primary p-2 text-xs shadow-xl"
+      data-note-open={noteOpen ? 'true' : undefined}
+      className={`fixed z-50 rounded-lg border p-2 text-xs ${noteOpen ? 'note-surface-panel' : 'border-border-subtle bg-bg-primary shadow-xl'}`}
       style={{ left, top, maxWidth }}
     >
       <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
@@ -487,8 +494,10 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
           </Button>
           {editing && <DeleteHighlightButton editing={editing} setActionError={setActionError} setStatus={setCopyStatus} />}
           <button
+            ref={closeButtonRef}
             type="button"
-            aria-label="Close selection toolbar"
+            aria-label={noteOpen ? 'Close note' : 'Close selection toolbar'}
+            title={noteOpen ? 'Close note (Esc)' : undefined}
             onClick={closeToolbar}
             className="rounded px-1.5 py-1 text-text-secondary hover:bg-bg-surface shrink-0"
           >
@@ -499,7 +508,7 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
       {copyStatus && <div role="status" className="mt-1 text-right text-2xs text-text-secondary">{copyStatus}</div>}
       {actionError && !noteOpen && <div role="alert" className="mt-1 text-2xs text-danger">{actionError}</div>}
       {noteOpen && noteSession && (
-        <div className="mt-2 w-80 max-w-full">
+        <div className="note-surface-panel__body">
           <NoteComposer
             key={noteSession.key}
             handle={noteHandleRef}
@@ -509,13 +518,13 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
             context="Note on selection"
             contextIcon="add-note"
             quote={noteSession.quote}
-            variant="popover"
-            role="dialog"
+            variant="embedded"
+            role="group"
             testIdPrefix="selection-note"
             draftKey={noteSession.key}
             documentId={noteSession.documentId}
             autosave={{ initialText: '', initialId: null, allowEmpty: false, persist: noteSession.persist }}
-            ignoreOutside={[noteButtonRef]}
+            ignoreOutside={[noteButtonRef, closeButtonRef]}
             onClose={closeNote}
           />
         </div>

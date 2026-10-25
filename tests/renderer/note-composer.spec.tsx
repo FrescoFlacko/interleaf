@@ -151,15 +151,34 @@ describe('note composer: selected passage', () => {
 
     const toolbar = screen.getByTestId('annotation-selection-toolbar');
     const composer = within(toolbar).getByTestId('selection-note-composer');
-    expect(composer).toHaveAttribute('data-variant', 'popover');
+    expect(composer).toHaveAttribute('data-variant', 'embedded');
     expect(composer).toHaveAttribute('data-note-font', 'dyslexic');
     expect(within(composer).getByTestId('selection-note-quote')).toHaveTextContent('selected quote');
     expect(composer).toHaveTextContent('Note on selection');
     // No Save or Cancel: the card saves itself and Done finishes.
     expect(within(composer).queryByRole('button', { name: /^(Save|Cancel|Save note)$/u })).toBeNull();
-    expect(within(composer).getByRole('button', { name: 'Close note' })).toBeInTheDocument();
     // The action row it opened from is still above it.
     expect(within(toolbar).getByRole('button', { name: 'Add note' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('expands the selection panel into one note surface rather than a card inside it', () => {
+    selectPassage();
+    openSelectionNote();
+
+    const toolbar = screen.getByTestId('annotation-selection-toolbar');
+    const composer = within(toolbar).getByTestId('selection-note-composer');
+    // An embedded part of the panel: a named group, never a dialog in a toolbar.
+    expect(composer).toHaveAttribute('data-variant', 'embedded');
+    expect(composer).toHaveAttribute('role', 'group');
+    expect(within(toolbar).queryByRole('dialog')).toBeNull();
+    expect(within(toolbar).getByRole('group', { name: 'Note on selected text' })).toBe(composer);
+    // The panel itself takes the note's surface while it is expanded.
+    expect(toolbar).toHaveAttribute('data-note-open', 'true');
+    // One close action for the whole surface, and it names what it closes.
+    const closes = within(toolbar).getAllByRole('button', { name: /close/iu });
+    expect(closes).toHaveLength(1);
+    expect(closes[0]).toHaveAccessibleName('Close note');
+    expect(within(composer).queryByRole('button', { name: /close/iu })).toBeNull();
   });
 
   it('creates once while typing, then updates that note, without moving focus or opening panels', async () => {
@@ -213,22 +232,22 @@ describe('note composer: selected passage', () => {
     fireEvent.click(done());
     // Still saving: the card stays open and says so.
     expect(screen.getByTestId('selection-note-composer')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Note on selected text' })).toBeInTheDocument();
 
     await act(async () => { first.resolve(annotation({ id: 'sel-note', note: 'one' })); await first.promise; });
-    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull(); });
     expect(create).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledWith({ documentId: 'doc-1', id: 'sel-note', note: 'one two' });
   });
 
-  it('flushes the newest text on Escape and on the close icon before closing', async () => {
+  it('flushes the newest text on Escape and on the panel close before closing', async () => {
     create.mockResolvedValue(annotation({ id: 'sel-note', note: 'Escaped' }));
     selectPassage();
     const field = openSelectionNote();
     fireEvent.change(field, { target: { value: 'Escaped' } });
     fireEvent.keyDown(field, { key: 'Escape' });
-    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull(); });
     expect(create).toHaveBeenCalledTimes(1);
     expect(create.mock.calls[0]![0]).toMatchObject({ note: 'Escaped' });
     cleanup();
@@ -238,10 +257,29 @@ describe('note composer: selected passage', () => {
     selectPassage('another quote');
     const second = openSelectionNote();
     fireEvent.change(second, { target: { value: 'Closed' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Close note' }));
-    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull(); });
+    // A real click presses first: the panel's close is not a click "outside" the note.
+    const close = screen.getByRole('button', { name: 'Close note' });
+    fireEvent.pointerDown(close);
+    fireEvent.click(close);
+    await waitFor(() => { expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull(); });
     expect(create).toHaveBeenCalledTimes(1);
     expect(create.mock.calls[0]![0]).toMatchObject({ note: 'Closed', selectedText: 'another quote' });
+    // The note exists, so its passage is done and the reader gets focus back.
+    expect(useAnnotationStore.getState().selection).toBeNull();
+  });
+
+  it('closes an empty note from the panel close back to Add note, keeping the passage', async () => {
+    selectPassage();
+    openSelectionNote();
+    const close = screen.getByRole('button', { name: 'Close note' });
+    fireEvent.pointerDown(close);
+    fireEvent.click(close);
+    const addNote = screen.getByRole('button', { name: 'Add note' });
+    await waitFor(() => { expect(addNote).toHaveFocus(); });
+    expect(addNote).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Close selection toolbar' })).toBeInTheDocument();
+    expect(useAnnotationStore.getState().selection).not.toBeNull();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('flushes on a click elsewhere without taking focus there', async () => {
@@ -255,7 +293,7 @@ describe('note composer: selected passage', () => {
     fireEvent.pointerDown(elsewhere);
     elsewhere.focus();
     await waitFor(() => { expect(create).toHaveBeenCalledTimes(1); });
-    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull(); });
     expect(elsewhere).toHaveFocus();
     elsewhere.remove();
   });
@@ -268,7 +306,7 @@ describe('note composer: selected passage', () => {
     fireEvent.keyDown(field, { key: 'Escape' });
 
     const alert = await screen.findByTestId('selection-note-error');
-    expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Note on selected text' })).toBeInTheDocument();
     expect(field).toHaveValue('Do not lose me');
     expect(within(alert).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(create).toHaveBeenCalledTimes(1);
@@ -279,7 +317,7 @@ describe('note composer: selected passage', () => {
 
     // Discard gives up the draft and closes, writing nothing more.
     fireEvent.click(within(alert).getByRole('button', { name: 'Discard note' }));
-    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull(); });
     expect(create).toHaveBeenCalledTimes(1);
   });
 
@@ -298,7 +336,7 @@ describe('note composer: selected passage', () => {
       note: 'About the first passage',
     });
     // The new passage gets its own fresh toolbar, not the old note.
-    expect(screen.queryByRole('dialog', { name: 'Note on selected text' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Note on selected text' })).toBeNull();
     expect(useAnnotationStore.getState().selection?.selectedText).toBe('a different passage');
   });
 
@@ -309,7 +347,7 @@ describe('note composer: selected passage', () => {
 
     expect(fireEvent.keyDown(field, { key: 'Enter', metaKey: true, isComposing: true })).toBe(true);
     expect(fireEvent.keyDown(field, { key: 'Escape', isComposing: true })).toBe(true);
-    expect(screen.getByRole('dialog', { name: 'Note on selected text' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Note on selected text' })).toBeInTheDocument();
     expect(create).not.toHaveBeenCalled();
   });
 });

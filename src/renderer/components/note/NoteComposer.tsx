@@ -22,8 +22,11 @@ export type NoteComposerClose = {
 };
 
 export type NoteComposerHandle = {
-  /** Writes the newest text and closes, as Escape does. */
-  readonly requestClose: () => void;
+  /**
+   * Writes the newest text and closes, as Escape does. An embedded composer's
+   * owner passes `close` from its own close action, which stands in for the icon.
+   */
+  readonly requestClose: (reason?: 'request' | 'close') => void;
 };
 
 type NoteComposerProps = {
@@ -38,8 +41,12 @@ type NoteComposerProps = {
   readonly contextIcon: AppIconName;
   /** The anchored passage, when there is one. */
   readonly quote?: string | null;
-  /** `popover` floats over the reader; `inline` sits in a list row with a shallower shadow. */
-  readonly variant: 'popover' | 'inline';
+  /**
+   * `popover` floats over the reader; `inline` sits in a list row with a
+   * shallower shadow; `embedded` is part of a panel that owns the surface and
+   * the close action, so it draws no card or close icon of its own.
+   */
+  readonly variant: 'popover' | 'inline' | 'embedded';
   readonly role: 'dialog' | 'group';
   /** Prefix for the `*-shortcut-hint` test id the editors already expose. */
   readonly testIdPrefix: string;
@@ -70,6 +77,22 @@ function statusText(status: NoteSaveStatus, closing: boolean): string {
     case 'error': return 'Not saved';
     case 'blocked': return 'Not saved';
   }
+}
+
+/** The card's own close; an embedded note is closed by the panel around it. */
+function NoteCloseIcon({ variant, onClose }: { readonly variant: NoteComposerProps['variant']; readonly onClose: () => void }) {
+  if (variant === 'embedded') return null;
+  return (
+    <button
+      type="button"
+      aria-label="Close note"
+      title="Close note (Esc)"
+      onClick={onClose}
+      className="note-composer__icon-button"
+    >
+      <AppIcon name="close" size={13} />
+    </button>
+  );
 }
 
 /**
@@ -144,7 +167,7 @@ export function NoteComposer({
   };
 
   useImperativeHandle(handle, () => ({
-    requestClose: () => { void finishRef.current?.('request'); },
+    requestClose: (reason = 'request') => { void finishRef.current?.(reason); },
   }), []);
 
   useEffect(() => {
@@ -173,6 +196,9 @@ export function NoteComposer({
   const statusId = `${fieldId}-status`;
   const errorId = `${fieldId}-error`;
   const problem = status.kind === 'error' || status.kind === 'blocked' ? status : null;
+  // A list row is named by its context line, so the row's field keeps the only
+  // "Note text" name in the list; a dialog or an embedded note by its field.
+  const namedByField = variant !== 'inline';
 
   return (
     <div
@@ -180,10 +206,8 @@ export function NoteComposer({
       id={panelId}
       role={role}
       aria-modal={role === 'dialog' ? false : undefined}
-      // A dialog is named by its field; an inline group by its context line, so
-      // the row's field keeps the only "Note text" name in the list.
-      aria-labelledby={role === 'dialog' ? labelId : contextId}
-      aria-describedby={role === 'dialog' ? contextId : undefined}
+      aria-labelledby={namedByField ? labelId : contextId}
+      aria-describedby={namedByField ? contextId : undefined}
       aria-busy={closing || status.kind === 'saving' ? true : undefined}
       data-variant={variant}
       data-note-font={NOTE_FONT[fontFamily]}
@@ -194,15 +218,7 @@ export function NoteComposer({
       <div className="note-composer__head">
         <AppIcon name={contextIcon} size={13} className="note-composer__context-icon" />
         <p id={contextId} className="note-composer__context" title={context}>{context}</p>
-        <button
-          type="button"
-          aria-label="Close note"
-          title="Close note (Esc)"
-          onClick={() => { void finishRef.current?.('close'); }}
-          className="note-composer__icon-button"
-        >
-          <AppIcon name="close" size={13} />
-        </button>
+        <NoteCloseIcon variant={variant} onClose={() => { void finishRef.current?.('close'); }} />
       </div>
       {quote !== null && quote !== '' && (
         <blockquote className="note-composer__quote" data-testid={`${testIdPrefix}-quote`}>{quote}</blockquote>
