@@ -1,19 +1,10 @@
-# Notes editor PR review media
+# Notes editor review media
 
-Real Electron demo captures for the Notes margin composer PR.
-Base: develop at 1d4caf3cdea9fb8244dfae7d788302bf13f5b423 (0.10.1).
-Feature: ada0e8d2c5803746bca4a6288b75321bd51fd52f (0.11.0).
-
-All screenshots and recordings use isolated profiles with fixture documents.
-No personal library, credentials, or paid provider calls were used.
-Before/after screenshots use the same 1280 x 820 CSS viewport, themes, and fixture text.
-Base captures preserve macOS Retina 2x density; after captures are 1x.
-After captures and videos come from the exact feature source.
-Recovery screenshots show an intentionally simulated save failure and retained text.
-
-The 32-second editor-flow and 19.04-second theme-variant recordings retain real elapsed timing.
-MP4s: H.264, 1280 x 800, 25 fps. GIF previews: 800 x 500, 5 fps.
-The demo location note's existing anchor warning remains visible; it was not hidden.
-
-This is an orphan review-assets branch, separate from the feature code and develop.
-Delete this branch after the PR merges or closes.
+Real Electron screenshots and recording for PR10, feature commit 32ca32f2d1c6ec60c8239c60400755811c587cb6, version0.11.1.
+Before: develop1d4caf3; after: final integrated selection-note source.
+The unchanged header-only theme demonstration was captured on previous commit ada0e8d. All captures use isolated demo profiles and fixture documents; no personal data or paid model calls.
+Before screenshots preserve Retina2x, new after screenshots Retina2x; CSSviewport1280x820 unless labelled narrow/zoom200.
+The new selection editor is one surface with a full-width embedded writingarea, one close and an underline focusindicator. Header and inline editors remain standalone.
+Error images use an intentionally simulated save failure.
+Recording is12.84s, realelapsedtiming, H2641280x80025fps plus800x500GIF5fps. The original0.12s nearblankopening is retained.
+This branch began as an orphan reviewassets branch and has no feature/develop ancestry; media is outside the feature diff. Delete afterPRmergesorcloses.
