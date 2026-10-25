@@ -53,6 +53,34 @@ function recoveredNoteSession(draft: NoteDraft): LocationNoteSession {
 const GONE_DRAFT: NoteAutosaveOptions['persist'] = () =>
   Promise.resolve({ ok: false, message: 'This note is no longer available.', retryable: false });
 
+/**
+ * Keeps the location note with the book it was opened in. Leaving that book
+ * closes it; its unsaved text is still written to that book, not this one, and
+ * if that write fails the draft is kept for when the reader returns. A kept
+ * draft for the open book is shown again, with Retry and Discard, as soon as
+ * the note's place is free. It does not take focus.
+ */
+function useLocationNoteDocument(
+  activeDocument: { readonly id: string } | null | undefined,
+  open: boolean,
+  session: LocationNoteSession | null,
+  setOpen: (open: boolean) => void,
+  setSession: (session: LocationNoteSession) => void,
+): void {
+  const activeDocumentId = activeDocument?.id ?? null;
+  const noteDocumentId = session?.documentId;
+  useEffect(() => {
+    if (open && noteDocumentId !== activeDocumentId) setOpen(false);
+  }, [activeDocumentId, noteDocumentId, open, setOpen]);
+
+  const retainedDraft = useRetainedNoteDraft(activeDocumentId);
+  useEffect(() => {
+    if (open || retainedDraft === null) return;
+    setSession(recoveredNoteSession(retainedDraft));
+    setOpen(true);
+  }, [open, retainedDraft, setOpen, setSession]);
+}
+
 /** The composer for one opening of the location note; nothing before the first opening. */
 function LocationNoteComposer({ session, handle, buttonRef, onClose }: {
   readonly session: LocationNoteSession | null;
@@ -133,23 +161,7 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
     setPageInput(String(currentPage));
   }, [currentPage]);
 
-  // An open note belongs to the book it was opened in. Leaving that book
-  // closes it; its unsaved text is still written to that book, not this one,
-  // and if that write fails the draft is kept for when the reader returns.
-  const activeDocumentId = activeDocument?.id ?? null;
-  const noteDocumentId = locationNote?.documentId;
-  useEffect(() => {
-    if (locationNoteOpen && noteDocumentId !== activeDocumentId) setLocationNoteOpen(false);
-  }, [activeDocumentId, noteDocumentId, locationNoteOpen]);
-
-  // A kept draft for this book is shown again, with Retry and Discard, as soon
-  // as the note's place is free. It does not take focus.
-  const retainedDraft = useRetainedNoteDraft(activeDocumentId);
-  useEffect(() => {
-    if (locationNoteOpen || retainedDraft === null) return;
-    setLocationNote(recoveredNoteSession(retainedDraft));
-    setLocationNoteOpen(true);
-  }, [locationNoteOpen, retainedDraft]);
+  useLocationNoteDocument(activeDocument, locationNoteOpen, locationNote, setLocationNoteOpen, setLocationNote);
 
   useEffect(() => {
     if (!displaySettingsOpen) return;

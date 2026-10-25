@@ -61,13 +61,15 @@ changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
 - Plain `Enter` starts a new line.
 - A card you close without typing anything creates no note.
 - If a save fails, the card stays open with your text and says why. Choose
-  **Retry**, or **Discard** to give up the unsaved text.
+  **Retry**, or **Discard** to give up the unsaved text. When the save cannot
+  succeed by trying again, only **Discard** is offered.
 - If the card goes away for another reason, such as when you open another
   document, the selection changes, or you edit a different row in the
   Annotations panel, your latest text is still saved to the note it was opened
   on. If that save fails, the note is kept. It reappears under **Note** the next
-  time that document is open, with the text, the place it was anchored, and
-  **Retry** and **Discard**. It does not move your cursor. If the note already
+  time that document is open, with the text, the place it was anchored, the
+  reason, and **Discard**, plus **Retry** when the save can be tried again.
+  Only **Discard** gives the text up. It does not move your cursor. If the note already
   exists, editing it again from the Annotations panel continues the same
   unsaved text.
 - Quitting Interleaf saves any note you are still typing first. Kept notes

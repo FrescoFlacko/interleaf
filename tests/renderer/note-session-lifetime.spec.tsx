@@ -353,4 +353,27 @@ describe('note drafts when the reader changes book', () => {
     await waitFor(() => { expect(create).toHaveBeenCalledTimes(2); });
     expect(create.mock.calls[1]![0]).toMatchObject({ documentId: 'doc-1', note: 'About this passage', selectedText: 'selected quote' });
   });
+
+  it('keeps the text of a note that cannot be saved, offering only Discard', async () => {
+    act(() => { seatPdf(); });
+    selectPassage();
+    // A passage with no stable anchor can never be stored as a note.
+    act(() => { useAnnotationStore.setState((state) => ({ selection: state.selection && { ...state.selection, anchor: null } })); });
+    renderWithChatStore(chat, <><ReaderHeaderToolbar hidden={false} /><AnnotationSelectionToolbar /></>);
+    const passageNote = screen.getAllByRole('button', { name: 'Add note' })
+      .find((button) => button.getAttribute('aria-controls') === 'selection-note-popover');
+    fireEvent.click(passageNote!);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), { target: { value: 'Worth keeping' } });
+
+    act(() => { useAnnotationStore.setState({ selection: null }); });
+    const field = await screen.findByRole('textbox', { name: 'Note on selected text' });
+    expect(field).toHaveValue('Worth keeping');
+    expect(screen.getByRole('alert')).toHaveTextContent('could not be mapped');
+    expect(within(screen.getByRole('alert')).queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard note' }));
+    await waitFor(() => { expect(screen.queryByTestId('location-note-composer')).toBeNull(); });
+    expect(create).not.toHaveBeenCalled();
+  });
 });

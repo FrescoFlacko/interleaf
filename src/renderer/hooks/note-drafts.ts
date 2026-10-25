@@ -15,6 +15,8 @@ import { NoteAutosaveSession, type NoteAutosaveOptions, type NoteFlushResult } f
  *   * A failed draft is kept. If the write made as an editor goes away fails,
  *     the draft stays here, with the document, anchor and quote it was opened
  *     on, until the reader retries or discards it (see `useRetainedNoteDraft`).
+ *     That holds for a failure that cannot be retried too: only Discard gives
+ *     the text up.
  *   * Quitting writes. `flushNoteDrafts` writes every draft's newest text, and
  *     the app's before-close handshake waits for it.
  *
@@ -105,12 +107,14 @@ export function holdNoteDraft(draft: NoteDraft, meta: NoteDraftMeta): symbol {
   return token;
 }
 
-/** Whether a draft may be forgotten after its last write: stored, or never storable. */
-function finished(result: NoteFlushResult, draft: NoteDraft): boolean {
-  if (result !== 'error') return true;
-  // Only a write that could succeed later is worth keeping; a note that
-  // cannot be stored at all has already said why while its editor was open.
-  return draft.session.status.kind === 'error' && !draft.session.status.retryable;
+/**
+ * Whether a draft may be forgotten after its last write: its text is stored,
+ * there was none, or it was emptied (the stored text stays). A failed write
+ * keeps the draft, even one that cannot be retried, so its text is only ever
+ * given up by the reader's Discard.
+ */
+function finished(result: NoteFlushResult): boolean {
+  return result !== 'error';
 }
 
 /**
@@ -123,7 +127,7 @@ export function releaseNoteDraft(draft: NoteDraft, token: symbol): void {
   draft.holder = null;
   void draft.session.flush().then((result) => {
     if (draft.holder !== null) return;
-    if (finished(result, draft)) {
+    if (finished(result)) {
       unregister(draft);
       return;
     }

@@ -171,14 +171,26 @@ describe('note drafts', () => {
     unsubscribe();
   });
 
-  it('does not keep a draft that can never be stored', async () => {
+  it('keeps the text of a draft that cannot be retried until the reader discards it', async () => {
     const persist = vi.fn(() => Promise.resolve<NotePersistResult>({ ok: false, message: 'Too large.', retryable: false }));
     const draft = ensureNoteDraft(newNoteDraftKey('selection'), options({ persist }), meta());
     const token = holdNoteDraft(draft, meta());
-    draft.session.input('text');
+    draft.session.input('valuable text');
     releaseNoteDraft(draft, token);
     await settle();
+
+    expect(retainedNoteDraft('doc-1')).toBe(draft);
+    expect(draft.session.text).toBe('valuable text');
+    expect(draft.session.status).toMatchObject({ kind: 'error', message: 'Too large.', retryable: false });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(persist).toHaveBeenCalledTimes(1);
+
+    const shown = holdNoteDraft(draft, meta());
+    draft.session.discard();
+    releaseNoteDraft(draft, shown);
+    await settle();
     expect(retainedNoteDraft('doc-1')).toBeNull();
+    expect(persist).toHaveBeenCalledTimes(1);
   });
 
   it('writes every draft at quit without waiting for the pause', async () => {
