@@ -1,0 +1,211 @@
+{
+  "featureCommit": "387add5c4e0a11ab510ce810e6750355dc77d199",
+  "version": "0.11.2",
+  "beforeCommit": "32ca32f2d1c6ec60c8239c60400755811c587cb6",
+  "source": "realElectron isolatedfixture",
+  "sameFixtureAndViewport": true,
+  "geometry": "top-leftunchangedwhenfits;minimalclampatreaderedge",
+  "selection": "temporaryCSSHighlight retainedwhileediting; panelcanoccludepassage",
+  "files": {
+    "stability-before-midnight-1-collapsed-crop.png": {
+      "bytes": 71707,
+      "sha256": "644f131ee00c9125b1cb7b832ac6f9a0532e91002db75d98906afc55ece8420b"
+    },
+    "stability-before-midnight-1-collapsed.png": {
+      "bytes": 434453,
+      "sha256": "f97018a2345018a776a3d1443ee6d8eb16ca9d9c153917234fbea75fdc48480a"
+    },
+    "stability-before-midnight-2-open-empty-crop.png": {
+      "bytes": 121098,
+      "sha256": "0010efed9d24234ed6b302198fa9438adf989543e20330f7f3abed5377b83b0f"
+    },
+    "stability-before-midnight-2-open-empty.png": {
+      "bytes": 407268,
+      "sha256": "442fbec384ab2a31cdf7f8188ceb6e7c8cca91ea4c7eacd2b3e96b50de2e3cec"
+    },
+    "stability-before-midnight-3-typing-saved-crop.png": {
+      "bytes": 216432,
+      "sha256": "3778677f81cfbb27ab917fd598af76704c72d97db3daa6109fb65e8d5f476794"
+    },
+    "stability-before-midnight-3-typing-saved.png": {
+      "bytes": 419173,
+      "sha256": "c93797eb72e57ba2f93c404a3b49fb1d2547905a78672831d938a8b571fffb00"
+    },
+    "stability-before-paper-1-collapsed-crop.png": {
+      "bytes": 75046,
+      "sha256": "9a54014cc5b25bf9b67fdf81a24e98362e2c749bcf211fbb5450dac0149671a2"
+    },
+    "stability-before-paper-1-collapsed.png": {
+      "bytes": 439736,
+      "sha256": "b760d94ff15cb694805587ed0a51651ea1e6ca3a922dbbea415523105d507d83"
+    },
+    "stability-before-paper-2-open-empty-crop.png": {
+      "bytes": 124840,
+      "sha256": "67c12309bc4d2cf542bda5a8426e05fad158128e521fb33d92b567306b017499"
+    },
+    "stability-before-paper-2-open-empty.png": {
+      "bytes": 412462,
+      "sha256": "c8841fb9414ab00f7bf8219a96b93afd4968b6d3087e6b76eb3ec415f4db9263"
+    },
+    "stability-before-paper-3-typing-saved-crop.png": {
+      "bytes": 220322,
+      "sha256": "f37ce09acfee95d06abfc6379d86164fbf469d584fe860e7ee08f56e943678f8"
+    },
+    "stability-before-paper-3-typing-saved.png": {
+      "bytes": 425763,
+      "sha256": "d12298fc791fb8e9f40d9c491119ff6f684c3de0e026c92e5adb6bdbe511ebf2"
+    },
+    "stability-before-sepia-1-collapsed-crop.png": {
+      "bytes": 78599,
+      "sha256": "d447dd7b7d0fd2fc8e2ea267d6d82e6aafa6834b4e42aefed8167462a072b9ed"
+    },
+    "stability-before-sepia-1-collapsed.png": {
+      "bytes": 441709,
+      "sha256": "eb64ed8adc9d1fbfa0ed04848aad8e7a3f15ba6a9096c622b72ba314b2e884bb"
+    },
+    "stability-before-sepia-2-open-empty-crop.png": {
+      "bytes": 131262,
+      "sha256": "38e37facfdb5a8ccd079862f5b05f5151c7fb8dceb4d4fd57d78a51658cbdc74"
+    },
+    "stability-before-sepia-2-open-empty.png": {
+      "bytes": 414394,
+      "sha256": "70713f578bcaf3aefb9c85f216cadd056fbe4b6b07f4eb04090bf68c87590887"
+    },
+    "stability-before-sepia-3-typing-saved-crop.png": {
+      "bytes": 229767,
+      "sha256": "46207df137ad37c53065179ed264b3f8ee826f739fc1b1def0441a722febfeda"
+    },
+    "stability-before-sepia-3-typing-saved.png": {
+      "bytes": 427972,
+      "sha256": "77396e404f28f01f9e56dc82b347ab221043cad58e6856f86b9df1e59096a65d"
+    },
+    "stability-after-edge-foot-1-collapsed-crop.png": {
+      "bytes": 72290,
+      "sha256": "93384492c53fa90198df944864b7d3bb15e1df055c466140e0326088b3193ecc"
+    },
+    "stability-after-edge-foot-1-collapsed.png": {
+      "bytes": 435316,
+      "sha256": "ed89becadde57cdf7d49d332bd4090f4e94a20f2fee8278ece0f2e4e2e61d35f"
+    },
+    "stability-after-edge-foot-2-open-clamped-crop.png": {
+      "bytes": 93760,
+      "sha256": "620b2ad8b8d003284aaf92fda846220f75d82475c37afa1e2bc86c3b873afbf2"
+    },
+    "stability-after-edge-foot-2-open-clamped.png": {
+      "bytes": 395104,
+      "sha256": "e62eecccc7e57da357a5c6fe2d7eea64971881c5bf09519e6188289e3aa12986"
+    },
+    "stability-after-midnight-1-collapsed-crop.png": {
+      "bytes": 71707,
+      "sha256": "644f131ee00c9125b1cb7b832ac6f9a0532e91002db75d98906afc55ece8420b"
+    },
+    "stability-after-midnight-1-collapsed.png": {
+      "bytes": 434443,
+      "sha256": "7ec455d5c6ef6c9cb6f32508c6cf3172eb2e37063898b1deac1a97a3fd3329d8"
+    },
+    "stability-after-midnight-2-open-empty-crop.png": {
+      "bytes": 100293,
+      "sha256": "06aa2a095a2f375f0933c19814c33e3540e8ba0e618999e84c491530560dace8"
+    },
+    "stability-after-midnight-2-open-empty.png": {
+      "bytes": 401567,
+      "sha256": "6620e0c66638adb9467e463658a224c79d6ca83e23432f37799c55f0b968dd69"
+    },
+    "stability-after-midnight-3-typing-saved-crop.png": {
+      "bytes": 186844,
+      "sha256": "7f472bee5ede4a1e71b21a9f69a1cd7bbbe1e68b3d18cb3f9df95082d2eae0bf"
+    },
+    "stability-after-midnight-3-typing-saved.png": {
+      "bytes": 407815,
+      "sha256": "187418ffbf02b1fffb260bfda47cc5b780d715a85a2ac93d203e8d01433d34de"
+    },
+    "stability-after-paper-1-collapsed-crop.png": {
+      "bytes": 75046,
+      "sha256": "9a54014cc5b25bf9b67fdf81a24e98362e2c749bcf211fbb5450dac0149671a2"
+    },
+    "stability-after-paper-1-collapsed.png": {
+      "bytes": 439742,
+      "sha256": "505e4d4a8286d8bca989659219aa4fa9204b9da79dc0a9e7906bdbadb1f6bf50"
+    },
+    "stability-after-paper-2-open-empty-crop.png": {
+      "bytes": 105502,
+      "sha256": "28db6edad471b959dd167d03db70bd3a4a95d3353b5d3dca079a7fcb5154e379"
+    },
+    "stability-after-paper-2-open-empty.png": {
+      "bytes": 406870,
+      "sha256": "8f10510267b1d90b2d9e969d892b36ad2a1787e8c9476cb2305fb94a635e0bfa"
+    },
+    "stability-after-paper-3-typing-saved-crop.png": {
+      "bytes": 192892,
+      "sha256": "280f7d8eefec928c6b967f987f8d735a59ee3f0a3fef022b1b1b4b1dcbe4f72f"
+    },
+    "stability-after-paper-3-typing-saved.png": {
+      "bytes": 415127,
+      "sha256": "8c5e9d47d8a83742893c159b6a4ed49a362664588a2cb13aabfd1c972d98f469"
+    },
+    "stability-after-pdf-midnight-open-crop.png": {
+      "bytes": 5288,
+      "sha256": "68d26a8ac6bf86c494184eed8cedebec24bbda4911ea6d819a65c7b339ed9a96"
+    },
+    "stability-after-pdf-midnight-open.png": {
+      "bytes": 107336,
+      "sha256": "275e392f6bee99bb4dfb1fcb8a9d05b1c68dc91be169a6a178e842c2d52b9b51"
+    },
+    "stability-after-pdf-midnight-saved-crop.png": {
+      "bytes": 4709,
+      "sha256": "eafc4e083ca20f82387e17f8a5d3da84c00cf2ba2d557cc6303779cbc466f3bb"
+    },
+    "stability-after-pdf-midnight-saved.png": {
+      "bytes": 134810,
+      "sha256": "9b5afc732b54be105f150265752b5c2fdbc1a40f86f0bfa2b2f232adc22c00d3"
+    },
+    "stability-after-pdf-paper-open-crop.png": {
+      "bytes": 4590,
+      "sha256": "7fbc54302640711e29dde17cc1de82e87fcb3a4d852a606828e9a6bc7b0e1f37"
+    },
+    "stability-after-pdf-paper-open.png": {
+      "bytes": 107604,
+      "sha256": "d370b65ae08a9e88f93890519ae2d9f21072092b3859d6c3a4a13aa55848915c"
+    },
+    "stability-after-pdf-paper-saved-crop.png": {
+      "bytes": 4402,
+      "sha256": "d1bb7d9a0ffb74125156d98c14def0b3b8a1e6a7b7df6714868d1debc04774e7"
+    },
+    "stability-after-pdf-paper-saved.png": {
+      "bytes": 135891,
+      "sha256": "0664dbcc00cec2e54195d3b484939326a2d53d1e1a7e4f5479ac5d40d72a0c31"
+    },
+    "stability-after-sepia-1-collapsed-crop.png": {
+      "bytes": 78599,
+      "sha256": "d447dd7b7d0fd2fc8e2ea267d6d82e6aafa6834b4e42aefed8167462a072b9ed"
+    },
+    "stability-after-sepia-1-collapsed.png": {
+      "bytes": 441709,
+      "sha256": "eb64ed8adc9d1fbfa0ed04848aad8e7a3f15ba6a9096c622b72ba314b2e884bb"
+    },
+    "stability-after-sepia-2-open-empty-crop.png": {
+      "bytes": 111400,
+      "sha256": "345abbdba3d11cf179bc93bf452a110f0f58eb24a720aa1439ed35c194737ddf"
+    },
+    "stability-after-sepia-2-open-empty.png": {
+      "bytes": 408531,
+      "sha256": "e385e8304825a913299aa1ff7a044586747871d01183cd372f9ef6533e417c03"
+    },
+    "stability-after-sepia-3-typing-saved-crop.png": {
+      "bytes": 202907,
+      "sha256": "cc47d29c4e930a24e5895bf264ad4e4f562e00fedeb5f00ee5e7323d44d6fa5c"
+    },
+    "stability-after-sepia-3-typing-saved.png": {
+      "bytes": 416528,
+      "sha256": "44a6fcc31fa323fbeaad442d7a2e10a5781c22e889a1aab5757e191493c4c929"
+    },
+    "selection-stability.mp4": {
+      "bytes": 1705823,
+      "sha256": "423dedefc139aa28bb10bcd06817fb521078353bb6c2f9d8f943e789884faf59"
+    },
+    "selection-stability.gif": {
+      "bytes": 660894,
+      "sha256": "bfe229a0792946b564f0337ac55a881a8e0f8fec4e0f4f03c5c60f85d275bc19"
+    }
+  }
+}
