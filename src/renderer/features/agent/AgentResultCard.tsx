@@ -52,7 +52,7 @@ export function AgentResultCard({ session, report, actionsReady }: AgentResultCa
         data-testid="agent-final-report"
         className="agent-result-report companion-readable companion-readable-xs max-h-[min(16rem,28vh)] min-w-0 overflow-y-auto leading-[1.6] break-words text-text-primary"
       >
-        <MarkdownContent content={truncateForDisplay(report, 8_000)} />
+        <MarkdownContent content={truncateForDisplay(report, 8_000)} diagrams />
       </div>
       {outcome !== null && (
         <p data-testid="agent-result-outcome" className="agent-mono text-2xs leading-[1.3] text-text-secondary">{outcome}</p>
