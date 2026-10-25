@@ -1,0 +1,210 @@
+{
+  "baseCommit": "1d4caf3cdea9fb8244dfae7d788302bf13f5b423",
+  "featureCommit": "ada0e8d2c5803746bca4a6288b75321bd51fd52f",
+  "files": {
+    "after-midnight-annotation-edit-window.png": {
+      "sha256": "723838a688776f23d4fcb74c3080c75f515f91b641aee29744a51d97b6f53922",
+      "bytes": 131037
+    },
+    "after-midnight-annotation-edit.png": {
+      "sha256": "7628652cb9df333a24bc8c4971d1993dd5e8ca3f0d773fc2a7b69022937ec01a",
+      "bytes": 18693
+    },
+    "after-midnight-location-note-recovery-window.png": {
+      "sha256": "bbafaa49faeec578ec562d2a258c44822a998b8385e9eec2dc8d2f368195ea38",
+      "bytes": 129957
+    },
+    "after-midnight-location-note-recovery.png": {
+      "sha256": "6f5fb3ebc5a9a59fc4cd70f5e707ae29f16213266d9cb5855b5dc50c0b34fc23",
+      "bytes": 42495
+    },
+    "after-midnight-location-note-window.png": {
+      "sha256": "33af9b4c31055a5c88148649a8793ed55081674b7b71d404f60fdf8103e74105",
+      "bytes": 133659
+    },
+    "after-midnight-location-note.png": {
+      "sha256": "57975a23991f3fb8cdcd3e70d3f68c5e186f028152c50cb3ed2aa316fc3531d0",
+      "bytes": 28586
+    },
+    "after-midnight-selection-note-window.png": {
+      "sha256": "a2e07468c360c38bb766cf82d1b3a40c4db93e999e473554f89a5e147a5c60d4",
+      "bytes": 145200
+    },
+    "after-midnight-selection-note-zoom150-narrow.png": {
+      "sha256": "d046a87701eb932bfc5b11eba167179aef73c9f6a7c3d5e31689c06881aa7df5",
+      "bytes": 64462
+    },
+    "after-midnight-selection-note.png": {
+      "sha256": "30df5fd4a8f0c7888f36a45988ab0e88768ef158f7e1aebd94394c87d830d3bc",
+      "bytes": 25663
+    },
+    "after-paper-annotation-edit-window.png": {
+      "sha256": "1ab521a770362ef09931b7d2cde5d2b49bb69f86cfb7bc0586909e4f84de9eb9",
+      "bytes": 115768
+    },
+    "after-paper-annotation-edit.png": {
+      "sha256": "9637d038cc95dc39b52e64a4cbfe1a56dbf431960decc445c321b68b023871b1",
+      "bytes": 19589
+    },
+    "after-paper-location-note-recovery-window.png": {
+      "sha256": "335ec5893ffa4aa5916f8865da40b560cd2aec60b42b8f485d5fa878847e21a3",
+      "bytes": 131518
+    },
+    "after-paper-location-note-recovery.png": {
+      "sha256": "5dded9e56dac4575bebeac71d3ad1f50d23fa1d393314980216586b776b78a9e",
+      "bytes": 43480
+    },
+    "after-paper-location-note-window.png": {
+      "sha256": "26376abce41e9e2c5f6f66786f72e20379b0bec3e5f2e38da23c032a3ded15c1",
+      "bytes": 117880
+    },
+    "after-paper-location-note.png": {
+      "sha256": "e1adb04fa872b50bd3291484b406600d345909e4758ef0585a92fb1e3fca1fbe",
+      "bytes": 29278
+    },
+    "after-paper-selection-note-window.png": {
+      "sha256": "e680ce38209a88e251c860832d2b05193334cee0a523a00e4a451aeea8ed7cf1",
+      "bytes": 123593
+    },
+    "after-paper-selection-note.png": {
+      "sha256": "b12f1888b1cc2f54b0b9dd94a110c087f6f665e93c31bfe725de3a33ddea7d23",
+      "bytes": 27543
+    },
+    "after-sepia-annotation-edit-window.png": {
+      "sha256": "5d3111c3a42c49dd1f6eac970f9926cf7bfcd62fe11024e0305841c46e55d9f0",
+      "bytes": 131746
+    },
+    "after-sepia-annotation-edit.png": {
+      "sha256": "dd603a56951ae44b1e1c86e564481023b5dd9629f8218be19e55e9f18f9c7da6",
+      "bytes": 19802
+    },
+    "after-sepia-location-note-recovery-window.png": {
+      "sha256": "226543aeff6a11d47759b86375c19b134cf4d121319a70bebf34e58681f3d4b6",
+      "bytes": 132549
+    },
+    "after-sepia-location-note-recovery.png": {
+      "sha256": "fdf513b7c5dc1f63b37955e17b3442ec27084ede459a536813638b1254b7f053",
+      "bytes": 43400
+    },
+    "after-sepia-location-note-window.png": {
+      "sha256": "2adcf4689d9e35fa3dc45e33ea83e5f8bdb54318d18ca42d780977d5afa8ab7b",
+      "bytes": 134872
+    },
+    "after-sepia-location-note.png": {
+      "sha256": "4e0be15a297e242b335e932bd47bc68d8079c24387449312c0086c381d6fec63",
+      "bytes": 29725
+    },
+    "after-sepia-selection-note-window.png": {
+      "sha256": "d8f7387e584182636db7a7703a35626c1bedea9051758f66f10da2c475835e98",
+      "bytes": 141558
+    },
+    "after-sepia-selection-note.png": {
+      "sha256": "92372f957673e0ac3556436be63e21b43c5cf6c45739bcfd4e177232bfd5d956",
+      "bytes": 28483
+    },
+    "before-midnight-annotation-edit-window.png": {
+      "sha256": "0d0f77ab4c70295bba00c21e069edf35e9735c7ab1c0b5f93802f1f12c45f24f",
+      "bytes": 295453
+    },
+    "before-midnight-annotation-edit.png": {
+      "sha256": "16a50ae8b18b64fda80d760eade021d0a7863037759ff34cbde33c98782a4c48",
+      "bytes": 27901
+    },
+    "before-midnight-location-note-window.png": {
+      "sha256": "ae5a84270155bc903c370659c2f7b81d24b2ffae14b949378621fc1f228063ff",
+      "bytes": 308562
+    },
+    "before-midnight-location-note.png": {
+      "sha256": "22f5b6a5a1861a48ae88d480db239cbd91c906a191334e0bd00bec5a4e2bacf0",
+      "bytes": 67478
+    },
+    "before-midnight-selection-note-window.png": {
+      "sha256": "56750d08bb3253542fc6c22894545af27e110f20463d38b1e6b034017acd4e72",
+      "bytes": 245815
+    },
+    "before-midnight-selection-note.png": {
+      "sha256": "e1836341169dcbabda6d1463a8c638aa6e433de71f919f3b2a1669010b758056",
+      "bytes": 43055
+    },
+    "before-paper-annotation-edit-window.png": {
+      "sha256": "0e18b8f0a5b5088bcd241bfe03d04255b374481dedcf63d6971aad0876806be2",
+      "bytes": 232619
+    },
+    "before-paper-annotation-edit.png": {
+      "sha256": "fb1b827fd8470d402f14155c609a2c2585d839245c3c776ed8db71c360f68833",
+      "bytes": 28011
+    },
+    "before-paper-location-note-window.png": {
+      "sha256": "ab7188a001992ff04aa650ebc2a1d4c3d47396265c12ba72453407fd504714fc",
+      "bytes": 247901
+    },
+    "before-paper-location-note.png": {
+      "sha256": "01fefd3f1d8695e29bbedec0ac6ab24e4317a3078156f182dcd264c62096cd6b",
+      "bytes": 65723
+    },
+    "before-paper-selection-note-window.png": {
+      "sha256": "79704cc67c9cf3c05264c7950fb49b5fb539842ac130738876b5675fa7008196",
+      "bytes": 275463
+    },
+    "before-paper-selection-note.png": {
+      "sha256": "f2ade25978b198955e84dce564e99ff42ec1b337db76a3402d1c96b755c68149",
+      "bytes": 42984
+    },
+    "before-sepia-annotation-edit-window.png": {
+      "sha256": "230e51f7f4c98031f92cdacc37d6d7e05ea3080ea5816bd2ce2e378dd175feaf",
+      "bytes": 264862
+    },
+    "before-sepia-annotation-edit.png": {
+      "sha256": "209101a6a987d607f474ab1f05599836461fa023d4d04e57cf437b5cc90c3d48",
+      "bytes": 30458
+    },
+    "before-sepia-location-note-window.png": {
+      "sha256": "008cbeeb6745d064f706e3d030e812003e260b2e2b523140070f53ced7f0fb2f",
+      "bytes": 283073
+    },
+    "before-sepia-location-note.png": {
+      "sha256": "b7554df3a11e6f6ecb77b641cebaf4dc5e7b8383d33190b20200ff9983019354",
+      "bytes": 72636
+    },
+    "before-sepia-selection-note-window.png": {
+      "sha256": "581960c48a21b0c863c62cd1a384743f7da6b10bc10c01710f247cabb06cf4d0",
+      "bytes": 251083
+    },
+    "before-sepia-selection-note.png": {
+      "sha256": "8b188046492c9452af3a8bc3b9e3919176b95aa50a6cd45c68f965e93468c763",
+      "bytes": 45523
+    },
+    "notes-editor-flows.gif": {
+      "sha256": "52a406c43c0f4d0ae23bb595dea289a68d5f3cf3656157383672be2b805cced5",
+      "bytes": 1245720
+    },
+    "notes-editor-flows.mp4": {
+      "sha256": "e6963e7bbd3f373ed9b95d850ca1c692425ad7e171f7287c604d0120456f53a1",
+      "bytes": 3379184
+    },
+    "notes-editor-theme-collage.png": {
+      "sha256": "efad4945a76f831c7b1291346cba51da9372bdb14a6b47c222d1eb639d79ee68",
+      "bytes": 405233
+    },
+    "notes-theme-variants.gif": {
+      "sha256": "aa895e7974599bbcaac46a42207fe8a808c555ea1f3fafa1b651518eaf33a8e8",
+      "bytes": 1193767
+    },
+    "notes-theme-variants.mp4": {
+      "sha256": "886acb0909793e35bcf610a1b992aa6b3b7ba0e113d56f5aad7714b10f5aae03",
+      "bytes": 2524882
+    }
+  },
+  "recordings": [
+    {
+      "file": "notes-editor-flows.mp4",
+      "seconds": 32
+    },
+    {
+      "file": "notes-theme-variants.mp4",
+      "seconds": 19.04
+    }
+  ],
+  "fixture": "Margin Notes / isolated demo profile",
+  "codeDiffContainsMedia": false
+}
