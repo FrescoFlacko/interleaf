@@ -200,7 +200,7 @@ test.describe('Annotations panel 4a redesign', () => {
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill(body);
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
   }
@@ -323,7 +323,7 @@ test.describe('Annotations panel 4a redesign', () => {
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill(NOTE_BODY);
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
 

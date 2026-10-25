@@ -26,7 +26,7 @@ afterEach(() => {
 /**
  * Revealing an annotation in the Annotations panel.
  *
- * Saving a note opens the tab and brings the new row to the very top of
+ * Finishing a note with Done opens the tab and brings the new row to the very top of
  * the list container, once, even when the row above it is enormous; nothing
  * else in the panel's life (a refresh, an edit, a filter change) moves the
  * reader's scroll position. A reveal names one row in one book, and until that
@@ -181,7 +181,7 @@ describe('a newly created annotation is revealed in the annotations panel', () =
 
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), { target: { value: 'A new note.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Done/ }));
 
     // The panel is opened by the same action, and the new row arrives with the
     // page refresh the creation triggered.

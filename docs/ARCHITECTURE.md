@@ -465,7 +465,8 @@ an updater and never contact the network.
   process is not yet reaped. The final idle reading, the shutdown-barrier
   reservation and closing every service's admission happen in one synchronous
   step before the renderer is asked to flush, so nothing new starts during the
-  handshake while flush writes such as reading positions still land. The
+  handshake while flush writes such as reading positions and unsaved note
+  text still land. The
   install then runs after the same drain as an ordinary quit
   (`src/main/app/shutdown-barrier.ts`).
 - `smoke-trust.ts` lets only a build made with `INTERLEAF_UPDATE_SMOKE_TRUST`

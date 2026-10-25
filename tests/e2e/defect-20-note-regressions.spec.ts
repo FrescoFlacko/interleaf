@@ -106,7 +106,7 @@ async function saveNote(page: Page, body: string): Promise<void> {
   await expect(toolbar).toBeVisible();
   await toolbar.getByRole('button', { name: /note/i }).click();
   await page.locator('#selection-note').fill(body);
-  await toolbar.getByRole('button', { name: 'Save note' }).click();
+  await toolbar.getByRole('button', { name: /^Done/u }).click();
   await expect(toolbar).toBeHidden();
 }
 
@@ -442,12 +442,14 @@ test.describe('Defect 20 note regressions (real BrowserWindow)', () => {
       await app.window.keyboard.press(key);
       await expect(list.getByRole('textbox')).toBeVisible();
       await expect(list.getByRole('textbox')).toHaveValue(NOTE_BODY);
-      // Tab walks from the edit surface to its Cancel control; Enter cancels.
+      // Tab walks from the edit surface to its Done control; Enter closes the
+      // unchanged note without rewriting it, and focus returns to Edit.
       await app.window.keyboard.press('Tab');
-      expect(await app.window.evaluate(() => document.activeElement?.textContent ?? '')).toBe('Cancel');
+      expect(await app.window.evaluate(() => document.activeElement?.textContent ?? '')).toMatch(/^Done/u);
       await app.window.keyboard.press('Enter');
       await expect(list.getByRole('textbox')).toHaveCount(0);
       await expect(list).toContainText(NOTE_BODY);
+      await expect(editButton).toBeFocused();
     }
 
     // Sequential Tab traversal reaches the focus proxy over the noted text.

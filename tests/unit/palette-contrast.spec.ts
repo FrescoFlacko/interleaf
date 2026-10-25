@@ -139,3 +139,33 @@ describe.each(PALETTE_IDS)('palette %s contrast targets', (id) => {
     expect(contrastRatio(foreground, rgb(reader['--search-mark'], 'reader search mark'))).toBeGreaterThanOrEqual(7);
   });
 });
+
+describe('note composer surface', () => {
+  it('uses the reviewed paper, sepia and midnight note colours exactly', () => {
+    expect([variable('paper', 'note-surface'), variable('paper', 'note-border'), variable('paper', 'note-quote-rail')])
+      .toEqual(['#fffbeb', '#e8d8a3', '#c49b39']);
+    expect([variable('sepia', 'note-surface'), variable('sepia', 'note-border'), variable('sepia', 'note-quote-rail')])
+      .toEqual(['#f0e1c2', '#cdb88a', '#9c6e29']);
+    expect([variable('midnight', 'note-surface'), variable('midnight', 'note-border'), variable('midnight', 'note-quote-rail')])
+      .toEqual(['#1c2431', '#3b4b63', '#8ab4ff']);
+  });
+
+  it('derives other palettes from their own tokens rather than one yellow', () => {
+    const derived = PALETTE_IDS.filter((id) => !['paper', 'sepia', 'midnight'].includes(id));
+    const surfaces = new Set(derived.map((id) => variable(id, 'note-surface')));
+    expect(surfaces.size).toBe(derived.length);
+    expect(surfaces.has('#fffbeb')).toBe(false);
+  });
+
+  it.each(PALETTE_IDS)('keeps %s note text, accent, status and focus readable on the card', (id) => {
+    expect(ratio(id, 'text-primary', 'note-surface'), 'text-primary').toBeGreaterThanOrEqual(7);
+    expect(ratio(id, 'text-secondary', 'note-surface'), 'text-secondary').toBeGreaterThanOrEqual(4.5);
+    expect(ratio(id, 'accent', 'note-surface'), 'accent').toBeGreaterThanOrEqual(4.5);
+    expect(ratio(id, 'danger', 'note-surface'), 'danger').toBeGreaterThanOrEqual(4.5);
+    expect(ratio(id, 'success', 'note-surface'), 'success').toBeGreaterThanOrEqual(4.5);
+    expect(ratio(id, 'focus-ring', 'note-surface'), 'focus-ring').toBeGreaterThanOrEqual(3);
+    const surface = rgb(variable(id, 'note-surface'), `${id} note-surface`);
+    const hover = compositeOver(rgb(variable(id, 'accent'), `${id} accent`), alphaOf(variable(id, 'note-control-hover')), surface);
+    expect(contrastRatio(rgb(variable(id, 'text-primary'), 'text'), hover), 'control label on hover').toBeGreaterThanOrEqual(4.5);
+  });
+});

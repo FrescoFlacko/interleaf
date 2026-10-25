@@ -72,6 +72,7 @@ change.
   images.
 - Highlights, highlight notes, location notes, bookmarks, five highlight
   colors, annotation filtering/search, and format-specific anchor recovery.
+  Notes save as you type.
 - Current-document search and SQLite FTS5-backed indexing with source locations.
 - Persistent one-document chat sessions, explicit selection/location/page-range
   context, bounded retrieval, streamed responses, and validated citation jumps.

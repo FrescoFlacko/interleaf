@@ -10,14 +10,14 @@ import { selectActiveDocument, useReaderStore } from '../../../stores/use-reader
 import { useUiStore } from '../../../stores/use-ui-store';
 import { useChatStore } from '../../../stores/use-chat-store';
 import { useAgentStore } from '../../../stores/use-agent-store';
-import {
-  NOTE_SAVE_SHORTCUT_HINT,
-  canSaveNoteDraft,
-  handleNoteSaveShortcut,
-} from '../../../hooks/note-save-shortcut';
+import { NoteComposer, type NoteComposerClose, type NoteComposerHandle } from '../../../components/note/NoteComposer';
+import { createThenUpdateNote } from '../../../hooks/note-persistence';
+import { newNoteDraftKey } from '../../../hooks/note-drafts';
+import type { NotePersistResult } from '../../../hooks/note-autosave';
 import { bridge } from '../../../app/api-client';
 import { Button } from '../../../components/ui/button';
-import { selectionToolbarBounds, selectionToolbarPosition } from './selection-toolbar-position';
+import { selectionToolbarBounds, selectionToolbarStyle, toolbarAnchor, type ToolbarAnchor } from './selection-toolbar-position';
+import { liveSelectionRange, paintSelectionNote } from '../annotations/selection-note-paint';
 import type { HighlightEditing } from '../annotations/use-highlight-edit';
 import {
   DeleteHighlightButton,
@@ -31,6 +31,31 @@ type AnnotationSelectionToolbarProps = {
   readonly editing?: HighlightEditing | null;
 };
 
+/**
+ * One opening of the note editor, frozen when "Add note" is pressed: the
+ * passage, its document and anchor, and how a write is made. `key` gives each
+ * opening its own composer and autosave session.
+ */
+type SelectionNoteSession = {
+  /** The note's draft, which is also the composer's key. */
+  readonly key: string;
+  /** The toolbar target it was opened on, compared by identity when it closes. */
+  readonly selection: object;
+  readonly documentId: string;
+  readonly quote: string | null;
+  readonly persist: (text: string, id: string | null) => Promise<NotePersistResult>;
+  /** Where the toolbar was when the note opened; the open box grows from there. */
+  readonly anchor: ToolbarAnchor;
+  /** The passage, kept marked while the note field holds focus. */
+  readonly range: Range | null;
+};
+
+/** Where an open note grows from and what it marks, while it is open on `selection`. */
+function openNoteTarget(noteOpen: boolean, session: SelectionNoteSession | null, selection: object | null): { anchor: ToolbarAnchor | null; range: Range | null } {
+  if (!noteOpen || session?.selection !== selection) return { anchor: null, range: null };
+  return { anchor: session.anchor, range: session.range };
+}
+
 export function AnnotationSelectionToolbar({ editing: reopened = null }: AnnotationSelectionToolbarProps) {
   const { selection, editing, resetKey, label: toolbarLabel } = useSelectionToolbarTarget(reopened);
   const createAnnotation = useAnnotationStore((state) => state.create);
@@ -40,10 +65,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   const showRightTab = useUiStore((state) => state.showRightTab);
   const addSelectionContext = useChatStore((state) => state.addSelectionContext);
   const [noteOpen, setNoteOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState('');
-  // One note per Save: the button and the Cmd/Ctrl+Enter shortcut share this
-  // gate, so a second press while the create is in flight cannot make two.
-  const [savingNote, setSavingNote] = useState(false);
+  const [noteSession, setNoteSession] = useState<SelectionNoteSession | null>(null);
+  const noteHandleRef = useRef<NoteComposerHandle>(null);
   const [copyStatus, setCopyStatus] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   // Which swatch is currently pointed at, and which one holds focus. They are
@@ -53,15 +76,14 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   const [focusedColorLabel, setFocusedColorLabel] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const noteButtonRef = useRef<HTMLButtonElement>(null);
-  const notePanelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [toolbarSize, setToolbarSize] = useState({ width: 0, height: 0 });
   const recolorHighlight = useRecolorHighlight(editing, { setActionError, setStatus: setCopyStatus });
   useFocusOnKeyboardOpen(editing, toolbarRef);
 
   useEffect(() => {
     setNoteOpen(false);
-    setNoteDraft('');
-    setSavingNote(false);
+    setNoteSession(null);
     setCopyStatus('');
     setActionError(null);
     setHoveredColorLabel(null);
@@ -76,7 +98,7 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
     setToolbarSize((size) => measuredSize(toolbar, size));
   }, [toolbarSize.width, toolbarSize.height, selection, noteOpen, actionError, copyStatus]);
 
-  // Dragging the note field's resize handle changes the box without a render,
+  // The note field grows as the reader types without the toolbar re-rendering,
   // so the browser's own resize notice re-measures and re-clamps it as well.
   useEffect(() => {
     const toolbar = toolbarRef.current;
@@ -85,6 +107,22 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
     observer.observe(toolbar);
     return () => { observer.disconnect(); };
   }, [selection]);
+
+  // The note field takes focus and collapses the browser selection, so the
+  // passage keeps a temporary mark of its own for as long as the note is open
+  // on it. Closing, a new selection, a document change or unmounting clears it.
+  const { anchor: openAt, range: paintRange } = openNoteTarget(noteOpen, noteSession, selection);
+  useEffect(() => (paintRange ? paintSelectionNote(paintRange) : undefined), [paintRange]);
+
+  // An open note stays where it opened, so a window resize is the one thing
+  // that re-clamps it; nothing else re-renders the toolbar then.
+  const [, setViewportVersion] = useState(0);
+  useEffect(() => {
+    if (!noteOpen) return;
+    const reclamp = (): void => { setViewportVersion((version) => version + 1); };
+    window.addEventListener('resize', reclamp);
+    return () => { window.removeEventListener('resize', reclamp); };
+  }, [noteOpen]);
 
   /**
    * The bare toolbar is itself a top layer (`hasOpenTopLayer`), so Escape has
@@ -112,40 +150,20 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
     return () => { document.removeEventListener('keydown', dismiss); };
   }, [editing, noteOpen, selection, setSelection]);
 
-  useEffect(() => {
-    if (!noteOpen) return;
-    const dismiss = (event: KeyboardEvent | PointerEvent): void => {
-      if (event instanceof KeyboardEvent) {
-        if (event.key !== 'Escape') return;
-        event.preventDefault();
-      } else {
-        const target = event.target;
-        if (target instanceof Node && (notePanelRef.current?.contains(target) || noteButtonRef.current?.contains(target))) return;
-      }
-      setNoteOpen(false);
-      window.queueMicrotask(() => { noteButtonRef.current?.focus(); });
-    };
-    document.addEventListener('keydown', dismiss);
-    document.addEventListener('pointerdown', dismiss);
-    return () => {
-      document.removeEventListener('keydown', dismiss);
-      document.removeEventListener('pointerdown', dismiss);
-    };
-  }, [noteOpen]);
-
   if (!selection || !activeDocument) return null;
   const readerRect = document.querySelector<HTMLElement>('[data-reader-focus-target="true"]')?.getBoundingClientRect() ?? null;
   const bounds = selectionToolbarBounds(readerRect, { width: window.innerWidth, height: window.innerHeight });
-  const { left, top, maxWidth } = selectionToolbarPosition(selection.clientRect, {
+  const size = {
     width: toolbarSize.width > 0 ? toolbarSize.width : 420,
     height: toolbarSize.height > 0 ? toolbarSize.height : (noteOpen ? 180 : 44),
-  }, bounds);
+  };
+  const placement = selectionToolbarStyle(selection.clientRect, openAt, size, bounds);
+  const { left, top } = placement;
 
   const clear = (): void => {
     setSelection(null, null);
     editing?.release();
     setNoteOpen(false);
-    setNoteDraft('');
     setActionError(null);
   };
 
@@ -184,8 +202,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   };
 
   /**
-   * A created note opens Annotations — but not while Focus Mode is on, which
-   * the reader chose and which note-taking deliberately keeps. Below 920px
+   * A note finished with Done opens Annotations — but not while Focus Mode is
+   * on, which the reader chose and which note-taking deliberately keeps. Below 920px
    * `showRightTab` opens the companion drawer, which would appear over the
    * distraction-free reader and inert it. A highlight never calls this: it is
    * saved and painted in place, leaving the companion and its tab as they were.
@@ -195,12 +213,12 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
    * of the list. The reveal is requested only here, where the panel is actually
    * being opened for a specific new annotation.
    */
-  const showAnnotationsUnlessFocusMode = (annotationId: string): void => {
+  const showAnnotationsUnlessFocusMode = (annotationId: string, documentId = activeDocument.id): void => {
     if (useUiStore.getState().focusMode) return;
     showRightTab('annotations');
     // Bound to the book the annotation was made in: if the reader has moved on
     // by the time the row arrives, the request is simply not for that list.
-    requestAnnotationReveal(activeDocument.id, annotationId);
+    requestAnnotationReveal(documentId, annotationId);
   };
 
   const focusReaderAfterClear = (): void => {
@@ -286,46 +304,77 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
   };
 
   /**
-   * The one save path for this editor. The Save button and the Cmd/Ctrl+Enter
-   * shortcut both call exactly this, so the bound validation, the anchor-quote
-   * contract, the reveal, and the error message cannot differ between them.
+   * Opens the note editor on the passage as it is now. The bound checks, the
+   * anchor and the anchor-quote contract (as for createHighlight above) are
+   * fixed here, so every autosave of this note writes to the same place even if
+   * the selection or the document changes while the editor is open. A passage
+   * that cannot be annotated still opens the editor, and its first write
+   * reports why instead of creating anything.
    */
-  const createNote = async (): Promise<void> => {
-    if (savingNote) return;
+  const openNote = (): void => {
     setActionError(null);
     const boundError = targetBoundsError(selection);
-    if (boundError) {
-      setActionError(boundError);
-      return;
-    }
-    if (!selection.anchor) return;
-    setSavingNote(true);
-    const created = await createAnnotation({
-      documentId: activeDocument.id,
-      type: 'note',
-      anchor: selection.anchor,
-      // Same anchor-quote contract as createHighlight above.
-      selectedText: selection.anchor.quote.exact,
-      note: noteDraft,
-    }).finally(() => { setSavingNote(false); });
-    if (created) {
-      showAnnotationsUnlessFocusMode(created.id);
-      clear();
-      focusReaderAfterClear();
-    } else {
-      setActionError(useAnnotationStore.getState().error ?? 'Could not create note.');
-    }
+    const anchor = selection.anchor;
+    const documentId = activeDocument.id;
+    const blocked = boundError ?? 'Highlights and notes could not be mapped to document segments deterministically. Use Ask AI for this selection.';
+    setNoteSession({
+      key: newNoteDraftKey('selection'),
+      selection,
+      documentId,
+      quote: anchor?.quote.exact ?? null,
+      persist: boundError === null && anchor
+        ? createThenUpdateNote({
+            documentId,
+            anchor,
+            selectedText: anchor.quote.exact,
+            // The passage stays selected, and this toolbar stays put, while
+            // the note autosaves; the selection is cleared when it closes.
+            keepSelection: true,
+          })
+        : () => Promise.resolve({ ok: false, message: blocked, retryable: false }),
+      anchor: toolbarAnchor({ left, top }),
+      range: editing ? null : liveSelectionRange(document.querySelector('[data-reader-focus-target="true"]'), selection.selectedText),
+    });
+    setNoteOpen(true);
   };
 
-  const canSaveNote = canSaveNoteDraft(noteDraft, savingNote);
+  /**
+   * The composer has stored the newest text (or there was none) and closed.
+   * Done keeps the Save behaviour: open Annotations on the new note (outside
+   * Focus Mode), clear the passage and return to the reader. A dismissal never
+   * opens a panel. Once a note exists the passage has done its job, so it is
+   * cleared too; with no note the toolbar stays for another action. A click
+   * elsewhere leaves focus where it landed and never clears a newer selection.
+   */
+  const closeNote = ({ reason, annotationId }: NoteComposerClose): void => {
+    const opened = noteSession;
+    if (annotationId === null || opened === null) {
+      setNoteOpen(false);
+      if (reason !== 'outside') window.queueMicrotask(() => { noteButtonRef.current?.focus(); });
+      return;
+    }
+    if (reason === 'done') showAnnotationsUnlessFocusMode(annotationId, opened.documentId);
+    if (reason === 'outside') {
+      if (selection === opened.selection) clear();
+      else setNoteOpen(false);
+      return;
+    }
+    clear();
+    focusReaderAfterClear();
+  };
 
   /** A swatch recolours a reopened highlight in place, else highlights the selection. */
   const chooseColor = (color: HighlightColor): Promise<void> =>
     editing ? recolorHighlight(color) : createHighlight(color);
 
-  /** Close returns focus to what reopened a highlight, as Escape does. */
+  /**
+   * Close returns focus to what reopened a highlight, as Escape does. While the
+   * note is expanded it is the note's only close: it writes the newest text
+   * and closes the note as Escape would.
+   */
   const closeToolbar = (): void => {
-    if (editing) editing.close('close-button');
+    if (noteOpen) noteHandleRef.current?.requestClose('close');
+    else if (editing) editing.close('close-button');
     else clear();
   };
 
@@ -377,8 +426,9 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
       role="toolbar"
       aria-label={toolbarLabel}
       data-editing-annotation-id={editing?.annotation.id}
-      className="fixed z-50 rounded-lg border border-border-subtle bg-bg-primary p-2 text-xs shadow-xl"
-      style={{ left, top, maxWidth }}
+      data-note-open={noteOpen ? 'true' : undefined}
+      className={`fixed z-50 rounded-lg border p-2 text-xs ${noteOpen ? 'note-surface-panel' : 'border-border-subtle bg-bg-primary shadow-xl'}`}
+      style={placement}
     >
       <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
         <div className="flex items-center gap-1 shrink-0">
@@ -437,12 +487,8 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
             aria-expanded={noteOpen}
             aria-controls="selection-note-popover"
             onClick={() => {
-              if (noteOpen) {
-                setNoteOpen(false);
-                window.queueMicrotask(() => { noteButtonRef.current?.focus(); });
-              } else {
-                setNoteOpen(true);
-              }
+              if (noteOpen) noteHandleRef.current?.requestClose();
+              else openNote();
             }}
             className="px-2"
           >
@@ -479,8 +525,10 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
           </Button>
           {editing && <DeleteHighlightButton editing={editing} setActionError={setActionError} setStatus={setCopyStatus} />}
           <button
+            ref={closeButtonRef}
             type="button"
-            aria-label="Close selection toolbar"
+            aria-label={noteOpen ? 'Close note' : 'Close selection toolbar'}
+            title={noteOpen ? 'Close note (Esc)' : undefined}
             onClick={closeToolbar}
             className="rounded px-1.5 py-1 text-text-secondary hover:bg-bg-surface shrink-0"
           >
@@ -490,69 +538,30 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
       </div>
       {copyStatus && <div role="status" className="mt-1 text-right text-2xs text-text-secondary">{copyStatus}</div>}
       {actionError && !noteOpen && <div role="alert" className="mt-1 text-2xs text-danger">{actionError}</div>}
-      {noteOpen && (
-        <div
-          ref={notePanelRef}
-          id="selection-note-popover"
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby="selection-note-label"
-          className="mt-2 border-t border-border-subtle pt-2"
-        >
-          <label id="selection-note-label" htmlFor="selection-note" className="block font-medium text-text-primary">Note on selected text</label>
-          <textarea
-            id="selection-note"
-            autoFocus
-            maxLength={100_000}
-            value={noteDraft}
-            onChange={(event) => { setNoteDraft(event.target.value); }}
-            onKeyDown={(event) => {
-              handleNoteSaveShortcut(event, canSaveNote, () => { void createNote(); });
-            }}
-            aria-describedby={noteFieldDescription(noteDraft, actionError)}
-            className="mt-1 h-20 max-h-[40vh] w-full max-w-full min-w-0 resize-y rounded-md border border-border-subtle bg-bg-surface p-2 text-text-primary"
+      {noteOpen && noteSession && (
+        <div className="note-surface-panel__body">
+          <NoteComposer
+            key={noteSession.key}
+            handle={noteHandleRef}
+            fieldId="selection-note"
+            panelId="selection-note-popover"
+            label="Note on selected text"
+            context="Note on selection"
+            contextIcon="add-note"
+            quote={noteSession.quote}
+            variant="embedded"
+            role="group"
+            testIdPrefix="selection-note"
+            draftKey={noteSession.key}
+            documentId={noteSession.documentId}
+            autosave={{ initialText: '', initialId: null, allowEmpty: false, persist: noteSession.persist }}
+            ignoreOutside={[noteButtonRef, closeButtonRef]}
+            onClose={closeNote}
           />
-          {noteDraft.trim() === '' && (
-            <p id="selection-note-empty" data-testid="selection-note-empty" className="mt-1 text-2xs text-text-secondary">
-              Write something to save this note.
-            </p>
-          )}
-          {/* A failed save is not invalid note content, so the field is
-              described by the error rather than marked invalid. The recovery
-              hint is its own line, apart from the main error's diagnostic ID. */}
-          {actionError && (
-            <div id="selection-note-error" role="alert" data-testid="selection-note-error" className="mt-1 text-2xs text-danger">
-              <p className="break-words">{actionError}</p>{' '}
-              <p className="mt-0.5">Your note is still here, so you can try again.</p>
-            </div>
-          )}
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <span className="mr-auto text-2xs text-text-secondary" data-testid="selection-note-shortcut-hint">
-              {NOTE_SAVE_SHORTCUT_HINT}
-            </span>
-            <Button
-              variant="ghost"
-              size="chip"
-              onClick={() => {
-                setNoteOpen(false);
-                window.queueMicrotask(() => { noteButtonRef.current?.focus(); });
-              }}
-              className="px-2"
-            >Cancel</Button>
-            <Button variant="primary" size="chip" disabled={!canSaveNote} aria-busy={savingNote} onClick={() => { void createNote(); }}>
-              Save note
-            </Button>
-          </div>
         </div>
       )}
     </div>
   );
-}
-
-/** The note field's description: the empty-draft hint, else a failed save. */
-function noteFieldDescription(draft: string, error: string | null): string | undefined {
-  if (draft.trim() === '') return 'selection-note-empty';
-  return error === null ? undefined : 'selection-note-error';
 }
 
 type MeasuredSize = { readonly width: number; readonly height: number };

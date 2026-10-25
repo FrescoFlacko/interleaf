@@ -50,6 +50,10 @@ export type LoadedAnnotationDocument = {
   readonly scope: AnnotationAnchorScope;
 };
 
+type CreateAnnotationOptions = {
+  readonly keepSelection?: boolean;
+};
+
 export type AnnotationState = {
   /** What the last load asked for; `null` until a document's annotations are requested. */
   loaded: LoadedAnnotationDocument | null;
@@ -66,7 +70,12 @@ export type AnnotationState = {
   /** Clears the pending reveal, ignoring a request raised after `nonce`. */
   clearReveal: (nonce: number) => void;
   load: (documentId: string, scope: AnnotationAnchorScope, documentHash: string) => Promise<void>;
-  create: (input: CreateAnnotationInput) => Promise<Annotation | null>;
+  /**
+   * Creates an annotation. A successful create clears the reader selection it
+   * came from unless `keepSelection` is set, which the note composer uses while
+   * it autosaves so the passage and its toolbar stay put until the reader is done.
+   */
+  create: (input: CreateAnnotationInput, options?: CreateAnnotationOptions) => Promise<Annotation | null>;
   update: (input: UpdateAnnotationInput) => Promise<Annotation | null>;
   remove: (documentId: string, id: string) => Promise<boolean>;
   repairResolution: (documentHash: string, resolution: AnnotationAnchorResolution) => Promise<void>;
@@ -176,13 +185,13 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     }
   },
 
-  create: async (input) => {
+  create: async (input, options) => {
     try {
       const annotation = await bridge.annotations.create(input);
       set((state) => isLoadedDocument(state, input.documentId)
         ? {
             annotations: [annotation, ...state.annotations],
-            selection: null,
+            selection: options?.keepSelection === true ? state.selection : null,
             error: null,
             mutationRevision: state.mutationRevision + 1,
           }
