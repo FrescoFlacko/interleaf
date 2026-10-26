@@ -23,6 +23,8 @@ export const SCREENS: readonly ScreenSpec[] = [
   // The grid ends well above the fold, so the empty lower half is cut.
   { name: 'library', crop: { left: 0, top: 0, width: 2880, height: 1000 } },
   { name: 'reader-annotations' },
+  { name: 'notes-selection' },
+  { name: 'notes-location' },
   { name: 'reader-chat' },
   { name: 'reader-agent' },
   { name: 'reader-search' },

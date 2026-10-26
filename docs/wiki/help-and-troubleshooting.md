@@ -26,7 +26,7 @@ question, try the [FAQ](faq.md).
 | Symptom | What to try |
 | --- | --- |
 | `npm run dev` fails immediately | Check your Node.js version against [Installation ▸ Requirements](installation.md#requirements), then run `npm install` again. |
-| You are looking for a download link | Nothing is published yet: installers will be releases of the public `FrescoFlacko/interleaf-releases` repository, which has no release so far, so an update check finds nothing yet. Install a build from someone you trust, run from source, or build a package yourself. See [Installation](installation.md#what-is-available-today). |
+| You are looking for a download link | macOS and Linux installers are releases of the public `FrescoFlacko/interleaf-releases` repository, also linked from [interleaf.ca](https://interleaf.ca/). Windows installers are not published: install a build from someone you trust, run from source, or build a package yourself. See [Installation](installation.md#what-is-available-today). |
 | You have a Windows installer and want a normal desktop app | See [Installation ▸ Install from a Windows .exe](installation.md#install-from-a-windows-exe). After that it launches from the Start menu — no terminal, no Node.js. |
 | An installer or app warns that the publisher is unidentified | A build made without a signing certificate is unsigned, and this repository provides none, so the warning is accurate. Continue only if you trust where the file came from. See [Installation ▸ What is available today](installation.md#what-is-available-today). |
 | The app does not start after a build | Try `npm run dev` first. If that works, the problem is packaging, not the app. |

@@ -20,24 +20,25 @@
 
 Read this before you go looking for a download button.
 
-- **Nothing is published for download yet.** Interleaf's installers will be
-  published as releases of the public
-  [`FrescoFlacko/interleaf-releases`](https://github.com/FrescoFlacko/interleaf-releases)
-  repository, which has no release yet. The project website's download buttons
-  stay disabled until one is promoted. Packaging and
+- **Download a release.** Interleaf's installers are published as releases of
+  the public [`FrescoFlacko/interleaf-releases`](https://github.com/FrescoFlacko/interleaf-releases/releases) repository. The current release, 0.12.0, has signed and
+  notarized macOS disk images (Apple silicon and Intel), plus a Linux AppImage,
+  `.deb` and pacman package; [interleaf.ca](https://interleaf.ca/) links the
+  macOS downloads. Check a file against the release's `SHA256SUMS` if you want
+  to be sure it is the published one. Windows installers are not published.
+  Packaging and
   publishing are deliberately separate: every package script passes
   `--publish never`, so building a package never uploads it anywhere.
   Maintainers: the release procedure is described in
   [Packaging ▸ Stable updates](../PACKAGING.md#stable-updates).
-- **Until then, get a trusted build or run from source.** If someone you trust
+- **Otherwise, get a trusted build or run from source.** If someone you trust
   built an installer from this project and gave it to you, installing it is a
   normal, supported thing to do. Otherwise, run Interleaf from source or build a
   package yourself, as described below. Do not install an "Interleaf" download
   from a site you cannot vouch for.
 - **Updates come only from signed releases, and only when you ask.** The
   macOS app and the Linux AppImage check Interleaf's public GitHub releases for
-  a newer stable version. No release has been published yet, so for now a check
-  finds nothing. See [Updating and uninstalling](#updating-and-uninstalling).
+  a newer stable version. See [Updating and uninstalling](#updating-and-uninstalling).
 - **Signing is a separate step from building.** Release signing on macOS
   (Developer ID plus notarization) and Windows (Authenticode) requires
   certificates this repository does not contain. A build made without them is
@@ -171,7 +172,7 @@ npm test
 ## Build a Windows `.exe` installer
 
 This produces the Windows installer file from source on your own machine. **It
-does not download one** — nothing is published yet, and every package script
+does not download one** — Windows installers are not published, and every package script
 runs with `--publish never`.
 
 > **Build on Windows.** The Windows installer should be produced on a Windows
@@ -318,8 +319,7 @@ Updates only ever move forward on the stable channel.
 
 - Checks contact only `github.com` and GitHub's download servers, and send no
   account details, library contents or settings.
-- No release has been published yet. Until one is, a check reports that there
-  is nothing to compare against. Version 0.5.0 is the first build with the
+- Version 0.5.0 is the first build with the
   release key; an earlier build reports that it cannot verify updates and never
   checks, so install 0.5.0 or later by hand once.
 - A macOS copy run from the mounted disk image cannot update itself. Drag it

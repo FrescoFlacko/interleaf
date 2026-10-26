@@ -90,6 +90,9 @@ changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
    closes.
 4. Click **Done** when you have finished.
 
+![The selection toolbar expanded into a note card, with the selected passage quoted above the note text and a Saved status](../../website/assets/screens/notes-selection-1600.webp)
+*A note on selected text, saved as it was typed. The note is a demo annotation.*
+
 The note is anchored to that passage, so it travels with the text. Unlike a
 highlight, a note finished with **Done** opens the Annotations panel and
 scrolls the new note into view (except in Focus Mode, which stays
@@ -105,6 +108,9 @@ page as a whole.
 2. Type in the note card. Its top line shows where you are: the page and how
    far through the document.
 3. Click **Done**.
+
+![A location note card open below the reader toolbar's Note button, headed Current position with the page and progress, over an EPUB chapter in the Sepia palette](../../website/assets/screens/notes-location-1600.webp)
+*A location note in the Sepia palette. The note is a demo annotation.*
 
 In the Annotations browser, the two are labelled *Text note* and *Location note*.
 
