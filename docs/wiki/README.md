@@ -38,8 +38,8 @@ optional and only run when you connect a provider yourself.
 
 - **[Quick start](quick-start.md)** — first launch, guided setup, importing your
   first document, your first highlight and your first question.
-- **[Installation](installation.md)** — where downloads will come from (the
-  public release repository, which has no release yet), installing a build you trust, running from
+- **[Installation](installation.md)** — downloading a macOS or Linux release
+  from the public release repository, installing a build you trust, running from
   source on macOS, Windows and Linux, and building a package yourself.
 - **[App navigation](navigation.md)** — the library sidebar, the header toolbar,
   the reader, the companion panel and the Settings dialog.
@@ -128,9 +128,10 @@ permanent product invariant.
   verified tool-free mode. See [Antigravity](providers/antigravity.md).
 - **Native Restricted is available only for Codex**, the one profile that
   currently proves the sandbox contract Interleaf requires.
-- **Nothing is published for download yet.** Installers will be releases of the
-  public `FrescoFlacko/interleaf-releases` repository, which has none yet. Until then, install a build from
-  someone you trust, run from source, or build a package yourself — see
+- **macOS and Linux installers are published** as releases of the public
+  `FrescoFlacko/interleaf-releases` repository; Windows installers are not. On
+  Windows, install a build from someone you trust, run from source, or build a
+  package yourself — see
   [Installation](installation.md). Updates for the macOS app and the Linux
   AppImage come only from signed public releases, and only when you click
   Download; see [Installation ▸ Updating](installation.md#updating-and-uninstalling).

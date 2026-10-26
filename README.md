@@ -36,7 +36,7 @@ The pages come from `docs/wiki/`, which stays readable on its own — start at
 | | |
 | --- | --- |
 | [Quick start](docs/wiki/quick-start.md) | First launch to first AI question |
-| [Installation](docs/wiki/installation.md) | Where downloads will come from, installing a trusted build, running from source, or building a package yourself |
+| [Installation](docs/wiki/installation.md) | Downloading a release, installing a trusted build, running from source, or building a package yourself |
 | [App navigation](docs/wiki/navigation.md) · [Keyboard shortcuts](docs/wiki/keyboard-shortcuts.md) | Every panel, button and binding |
 | [Adding documents](docs/wiki/adding-documents.md) · [Document formats](docs/wiki/formats/README.md) | Open a file or import it to the library, and what each format supports |
 | [Reading](docs/wiki/reading.md) · [Highlights and notes](docs/wiki/highlights-and-notes.md) | Navigating, annotating, finding things again |
@@ -48,10 +48,13 @@ The rest of this README is developer-facing.
 
 This repository contains an actively developed implementation. Provider
 availability and platform packaging remain environment-dependent; this
-documentation does not make a release-readiness claim. Nothing is published for
-download yet: installers will be releases of the public
+documentation does not make a release-readiness claim. Installers are published
+as releases of the public
 [`FrescoFlacko/interleaf-releases`](https://github.com/FrescoFlacko/interleaf-releases)
-repository, which has no release yet. The update signing key is bootstrapped
+repository: [0.12.0](https://github.com/FrescoFlacko/interleaf-releases/releases/tag/v0.12.0)
+ships signed and notarized macOS builds plus Linux AppImage, `.deb` and pacman
+packages, also linked from [interleaf.ca](https://interleaf.ca/). Windows
+installers are not published. The update signing key is bootstrapped
 and pinned from 0.5.0 (see [Stable updates](docs/PACKAGING.md#stable-updates)).
 ChatGPT Reader Chat runs through an explicitly user-authorized constrained Codex
 path, but it is **not genuinely tool-free**. Run the commands below after any
@@ -100,7 +103,7 @@ Original imported files may remain intact as opaque source data.
 
 ## Screenshots
 
-Captured from a production build of Interleaf 0.3.2 with a demo library of four
+Captured from a production build of Interleaf 0.12.0 with a demo library of four
 openly licensed books; see [website/PROVENANCE.md](website/PROVENANCE.md).
 
 ![The library with four demo books shown as cards](website/assets/screens/library-1600.webp)
@@ -108,6 +111,13 @@ openly licensed books; see [website/PROVENANCE.md](website/PROVENANCE.md).
 
 ![A PDF page with coloured highlights and the Annotations tab listing them](website/assets/screens/reader-annotations-1600.webp)
 *Reader and annotations. The highlights and the note are demo annotations.*
+
+![A note being written on a selected passage, with the passage quoted above the note text and a Saved status](website/assets/screens/notes-selection-1600.webp)
+*A note on selected text. It opens in the selection toolbar and saves as you
+type.*
+
+![A location note open over an EPUB chapter in the Sepia palette, headed with the current page and progress](website/assets/screens/notes-location-1600.webp)
+*A note at the current location, in the warm Sepia palette.*
 
 ![AI Chat answering a question about a highlighted passage, with page citation chips and suggested follow-ups](website/assets/screens/reader-chat-1600.webp)
 *AI Chat with a selected passage attached as context. The answer is a fixed sample

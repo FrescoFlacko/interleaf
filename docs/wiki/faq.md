@@ -21,11 +21,12 @@ Short answers. Each links to the page with the long one.
 ## Getting it
 
 **Where do I download Interleaf?**
-Nowhere yet. Installers will be published as releases of the public
-`FrescoFlacko/interleaf-releases` repository, which has no release yet. Until
-one is published, install a build from someone you trust, run from source, or build a package yourself.
-Packages exist for macOS (DMG and ZIP), Windows (an NSIS installer) and Linux
-(AppImage, `.deb` and pacman), but none of them is published. See [Installation](installation.md#what-is-available-today).
+From the public [`FrescoFlacko/interleaf-releases`](https://github.com/FrescoFlacko/interleaf-releases/releases)
+repository, or via the download buttons on [interleaf.ca](https://interleaf.ca/).
+Releases include macOS (DMG and ZIP, signed and notarized) and Linux (AppImage,
+`.deb` and pacman) packages. Windows has an NSIS installer you can build, but
+none is published; install a build from someone you trust, run from source, or
+build a package yourself. See [Installation](installation.md#what-is-available-today).
 
 **Someone gave me a Windows `.exe`. Can I just install it?**
 Yes — pick the build matching your PC, run the wizard, choose an installation

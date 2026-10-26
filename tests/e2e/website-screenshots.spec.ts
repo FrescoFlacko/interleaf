@@ -225,7 +225,7 @@ test.describe('Website screenshots from an isolated demo library', () => {
     rmSync(staging, { recursive: true, force: true });
   });
 
-  test('captures library, reading, annotations, search, chat and agent views', async () => {
+  test('captures library, reading, annotations, notes, search, chat and agent views', async () => {
     await stubSampleChat(app);
     await stubOpenDialog(app, books.map((book) => join(staging, book.importAs)));
     await app.window.getByTestId('import-files-button').click();
@@ -243,6 +243,9 @@ test.describe('Website screenshots from an isolated demo library', () => {
     await selectPdfPhrase(app, 43, 'reduced the n-disk Tower of Hanoi problem to two instances');
     await app.window.getByTestId('annotation-selection-toolbar').getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill('Recursion Fairy: trust the smaller instances, never unroll them.');
+    // The note card autosaves; capture it open once it reports Saved.
+    await expect(app.window.getByTestId('selection-note-save-status')).toHaveText('Saved', { timeout: 10_000 });
+    await shoot(app, 'notes-selection');
     await app.window.getByRole('button', { name: /^Done/u }).click();
     await openCompanionTab(app, /Annotations/u);
     await expect(app.window.getByTestId('annotation-row')).toHaveCount(4);
@@ -294,6 +297,14 @@ test.describe('Website screenshots from an isolated demo library', () => {
     await setCompanionPanel(app, false);
     await goToSection(app, Number(process.env.INTERLEAF_SITE_ALICE_SECTION ?? '3'), /Rabbit-Hole/iu);
     await shoot(app, 'epub-sepia');
+
+    // A location note in the same chapter, themed by the Sepia palette.
+    await app.window.getByTestId('reader-header-toolbar').getByRole('button', { name: 'Add note' }).click();
+    await app.window.locator('#location-note').fill('The fall takes a whole page: the narration slows down exactly when Alice does.');
+    await expect(app.window.getByTestId('location-note-save-status')).toHaveText('Saved', { timeout: 10_000 });
+    await shoot(app, 'notes-location');
+    await app.window.getByRole('button', { name: /^Done/u }).click();
+    await expect(app.window.locator('#location-note-popover')).toBeHidden();
 
     // Babbage: Midnight palette with the outline, then Focus Reading Mode.
     await returnToLibrary(app);

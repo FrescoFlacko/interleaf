@@ -19,9 +19,9 @@ Steps 1–4 need no account and no internet connection. Step 5 is optional.
 
 ## Before you begin
 
-You need Interleaf running on your machine. Nothing is published for download
-yet (the public release repository has no release so far): either install a build
-you already have from someone you trust, or run it from source. Follow
+You need Interleaf running on your machine: download a macOS or Linux release
+from the public release repository, install a build you already have from
+someone you trust, or run it from source. Follow
 [Installation](installation.md) first, then come back here.
 
 ---
