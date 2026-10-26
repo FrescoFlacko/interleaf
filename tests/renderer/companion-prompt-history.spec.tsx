@@ -112,12 +112,6 @@ function ChatHarness({
       settingsOpen={false}
       isStreaming={false}
       canSend
-      activeSession={null}
-      contextItems={[]}
-      cleanContext={{
-        control: { present: false, canClean: false, isCleaning: false, contextMutationsDisabled: true, target: 'the current provider' },
-        onClean: vi.fn(() => Promise.resolve(false)),
-      }}
       webSearchSupported={false}
       webSearchEnabled={false}
       onWebSearchChange={vi.fn()}
@@ -128,7 +122,8 @@ function ChatHarness({
       onSelectModel={vi.fn()}
       onOpenProviderSettings={vi.fn()}
       onStop={vi.fn()}
-      context={null}
+      shelf={null}
+      addContext={null}
     />
   );
 }

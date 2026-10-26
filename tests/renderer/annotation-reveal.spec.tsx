@@ -26,7 +26,7 @@ afterEach(() => {
 /**
  * Revealing an annotation in the Annotations panel.
  *
- * Creating a highlight opens the tab and brings the new row to the very top of
+ * Finishing a note with Done opens the tab and brings the new row to the very top of
  * the list container, once, even when the row above it is enormous; nothing
  * else in the panel's life (a refresh, an edit, a filter change) moves the
  * reader's scroll position. A reveal names one row in one book, and until that
@@ -66,10 +66,10 @@ const existing = [
   annotation('ann-long', { note: 'A note long enough to fill the panel several times over.' }),
   annotation('ann-tail', { note: 'The note after it.' }),
 ];
-const created = annotation('ann-new', { color: 'green' });
+const created = annotation('ann-new', { type: 'note', note: 'A new note.', color: null });
 
 /** The row a reveal names, and the two rows that were already there. */
-const target = created;
+const target = annotation('ann-new', { color: 'green' });
 const older = [annotation('ann-old', { note: 'An earlier note.' }), annotation('ann-tail', { type: 'note', note: 'The note after it.' })];
 const revealed: AnnotationPage = { items: [target, ...older], total: 3, ...PAGE };
 /** What the Notes filter shows: real rows, none of them the target. */
@@ -168,10 +168,10 @@ async function renderPanel(): Promise<HTMLElement> {
 }
 
 describe('a newly created annotation is revealed in the annotations panel', () => {
-  it('brings the created highlight to the top of a list left scrolled mid-note', async () => {
+  it('brings the created note to the top of a list left scrolled mid-note', async () => {
     const list = await renderPanel();
     stubLayout(ROW_HEIGHTS);
-    // The reader is 900px into the tall note when they make the highlight.
+    // The reader is 900px into the tall note when they write the new one.
     list.scrollTop = 900;
     const writes = watchScroll(list);
 
@@ -179,7 +179,9 @@ describe('a newly created annotation is revealed in the annotations panel', () =
     page.mockResolvedValue({ items: [created, ...existing], total: existing.length + 1, ...PAGE });
     stubLayout([NEW_ROW_HEIGHT, ...ROW_HEIGHTS]);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Green highlight' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note on selected text' }), { target: { value: 'A new note.' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done/ }));
 
     // The panel is opened by the same action, and the new row arrives with the
     // page refresh the creation triggered.

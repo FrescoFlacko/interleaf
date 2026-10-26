@@ -6,14 +6,14 @@
    follows all six palettes instead of the mockup's parallel light palette.
    Scoped to the agent panel: no other surface changes typography. */
 .agent-design {
-  font-family: 'IBM Plex Sans', Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
 }
 
-/* The reference sets every label, chip, command and metadata value in IBM Plex
-   Mono. Declared here rather than through Tailwind's `font-mono` so the agent
+/* Every label, chip, command and metadata value uses the panels' bundled
+   monospace face (JetBrains Mono). Declared here rather than through Tailwind's `font-mono` so the agent
    panel carries the design's own stack without redefining it app-wide. */
 .agent-design .agent-mono {
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 /* Dashed placeholder boxes: the empty working directory value and the

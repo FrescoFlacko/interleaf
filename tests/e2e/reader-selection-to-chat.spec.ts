@@ -113,9 +113,9 @@ test.describe('Reader selection to Chat planning and bounded limits', () => {
     // that provider, and the turn fails for a reason unrelated to selection.
     await chooseChatModel(app.window, 'openrouter', 'openrouter/auto');
     await expect(app.window.getByTestId('chat-model-picker')).toContainText('OpenRouter');
-    const contextList = app.window.getByTestId('chat-context-list');
-    await expect(contextList).toBeVisible();
-    await expect(contextList).toContainText(/Pages 1–2|Distributed Consensus/i);
+    const contextSummary = app.window.getByTestId('chat-context-summary');
+    await expect(contextSummary).toBeVisible();
+    await expect(contextSummary).toContainText(/Pages 1–2|Distributed Consensus/i);
     // Send chat message with the selection context
     const composer = app.window.locator('#chat-composer');
     await composer.fill('Explain this multi-page section architecture');
@@ -213,9 +213,9 @@ test.describe('Reader selection to Chat planning and bounded limits', () => {
     // test in this file): an installed CLI provider would otherwise win.
     await chooseChatModel(app.window, 'openrouter', 'openrouter/auto');
     await expect(app.window.getByTestId('chat-model-picker')).toContainText('OpenRouter');
-    const contextList = app.window.getByTestId('chat-context-list');
-    await expect(contextList).toBeVisible();
-    await expect(contextList).toContainText(/Blocks 1–106|Paragraph text for block 1/i);
+    const contextSummary = app.window.getByTestId('chat-context-summary');
+    await expect(contextSummary).toBeVisible();
+    await expect(contextSummary).toContainText(/Blocks 1–106|Paragraph text for block 1/i);
     // 5. Send message with the selection context
     const composer = app.window.locator('#chat-composer');
     await composer.fill('Analyze this passage');
@@ -299,9 +299,9 @@ test.describe('Reader selection to Chat planning and bounded limits', () => {
     // test in this file): an installed CLI provider would otherwise win.
     await chooseChatModel(app.window, 'openrouter', 'openrouter/auto');
     await expect(app.window.getByTestId('chat-model-picker')).toContainText('OpenRouter');
-    const contextList = app.window.getByTestId('chat-context-list');
-    await expect(contextList).toBeVisible();
-    await expect(contextList).toContainText(/Pages 1–51/i);
+    const contextSummary = app.window.getByTestId('chat-context-summary');
+    await expect(contextSummary).toBeVisible();
+    await expect(contextSummary).toContainText(/Pages 1–51/i);
 
     // 5. Send message with 51-page prompt
     const composer = app.window.locator('#chat-composer');
@@ -419,7 +419,7 @@ test.describe('Reader selection to Chat provider routing under a slow session cr
     const selectionToolbar = app.window.getByTestId('annotation-selection-toolbar');
     await expect(selectionToolbar).toBeVisible();
     await selectionToolbar.getByRole('button', { name: 'Ask AI' }).click();
-    await expect(app.window.getByTestId('chat-context-list')).toBeVisible();
+    await expect(app.window.getByTestId('chat-context-summary')).toBeVisible();
 
     // What the reader is told, what was persisted, and what answers the turn
     // are one provider.

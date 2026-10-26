@@ -108,29 +108,27 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     expect(forcedColorState.right).toBeLessThanOrEqual(forcedColorState.viewportWidth + 1);
     await app.window.emulateMedia({ forcedColors: 'none' });
     await choosePalette(app.window, 'paper');
-    await expect(contextBar).toContainText('0 items');
-    // The summary line names the context and offers to add to it, and nothing
-    // else: the context-window wheel it used to carry now sits beside Send,
-    // where the decision it informs is actually made.
+    // The live conversation has nothing attached yet: the shelf says so in
+    // words, beside the context-window wheel at its edge, rather than a count
+    // of zero. Adding is the footer's job, under the field.
     const summary = contextBar.getByTestId('chat-context-summary');
-    await expect(summary).toContainText('Context ·');
-    await expect(summary).toContainText('0 items');
-    await expect(summary.getByRole('button', { name: 'Add pages to AI context' })).toBeVisible();
-    await expect(contextBar.getByTestId('chat-context-budget')).toHaveCount(0);
+    await expect(summary).toHaveText('No context attached');
+    await expect(contextBar.getByTestId('chat-context-budget')).toHaveCount(1);
+    await expect(contextBar.getByRole('button', { name: 'Add context' })).toHaveCount(0);
 
-    const pagesTrigger = chat.getByRole('button', { name: 'Add pages to AI context' });
+    const pagesTrigger = chat.getByRole('button', { name: 'Add context' });
     await pagesTrigger.focus();
     await pagesTrigger.press('Enter');
     await expect(pagesTrigger).toHaveAttribute('aria-expanded', 'true');
     const popover = app.window.getByTestId('chat-pages-popover');
     await expect(popover).toBeVisible();
-    await expect(app.window.getByLabel('Start page for context')).toBeFocused();
+    await expect(popover.getByRole('button', { name: 'Entire document' })).toBeFocused();
 
     await app.window.getByLabel('Start page for context').fill('2');
     await app.window.getByLabel('End page for context').fill('4');
     await app.window.getByLabel('End page for context').press('Enter');
     await expect(pagesTrigger).toBeFocused();
-    await expect(contextBar.getByText('Pages 2–4')).toBeVisible();
+    await expect(summary).toHaveAccessibleName('Context, 1 item: Pages 2–4');
 
     let sessions = await app.window.evaluate(async (documentId) => window.interleafAPI.chat.listSessions(documentId), fixtureDocument!.id);
     const session = sessions[0];
@@ -154,12 +152,12 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
       return messages.find((message) => message.role === 'assistant')?.status ?? null;
     }).toBe('complete');
 
-    // Once main has a packed request to report, the wheel appears — in the
-    // composer, still not in this bar.
+    // Once main has a packed request to report, the wheel still ends the
+    // shelf — drawn once, never also in the tool row under the field.
     const meter = chat.getByTestId('chat-context-budget');
-    await expect(meter).toBeVisible();
-    await expect(contextBar.getByTestId('chat-context-budget')).toHaveCount(0);
-    expect(await meter.evaluate((element) => element.closest('form') !== null)).toBe(true);
+    await expect(meter).toHaveCount(1);
+    await expect(contextBar.getByTestId('chat-context-budget')).toBeVisible();
+    expect(await meter.evaluate((element) => element.closest('.chat-design-controls') === null)).toBe(true);
 
     const db = new DatabaseSync(join(app.userDataDir, 'database', 'interleaf.sqlite'));
     try {
@@ -181,10 +179,20 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     await expect(contextBar.getByText('Pages 2–4')).toBeVisible();
     contextItems = await app.window.evaluate(async (sessionId) => window.interleafAPI.chat.listContext(sessionId), session!.id);
     expect(contextItems.map((item) => item.displayLabel)).toEqual(['Pages 2–4']);
-    // The whole document is the one toggle in the row, never a second chip.
-    await contextBar.getByRole('button', { name: 'Entire document' }).click();
-    await expect(contextBar.getByRole('button', { name: 'Entire document' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(contextBar.getByRole('button', { name: /Remove Entire document/ })).toHaveCount(0);
+    // The whole document is an Add context action. Once attached it is one
+    // shelf entry, listed first, and that entry is where it is removed.
+    await pagesTrigger.click();
+    await popover.getByRole('button', { name: 'Entire document' }).click();
+    await expect(popover).toHaveCount(0);
+    await expect(pagesTrigger).toBeFocused();
+    await expect(summary).toHaveAccessibleName('Context, 2 items: Entire document');
+    await summary.click();
+    const manage = app.window.getByTestId('chat-context-manage');
+    await expect(manage.getByText('Entire document', { exact: true })).toHaveCount(1);
+    await expect(manage.getByRole('button', { name: 'Remove Entire document from AI context' })).toBeEnabled();
+    await app.window.keyboard.press('Escape');
+    await expect(manage).toHaveCount(0);
+    await expect(summary).toBeFocused();
 
     await pagesTrigger.click();
     await expect(popover).toBeVisible();
@@ -193,9 +201,10 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
 
     // Exercise the real supported narrow companion-panel layout at 100% with
     // many pinned ranges. The minimum supported BrowserWindow width clamps
-    // this request to the normal panel layout; chips must wrap while
+    // this request to the normal panel layout; the shelf stays one line while
     // every remove control remains in the vertically scrollable,
-    // keyboard-reachable list. The compact drawer is exercised below at 200%.
+    // keyboard-reachable list it opens. The compact drawer is exercised below
+    // at 200%.
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
       if (!window) throw new Error('Main BrowserWindow was not found.');
@@ -211,15 +220,20 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     await expect(narrowChat).toBeVisible();
     const narrowContextBar = narrowChat.getByTestId('chat-context-bar');
     for (let index = 0; index < 20; index += 1) {
-      const narrowPagesTrigger = narrowChat.getByRole('button', { name: 'Add pages to AI context' });
+      const narrowPagesTrigger = narrowChat.getByRole('button', { name: 'Add context' });
       await narrowPagesTrigger.click();
       await app.window.getByLabel('Start page for context').fill('1');
       await app.window.getByLabel('End page for context').fill('1');
       await app.window.getByRole('button', { name: 'Add range' }).click();
       await expect(narrowPagesTrigger).toBeFocused();
     }
-    // Every item stays listed as a wrapping chip; the count leads the row.
-    await expect(narrowContextBar.getByTestId('chat-context-summary')).toContainText('Context · 22 items');
+    // One line names the first item and counts the rest; the list opens on demand.
+    const narrowSummary = narrowContextBar.getByTestId('chat-context-summary');
+    await expect(narrowSummary).toHaveAccessibleName('Context, 22 items: Entire document');
+    await expect(narrowSummary.locator('.chat-context-shelf-count')).toHaveText('+21');
+    await narrowSummary.click();
+    const narrowList = app.window.getByTestId('chat-context-list');
+    await expect(narrowList).toBeVisible();
     const narrowMetrics = await app.window.evaluate(() => {
       const bar = document.querySelector<HTMLElement>('[data-testid="chat-context-bar"]');
       const list = document.querySelector<HTMLElement>('[data-testid="chat-context-list"]');
@@ -239,16 +253,20 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
       };
     });
     expect(narrowMetrics.bodyOverflowX).toBeLessThanOrEqual(1);
-    expect(narrowMetrics.barHeight).toBeGreaterThan(40);
+    expect(narrowMetrics.barHeight).toBeLessThanOrEqual(40);
     expect(narrowMetrics.barScrollHeight).toBeLessThanOrEqual(narrowMetrics.barHeight + 1);
     expect(narrowMetrics.listClientHeight).toBeGreaterThan(0);
+    // Bounded: the list scrolls rather than growing past its cap.
+    expect(narrowMetrics.listScrollHeight).toBeGreaterThan(narrowMetrics.listClientHeight);
     expect(narrowMetrics.barRight).toBeLessThanOrEqual(narrowMetrics.companionRight + 1);
-    expect(narrowMetrics.listRight).toBeLessThanOrEqual(narrowMetrics.companionRight + 1);
-    expect(await narrowContextBar.getAttribute('data-context-layout')).toBe('wrapping-chips');
-    const narrowRemoveControls = narrowContextBar.getByRole('button', { name: /Remove Page 1 from AI context/ });
+    expect(narrowMetrics.listRight).toBeLessThanOrEqual(narrowMetrics.viewportWidth + 1);
+    expect(await narrowContextBar.getAttribute('data-context-layout')).toBe('shelf');
+    const narrowRemoveControls = narrowList.getByRole('button', { name: /Remove Page 1 from AI context/ });
     expect(await narrowRemoveControls.count()).toBe(20);
     await narrowRemoveControls.last().focus();
     await expect(narrowRemoveControls.last()).toBeFocused();
+    await app.window.keyboard.press('Escape');
+    await expect(narrowList).toHaveCount(0);
 
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
@@ -267,9 +285,12 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
       ? compactDrawer.getByRole('region', { name: 'AI research chat' })
       : chat;
     await expect(zoomedChat.getByTestId('chat-context-bar')).toBeVisible();
-    expect(await zoomedChat.getByRole('button', { name: /Remove Page 1 from AI context/ }).count()).toBe(20);
-    await zoomedChat.getByRole('button', { name: 'Add pages to AI context' }).click();
+    await zoomedChat.getByTestId('chat-context-summary').click();
+    expect(await app.window.getByTestId('chat-context-list').getByRole('button', { name: /Remove Page 1 from AI context/ }).count()).toBe(20);
+    // Opening Add context closes the list first: the two never stand open together.
+    await zoomedChat.getByRole('button', { name: 'Add context' }).click();
     await expect(popover).toBeVisible();
+    await expect(app.window.getByTestId('chat-context-manage')).toHaveCount(0);
 
     const containment = await app.window.evaluate(() => {
       const chatBar = document.querySelector<HTMLElement>('[data-testid="chat-context-bar"]');
@@ -313,10 +334,10 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     // Re-select the real Chat tab after leaving the compact drawer. This keeps
     // the desktop step independent of whichever companion tab a prior drawer
     // lifecycle restored, while still exercising the production tab control.
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const desktopChat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(desktopChat).toBeVisible();
-    await desktopChat.getByRole('button', { name: 'Add pages to AI context' }).click();
+    await desktopChat.getByRole('button', { name: 'Add context' }).click();
     await expect(popover).toBeVisible();
     const desktopContainment = await app.window.evaluate(() => {
       const bar = document.querySelector<HTMLElement>('[data-testid="chat-context-bar"]');
@@ -351,7 +372,7 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     }
     await app.window.getByRole('tab', { name: 'Chat' }).click();
     const restartedChat = app.window.getByRole('region', { name: 'AI research chat' });
-    await expect(restartedChat.getByTestId('chat-context-list').getByText('Entire document')).toBeVisible();
+    await expect(restartedChat.getByTestId('chat-context-summary')).toHaveAccessibleName(/^Context, \d+ items: Entire document$/u);
     contextItems = await app.window.evaluate(async (sessionId) => window.interleafAPI.chat.listContext(sessionId), session!.id);
     expect(contextItems.some((item) => item.kind === 'entire_document')).toBe(true);
   });

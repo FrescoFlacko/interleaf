@@ -6,12 +6,10 @@ import type { Annotation, AnnotationSort, AnnotationType } from '@shared/types/a
 import { AppIcon } from '../../components/AppIcon';
 import { useAnnotationStore } from '../../stores/use-annotation-store';
 import { selectActiveDocument, selectAdapter, useReaderStore } from '../../stores/use-reader-store';
-import {
-  NOTE_SAVE_SHORTCUT_HINT,
-  handleNoteSaveShortcut,
-} from '../../hooks/note-save-shortcut';
+import type { NoteComposerClose } from '../../components/note/NoteComposer';
 import { anchorToLocation } from '../reader/annotations/dom-anchors';
 import { AnnotationBody } from './AnnotationBody';
+import { AnnotationInlineEditor } from './AnnotationInlineEditor';
 import { REVEAL_VIEW, annotationPageKey, useAnnotationReveal } from './use-annotation-reveal';
 import {
   ANNOTATION_ROW,
@@ -129,6 +127,23 @@ function railColor(annotation: Annotation, color: HighlightColorConfig): string 
 
 const PAGE_SIZE = 50;
 
+/**
+ * The fetched page in the order the reader is already looking at. While a row
+ * is being edited its autosaves change its updated time, and re-sorting would
+ * move the row out from under the cursor; so rows keep their places, changed
+ * rows are refreshed in place, and new rows are added at the end. The real
+ * order returns when the edit closes.
+ */
+function keepRowOrder(current: readonly Annotation[], fetched: readonly Annotation[]): readonly Annotation[] {
+  const byId = new Map(fetched.map((annotation) => [annotation.id, annotation]));
+  const kept = current.flatMap((annotation) => {
+    const fresh = byId.get(annotation.id);
+    return fresh ? [fresh] : [];
+  });
+  const keptIds = new Set(kept.map((annotation) => annotation.id));
+  return [...kept, ...fetched.filter((annotation) => !keptIds.has(annotation.id))];
+}
+
 const CHIP_BASE =
   'flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs leading-none focus:outline-none focus:ring-2 focus:ring-focus-ring';
 const CHIP_ACTIVE = 'bg-text-primary font-medium text-bg-primary';
@@ -156,10 +171,12 @@ export function AnnotationBrowser() {
   const [type, setType] = useState<TypeFilter>('all');
   const [sort, setSort] = useState<AnnotationSort>('updated_desc');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
-  // Shared by the Save button and the Cmd/Ctrl+Enter shortcut so a second
-  // press while the update is in flight cannot write the edit twice.
-  const [savingEdit, setSavingEdit] = useState(false);
+  const editingRef = useRef<string | null>(null);
+  editingRef.current = editingId;
+  /** Bumped when an edit closes, so the list is fetched again in its real order. */
+  const [orderRevision, setOrderRevision] = useState(0);
+  /** The row whose Edit control takes focus back once the editor has closed. */
+  const [focusEditTrigger, setFocusEditTrigger] = useState<string | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [items, setItems] = useState<readonly Annotation[]>([]);
   const [total, setTotal] = useState(0);
@@ -197,7 +214,9 @@ export function AnnotationBrowser() {
   useEffect(() => {
     if (!activeDocument) return;
     let cancelled = false;
-    setIsLoading(true);
+    // An autosave refreshes the list under the open editor; that refresh is
+    // quiet rather than announced as a load.
+    if (editingRef.current === null) setIsLoading(true);
     setBrowserError(null);
     // Recorded only on success, so a failed page leaves the previously
     // rendered rows described by the key they actually came from.
@@ -211,7 +230,7 @@ export function AnnotationBrowser() {
         ...(query.trim() ? { searchQuery: query.trim() } : {}),
       }).then((page) => {
         if (cancelled) return;
-        setItems(page.items);
+        setItems((current) => editingRef.current === null ? page.items : keepRowOrder(current, page.items));
         setTotal(page.total);
         setIsLoading(false);
         setPageKey(key);
@@ -225,7 +244,13 @@ export function AnnotationBrowser() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeDocument, mutationRevision, pageIndex, query, sort, type]);
+  }, [activeDocument, mutationRevision, orderRevision, pageIndex, query, sort, type]);
+
+  useEffect(() => {
+    if (focusEditTrigger === null || editingId !== null) return;
+    listRef.current?.querySelector<HTMLElement>(`[data-annotation-edit-trigger="${CSS.escape(focusEditTrigger)}"]`)?.focus();
+    setFocusEditTrigger(null);
+  }, [editingId, focusEditTrigger]);
 
   /**
    * Chip counts are read from the same store as the list, one bounded count
@@ -285,34 +310,14 @@ export function AnnotationBrowser() {
   const beginEdit = (annotation: Annotation): void => {
     setOpenMenuId(null);
     setEditingId(annotation.id);
-    setSavingEdit(false);
-    setDraft(annotation.type === 'bookmark' ? annotation.label ?? '' : annotation.note ?? '');
   };
 
-  /**
-   * The one save path for the inline editor. The Save button and the
-   * Cmd/Ctrl+Enter shortcut both call exactly this, so the per-type validation
-   * — a note may not be emptied, a highlight note or bookmark label may — holds
-   * whichever way the reader commits the edit.
-   */
-  const saveEdit = async (annotation: Annotation): Promise<void> => {
-    if (savingEdit) return;
-    const trimmed = draft.trim();
-    setSavingEdit(true);
-    const result = await (annotation.type === 'bookmark'
-      ? update({ documentId: annotation.documentId, id: annotation.id, label: trimmed.length > 0 ? trimmed : null })
-      : annotation.type === 'highlight'
-        ? update({ documentId: annotation.documentId, id: annotation.id, note: trimmed.length > 0 ? trimmed : null })
-        : trimmed
-          ? update({ documentId: annotation.documentId, id: annotation.id, note: trimmed })
-          : Promise.resolve(null)
-    ).finally(() => { setSavingEdit(false); });
-    if (result) setEditingId(null);
+  /** The editor has stored its text and closed; a click elsewhere keeps focus where it went. */
+  const endEdit = (annotation: Annotation, { reason }: NoteComposerClose): void => {
+    setEditingId(null);
+    setOrderRevision((revision) => revision + 1);
+    if (reason !== 'outside') setFocusEditTrigger(annotation.id);
   };
-
-  /** Mirrors the Save button's own disabled condition, plus "not already saving". */
-  const canSaveEdit = (annotation: Annotation): boolean =>
-    !savingEdit && !(annotation.type === 'note' && draft.trim().length === 0);
 
   if (!activeDocument) {
     return <p className="p-4 text-sm text-text-secondary">Open a document to browse its annotations.</p>;
@@ -429,6 +434,9 @@ export function AnnotationBrowser() {
             const color = highlightConfig(annotation.color);
             const isHighlight = annotation.type === 'highlight';
             const isUnanchored = lostItsPlace(annotation);
+            // The note composer carries the row's metadata on its own context
+            // line, so the row's line steps aside while a note is open.
+            const composing = editingId === annotation.id && annotation.type !== 'bookmark';
             // A quote inside a highlight keeps the marker; a quote under a note
             // is supporting text and stays unpainted.
             const quoteMarker = isHighlight
@@ -450,7 +458,7 @@ export function AnnotationBrowser() {
                 <div className={ANNOTATION_ROW_CONTENT}>
                   {/* Plain words, as everywhere else: "Note · Block 3", not
                       an abbreviated uppercase code. */}
-                  <div className="flex items-baseline gap-1.5">
+                  {!composing && <div className="flex items-baseline gap-1.5">
                     <span
                       data-testid="annotation-meta-type"
                       className="text-2xs font-medium leading-none text-text-secondary"
@@ -474,39 +482,14 @@ export function AnnotationBrowser() {
                         }
                       }}
                     />
-                  </div>
+                  </div>}
 
                   {editingId === annotation.id ? (
-                    <div>
-                      <label htmlFor={`annotation-edit-${annotation.id}`} className="text-2xs font-medium text-text-secondary">
-                        {annotation.type === 'bookmark' ? 'Bookmark label' : 'Note text'}
-                      </label>
-                      <textarea
-                        id={`annotation-edit-${annotation.id}`}
-                        autoFocus
-                        maxLength={annotation.type === 'bookmark' ? 500 : 100_000}
-                        value={draft}
-                        onChange={(event) => { setDraft(event.target.value); }}
-                        onKeyDown={(event) => {
-                          handleNoteSaveShortcut(event, canSaveEdit(annotation), () => { void saveEdit(annotation); });
-                        }}
-                        className="mt-1 h-20 w-full resize-y rounded-md border border-border-subtle bg-bg-primary p-2 text-xs text-text-primary"
-                      />
-                      <div className="mt-1 flex items-center justify-end gap-2">
-                        <span className="mr-auto text-2xs text-text-secondary" data-testid="annotation-edit-shortcut-hint">
-                          {NOTE_SAVE_SHORTCUT_HINT}
-                        </span>
-                        <button type="button" onClick={() => { setEditingId(null); }} className="rounded px-2 py-1 text-xs text-text-secondary">Cancel</button>
-                        <button
-                          type="button"
-                          disabled={!canSaveEdit(annotation)}
-                          onClick={() => { void saveEdit(annotation); }}
-                          className="rounded bg-accent px-2 py-1 text-xs font-medium text-on-accent disabled:opacity-40"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
+                    <AnnotationInlineEditor
+                      annotation={annotation}
+                      context={`${metaTypeLabel(annotation)} · ${locationLabel(annotation)}`}
+                      onClose={(close) => { endEdit(annotation, close); }}
+                    />
                   ) : (
                     <>
                       {/* The note's own words lead; the passage it came from supports them. */}
@@ -546,7 +529,12 @@ export function AnnotationBrowser() {
                       <div data-testid="annotation-row-actions" className={ANNOTATION_ROW_ACTIONS}>
                         {isUnanchored ? (
                           <>
-                            <button type="button" onClick={() => { beginEdit(annotation); }} className={ACTION_SECONDARY}>
+                            <button
+                              type="button"
+                              data-annotation-edit-trigger={annotation.id}
+                              onClick={() => { beginEdit(annotation); }}
+                              className={ACTION_SECONDARY}
+                            >
                               Edit
                             </button>
                             <button
@@ -568,7 +556,12 @@ export function AnnotationBrowser() {
                             >
                               {jumpLabel(annotation)}
                             </button>
-                            <button type="button" onClick={() => { beginEdit(annotation); }} className={ACTION_SECONDARY}>
+                            <button
+                              type="button"
+                              data-annotation-edit-trigger={annotation.id}
+                              onClick={() => { beginEdit(annotation); }}
+                              className={ACTION_SECONDARY}
+                            >
                               {isHighlight && !annotation.note ? 'Add note' : 'Edit'}
                             </button>
                           </>

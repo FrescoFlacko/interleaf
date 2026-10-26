@@ -97,7 +97,7 @@ test.describe('Annotation reveal and library drag-to-folder', () => {
     rmSync(fixtureDir, { recursive: true, force: true });
   });
 
-  test('brings a newly created highlight to the top of a scrolled annotations panel', async () => {
+  test('brings a newly created note to the top of a scrolled annotations panel', async () => {
     const docs = await app.window.evaluate(() => window.interleafAPI.library.listDocuments());
     await app.window.getByTestId(`read-doc-${docs[0]!.id}`).click();
     await expect(app.window.getByTestId('markdown-content-wrapper')).toBeVisible();
@@ -108,7 +108,7 @@ test.describe('Annotation reveal and library drag-to-folder', () => {
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill(TALL_NOTE_BODY);
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
 
@@ -124,15 +124,19 @@ test.describe('Annotation reveal and library drag-to-folder', () => {
     });
     expect(parked).toBeGreaterThan(0);
 
+    // A new note, saved the way a reader saves one: unlike a highlight, which
+    // is saved in place, a note opens Annotations and reveals itself.
     await selectPhrase(app.window, HIGHLIGHT_PHRASE);
     await expect(toolbar).toBeVisible();
-    await toolbar.getByRole('button', { name: 'Yellow highlight' }).click();
+    await toolbar.getByRole('button', { name: 'Add note' }).click();
+    await app.window.locator('#selection-note').fill('A short second note.');
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
 
     await expect(app.window.getByTestId('annotation-row')).toHaveCount(2);
 
-    // The new mark is at the top of the panel's own scroll container, and the
+    // The new note is at the top of the panel's own scroll container, and the
     // panel is at its start rather than left where the reader had parked it.
     await expect
       .poll(async () => list.evaluate((node) => node.scrollTop), { timeout: 5_000 })
@@ -186,7 +190,7 @@ test.describe('Annotation reveal and library drag-to-folder', () => {
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await app.window.locator('#selection-note').fill(TALL_NOTE_BODY);
-    await toolbar.getByRole('button', { name: 'Save note' }).click();
+    await toolbar.getByRole('button', { name: /^Done/u }).click();
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);
     await highlight(HIGHLIGHT_PHRASE);

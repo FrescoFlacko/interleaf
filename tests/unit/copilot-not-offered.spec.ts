@@ -85,6 +85,11 @@ afterAll(() => {
 });
 
 describe('GitHub Copilot is not a built-in integration', () => {
+  // Detection sequentially resolves each built-in CLI candidate ('codex', 'claude',
+  // 'agy', 'opencode', 'pi', 'cursor-agent') by invoking which and spawning real
+  // child processes to probe version strings. Under high-concurrency worker load
+  // (356 test suites), 6 sequential subprocess spawns need an aggregate budget of
+  // 15s to avoid false timeouts while preserving real detection and the copilotMarker check.
   it('is neither detected nor registered by the main agent registry', async () => {
     const registry = new AgentRegistry(testAgentRegistryOptions());
     const detected = await registry.detect();
@@ -96,7 +101,7 @@ describe('GitHub Copilot is not a built-in integration', () => {
     expect(registry.getAdapter('copilot')).toBeUndefined();
     // A `copilot` on the search path is never probed.
     expect(existsSync(copilotMarker)).toBe(false);
-  });
+  }, 15_000);
 
   it('does not let a legacy Copilot preference recreate a runnable profile', async () => {
     const registry = new AgentRegistry(testAgentRegistryOptions());
@@ -106,7 +111,7 @@ describe('GitHub Copilot is not a built-in integration', () => {
 
     expect(registry.getAdapter('copilot')).toBeUndefined();
     expect(registry.listMainProfiles().map((profile) => profile.id)).not.toContain('copilot');
-  });
+  }, 15_000);
 
   it('is absent from the shared built-in editor table and the Settings provider rows', () => {
     expect(PROFILE_EDITOR_DEFINITIONS.map((definition) => definition.id)).not.toContain('copilot');

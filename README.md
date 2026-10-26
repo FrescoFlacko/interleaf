@@ -72,11 +72,16 @@ change.
   images.
 - Highlights, highlight notes, location notes, bookmarks, five highlight
   colors, annotation filtering/search, and format-specific anchor recovery.
+  Notes save as you type.
 - Current-document search and SQLite FTS5-backed indexing with source locations.
 - Persistent one-document chat sessions, explicit selection/location/page-range
   context, bounded retrieval, streamed responses, and validated citation jumps.
   The chat panel offers starter prompts, suggested follow-ups that only fill the
   composer, and a Prompt details view of what was sent.
+- Mermaid diagrams in chat answers and agent results/activity are drawn
+  offline with the bundled [Pele](https://github.com/obsidianmd/pele) renderer
+  as inert images. Their source stays one click away, and a diagram that can't
+  be drawn falls back to its source.
 - Detected built-in agent profiles for Codex, Claude Code, Antigravity,
   OpenCode, Pi, and Cursor. Missing CLIs are shown as unavailable rather than
   crashing the app. GitHub Copilot is not offered: it cannot run unattended

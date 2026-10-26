@@ -59,7 +59,8 @@ function renderComposer(overrides?: Overrides): {
     <ChatComposer
       draft=""
       placeholder="Ask about this document"
-      context={null}
+      shelf={null}
+      addContext={null}
       composerRef={createRef<HTMLTextAreaElement>()}
       composerDisabled={false}
       providers={[fakeProvider, otherProvider]}
@@ -74,18 +75,6 @@ function renderComposer(overrides?: Overrides): {
       settingsOpen={false}
       isStreaming={false}
       canSend
-      activeSession={null}
-      contextItems={[]}
-      cleanContext={{
-        control: {
-          present: false,
-          canClean: false,
-          isCleaning: false,
-          contextMutationsDisabled: true,
-          target: 'the current provider',
-        },
-        onClean: vi.fn(() => Promise.resolve(false)),
-      }}
       webSearchSupported={false}
       webSearchEnabled={false}
       onWebSearchChange={vi.fn()}
@@ -121,7 +110,7 @@ describe('composer tool row', () => {
   });
 
   it('reserves no slot for controls this conversation does not have', () => {
-    renderComposer({ webSearchSupported: false, activeSession: null });
+    renderComposer({ webSearchSupported: false });
     const row = screen.getByTestId('chat-model-picker').closest('.chat-design-controls');
     expect(row).not.toBeNull();
     expect(screen.queryByTestId('chat-web-search-toggle')).toBeNull();

@@ -84,6 +84,13 @@
   --on-warning: #ffffff;
   --elevation-popover: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
   --elevation-dialog: 0 24px 64px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* The note composer's paper card (`palette-note-tokens.ts`). */
+  --note-surface: #fffbeb;
+  --note-border: #e8d8a3;
+  --note-quote-rail: #c49b39;
+  --note-shadow: 0 2px 1px rgba(174, 138, 48, 0.125), 0 12px 26px rgba(79, 60, 24, 0.125);
+  --note-shadow-inline: 0 2px 1px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.055);
+  --note-control-hover: rgba(7, 89, 133, 0.1);
 }
 
 /* Motion durations (docs/UX_SPEC.md §motion). Easing curves live in @theme

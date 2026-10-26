@@ -120,7 +120,7 @@ const messagesBySession: Record<string, readonly ChatMessage[]> = {
   }],
 };
 
-describe('Companion tab lifecycle around AI Chat', () => {
+describe('Companion tab lifecycle around Chat', () => {
   /**
    * Session reads are gated so the regression measures the real IPC gap the
    * user hits after a tab-away/tab-back cycle: while `listMessages` and
@@ -186,26 +186,26 @@ describe('Companion tab lifecycle around AI Chat', () => {
     await chat.getState().initializeDocument(null);
   });
 
-  /** Leaves AI Chat for Search and comes back, through the real tablist. */
+  /** Leaves Chat for Search and comes back, through the real tablist. */
   const cycleAwayAndBack = async (): Promise<void> => {
     fireEvent.click(screen.getByRole('tab', { name: 'Search' }));
     await waitFor(() => {
       expect(screen.getByTestId('companion-panel-chat')).toHaveAttribute('hidden');
     });
-    fireEvent.click(screen.getByRole('tab', { name: 'AI Chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
     await waitFor(() => {
       expect(screen.getByTestId('companion-panel-chat')).not.toHaveAttribute('hidden');
     });
   };
 
-  /** Renders the real tab owner and parks AI Chat on the Conversations screen. */
+  /** Renders the real tab owner and parks Chat on the Conversations screen. */
   const renderOnConversations = async (): Promise<void> => {
     renderWithChatStore(chat, <CompanionPanel />);
     fireEvent.click(await screen.findByRole('button', { name: 'Back to conversations' }));
     expect(await screen.findByText('Conversations')).toBeTruthy();
   };
 
-  it('resumes the current conversation after leaving and returning to the AI Chat tab', async () => {
+  it('resumes the current conversation after leaving and returning to the Chat tab', async () => {
     await renderOnConversations();
     await cycleAwayAndBack();
     expect(screen.getByText('Conversations')).toBeTruthy();
@@ -225,7 +225,7 @@ describe('Companion tab lifecycle around AI Chat', () => {
     expect(screen.getByTestId('chat-conversation-line')).toHaveTextContent('Quorum Notes');
   });
 
-  it('opens a non-current conversation after leaving and returning to the AI Chat tab', async () => {
+  it('opens a non-current conversation after leaving and returning to the Chat tab', async () => {
     await renderOnConversations();
     await cycleAwayAndBack();
 
@@ -246,7 +246,7 @@ describe('Companion tab lifecycle around AI Chat', () => {
     expect(screen.queryByText('Majority overlap guarantees quorum.')).toBeNull();
   });
 
-  it('keeps the AI Chat thread on the selected session when a tab cycle interleaves reads', async () => {
+  it('keeps the Chat thread on the selected session when a tab cycle interleaves reads', async () => {
     await renderOnConversations();
     await cycleAwayAndBack();
 

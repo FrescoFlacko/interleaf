@@ -160,7 +160,7 @@ async function importAndNote(app: AppHandle, fixturePath: string): Promise<void>
   await expect(toolbar).toBeVisible();
   await toolbar.getByRole('button', { name: /note/i }).click();
   await app.window.locator('#selection-note').fill(NOTE_BODY);
-  await toolbar.getByRole('button', { name: 'Save note' }).click();
+  await toolbar.getByRole('button', { name: /^Done/u }).click();
   await expect(toolbar).toBeHidden();
 
   // Exactly one live focus proxy is the authoritative post-save paint symptom.

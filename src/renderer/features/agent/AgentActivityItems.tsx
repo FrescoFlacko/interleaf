@@ -1,12 +1,15 @@
 import { useState, type CSSProperties, type ReactElement } from 'react';
 import { AppIcon, type AppIconName } from '../../components/AppIcon';
 import { Badge, BadgeDot } from '../../components/ui/badge';
+import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import type { ActivityItemStatus, ActivityTodoItem, NormalizedAgentActivity } from './agent-activity';
 
 /**
  * Timeline rows for the 6b activity feed. Every value below originates in a
  * subprocess or a model, so each one is rendered as React text content; no
- * branch in this file produces markup from agent output.
+ * branch in this file produces markup from agent output. Agent messages go
+ * through the shared safe Markdown renderer, which keeps that guarantee and
+ * draws complete Mermaid fences as sanitized, inert images.
  */
 
 /** Keeps a long feed cheap to paint without virtualising it. */
@@ -123,7 +126,9 @@ export function MessageActivityItem({
           {isFinal ? 'Final output' : 'Agent'}
         </span>
       </span>
-      <p className="companion-readable companion-readable-xs leading-[1.6] break-words whitespace-pre-wrap text-text-primary">{activity.text}</p>
+      <div className="companion-readable companion-readable-xs min-w-0 leading-[1.6] break-words text-text-primary">
+        <MarkdownContent content={activity.text} diagrams />
+      </div>
     </div>
   );
 }

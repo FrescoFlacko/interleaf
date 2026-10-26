@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 const TAB_LABELS: Record<RightTab, string> = {
-  chat: 'AI Chat',
+  chat: 'Chat',
   search: 'Search',
   annotations: 'Annotations',
   agent: 'Agent',
@@ -56,7 +56,7 @@ describe('Companion tab bar style ownership', () => {
     };
   };
 
-  it('keeps the old shared tab classes and geometry on every tab, including AI Chat', () => {
+  it('keeps the old shared tab classes and geometry on every tab, including Chat', () => {
     renderWithChatStore(chat, <CompanionPanel />);
 
     const onSearch = tabBarClasses('search');
@@ -78,10 +78,10 @@ describe('Companion tab bar style ownership', () => {
     renderWithChatStore(chat, <CompanionPanel />);
     const content = screen.getByTestId('companion-panel-content');
 
-    // AI Chat and Annotations both draw edge-to-edge — their rows, rails and
+    // Chat and Annotations both draw edge-to-edge — their rows, rails and
     // dividers reach the panel edge — so the panel yields its padding to them
     // and each owns its own inset internally.
-    fireEvent.click(screen.getByRole('tab', { name: 'AI Chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
     expect(content.className).toContain('p-0');
     expect(content.className).not.toContain('p-4');
 

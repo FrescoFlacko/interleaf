@@ -52,12 +52,14 @@ class DelayedProvider implements AIProvider {
     hostedWebSearch: false,
   };
   probeDelayMs = 0;
+  probeGate: Promise<undefined> = Promise.resolve(undefined);
   refuseWith: string | null = null;
   readonly requests: ProviderChatRequest[] = [];
 
   constructor(readonly id: AIProviderId, readonly name: string) {}
 
   async detect(): Promise<AIProviderStatus> {
+    await this.probeGate;
     if (this.probeDelayMs > 0) {
       await new Promise<void>((resolve) => setTimeout(resolve, this.probeDelayMs));
     }
@@ -251,43 +253,54 @@ describe('session binding order, against the real repository', () => {
 
   it('spawns the turn from the binding the reader last asked for, not the one it was mid-way through', async () => {
     const session = await service.createSession({ documentId: 'doc-binding-a', providerId: 'fake' });
-    providers.get('openrouter')!.probeDelayMs = 50;
+    const { promise: openRouterGate, resolve: releaseOpenRouter } = Promise.withResolvers<undefined>();
+    providers.get('openrouter')!.probeGate = openRouterGate;
 
-    // The reader chooses, and sends before main has finished writing that choice.
-    const rebinding = service.updateSession({ sessionId: session.id, providerId: 'openrouter' });
-    const events: ChatStreamEvent[] = [];
-    const sent = service.sendMessage(
-      { sessionId: session.id, content: 'Explain leader replication' },
-      collectingOwner(events)
-    );
-    await rebinding;
-    await sent;
-    await vi.waitFor(() => {
-      expect(events.some((event) => event.type === 'done')).toBe(true);
-    });
+    try {
+      // The reader chooses, and sends before main has finished writing that choice.
+      const rebinding = service.updateSession({ sessionId: session.id, providerId: 'openrouter' });
+      const events: ChatStreamEvent[] = [];
+      const sent = service.sendMessage(
+        { sessionId: session.id, content: 'Explain leader replication' },
+        collectingOwner(events)
+      );
+      releaseOpenRouter(undefined);
+      await rebinding;
+      await sent;
+      await vi.waitFor(() => {
+        expect(events.some((event) => event.type === 'done')).toBe(true);
+      });
 
-    expect(providers.get('fake')!.requests).toHaveLength(0);
-    expect(providers.get('openrouter')!.requests).toHaveLength(1);
-  });
+      expect(providers.get('fake')!.requests).toHaveLength(0);
+      expect(providers.get('openrouter')!.requests).toHaveLength(1);
+    } finally {
+      releaseOpenRouter(undefined);
+    }
+  }, 10_000);
 
   it("does not let one conversation's slow rebinding decide another's", async () => {
     const first = await service.createSession({ documentId: 'doc-binding-a', providerId: 'fake' });
     const second = await service.createSession({ documentId: 'doc-binding-b', providerId: 'fake' });
-    providers.get('claude')!.probeDelayMs = 80;
-    providers.get('openrouter')!.probeDelayMs = 0;
+    const { promise: claudeGate, resolve: releaseClaude } = Promise.withResolvers<undefined>();
+    providers.get('claude')!.probeGate = claudeGate;
 
-    const slowOnFirst = service.updateSession({ sessionId: first.id, providerId: 'claude' });
-    const quickOnSecond = await service.updateSession({ sessionId: second.id, providerId: 'openrouter' });
+    try {
+      const slowOnFirst = service.updateSession({ sessionId: first.id, providerId: 'claude' });
+      const quickOnSecond = await service.updateSession({ sessionId: second.id, providerId: 'openrouter' });
 
-    // The second conversation was answered without waiting for the first.
-    expect(quickOnSecond.providerId).toBe('openrouter');
-    expect(storedBinding(second.id).providerId).toBe('openrouter');
-    expect(storedBinding(first.id).providerId).toBe('fake');
+      // The second conversation was answered without waiting for the first.
+      expect(quickOnSecond.providerId).toBe('openrouter');
+      expect(storedBinding(second.id).providerId).toBe('openrouter');
+      expect(storedBinding(first.id).providerId).toBe('fake');
 
-    await slowOnFirst;
-    expect(storedBinding(first.id).providerId).toBe('claude');
-    expect(storedBinding(second.id).providerId).toBe('openrouter');
-  });
+      releaseClaude(undefined);
+      await slowOnFirst;
+      expect(storedBinding(first.id).providerId).toBe('claude');
+      expect(storedBinding(second.id).providerId).toBe('openrouter');
+    } finally {
+      releaseClaude(undefined);
+    }
+  }, 10_000);
 
   it('leaves the stored binding alone when the chosen provider is refused', async () => {
     const session = await service.createSession({ documentId: 'doc-binding-a', providerId: 'fake' });

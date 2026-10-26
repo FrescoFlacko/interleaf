@@ -48,7 +48,7 @@ a footnote:
 1. Open a document.
 2. Show the right companion panel if it is hidden — `⌘ Shift + A` on macOS,
    `Ctrl + Shift + A` on Windows and Linux.
-3. Select the **AI Chat** tab.
+3. Select the **Chat** tab.
 
 With no document open the panel says *Open a document to start a grounded
 research conversation.* Chat is always about one document.
@@ -216,6 +216,30 @@ Each answer carries two actions once it has finished:
 
 If a turn ended early you will see **Stopped** (you pressed **Stop**) or
 **Generation failed** (the provider did not complete it).
+
+### Diagrams in answers
+
+When an answer contains a fenced `mermaid` block, Interleaf draws it as a
+picture once the answer has finished streaming. Until then, and for a fence the
+model never closed, you see the source as an ordinary code block. Drawing
+happens on your machine with the bundled Pele renderer, so it works offline and
+nothing is sent anywhere.
+
+- The caption names the diagram type. **Show source** reveals the original
+  text with its **Copy code** button; **Hide source** folds it away again.
+- A wide diagram scrolls sideways inside its own frame rather than widening the
+  panel.
+- The picture follows your reading palette, so it stays legible in Paper and
+  Midnight alike.
+- If a diagram can't be drawn — an unsupported type, a syntax error, too large,
+  or too slow — you get its source with a one-line reason, such as *This
+  diagram couldn't be read; showing its source.*
+- At most six diagrams are drawn per answer; any further fences stay as source.
+
+**Copy answer**, **Save answer as note** and the conversation history keep the
+original Markdown, not the picture. Notes and the document reader are not
+affected: there, a `mermaid` fence is handled by the reader's own diagram
+support.
 
 ![AI Chat beside a PDF page: an answer with page citation chips, Prompt details, Suggested follow-ups, and a selected passage in the context bar](../../website/assets/screens/reader-chat-1600.webp)
 *A cited answer about an attached passage. The answer is a fixed sample from a

@@ -16,8 +16,8 @@ import { makePdfFixture } from '../fixtures/document-fixtures';
  * The reported composer row, at the widths it was reported at.
  *
  * The reader's screenshot shows a specific combination: a short provider name
- * ("Omp"), a long model name ("Gemini 3.8 Flash"), the context meter, and Send,
- * with several page chips pinned above them. That combination is what the
+ * ("Omp"), a long model name ("Gemini 3.8 Flash") and Send, with several page
+ * ranges pinned in the context shelf above them. That combination is what the
  * removed `min-width` floor mis-sized, so it is the combination the test has to
  * put on screen — a provider with one model hides the model selector entirely
  * and proves nothing about the row.
@@ -41,7 +41,7 @@ async function chooseOmpModel(page: Page, chat: Locator): Promise<void> {
 /** The supported minimum for the right sidebar, and the width the defect shows at. */
 const MINIMUM_WIDTH = 280;
 
-/** Page ranges to pin, chosen to wrap the chip row at the minimum width. */
+/** Page ranges to pin: enough that the old chip row wrapped at the minimum width. */
 const RANGES: readonly (readonly [number, number])[] = [[1, 2], [3, 4], [5, 5], [6, 7], [7, 8]];
 
 test.describe('chat composer with several page contexts attached', () => {
@@ -143,7 +143,7 @@ test.describe('chat composer with several page contexts attached', () => {
 
   test('shrinks a long model label beside Send at wide, middle and narrow pane widths', async () => {
     await openDocument(1);
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     const provider = chat.getByTestId('chat-model-picker');
@@ -213,10 +213,10 @@ test.describe('chat composer with several page contexts attached', () => {
     await expect(provider).toBeFocused();
   });
 
-  test('keeps Omp, a long model name, the meter and Send aligned at the minimum width and at 200% zoom', async () => {
+  test('keeps the shelf to one line, and Add, Omp, a long model name and Send aligned, at the minimum width and at 200% zoom', async () => {
     await openDocument(8);
 
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     await chat.getByRole('button', { name: 'New chat' }).click();
@@ -227,19 +227,21 @@ test.describe('chat composer with several page contexts attached', () => {
     // The reported state: several page ranges pinned at once, attached through
     // the real popover rather than written into the store.
     for (const [start, end] of RANGES) {
-      const trigger = chat.getByRole('button', { name: 'Add pages to AI context' });
+      const trigger = chat.getByRole('button', { name: 'Add context' });
       await trigger.click();
       await app.window.getByLabel('Start page for context').fill(String(start));
       await app.window.getByLabel('End page for context').fill(String(end));
       await app.window.getByRole('button', { name: 'Add range' }).click();
       await expect(trigger).toBeFocused();
     }
-    await expect(chat.getByTestId('chat-context-summary')).toContainText(`${String(RANGES.length)} items`);
+    const summary = chat.getByTestId('chat-context-summary');
+    await expect(summary).toHaveAccessibleName(new RegExp(`^Context, ${String(RANGES.length)} items: `, 'u'));
+    await expect(summary.locator('.chat-context-shelf-count')).toHaveText(`+${String(RANGES.length - 1)}`);
     const ordinaryRegion = await visibleChatRegion();
     const ordinary = await measureComposerAlignment(ordinaryRegion);
     expectComposerRowContains(ordinary, ['Omp', OMP_FIXTURE_MODEL_NAME], 'ordinary panel width');
     expectLabelIntact(ordinary, OMP_FIXTURE_MODEL_NAME, 'ordinary panel width');
-    expect(ordinary.chipCount, 'every pinned range must still have a chip').toBe(RANGES.length);
+    await expect(summary.locator('.chat-context-shelf-count'), 'the count of the rest stays whole').toBeVisible();
     expectComposerAligned(ordinary, 'ordinary panel width');
     expect(await sendToComposerRightGap(ordinaryRegion), 'ordinary panel width Send pinned to right').toBeLessThanOrEqual(2);
     expect(await lastControlToSendGap(ordinaryRegion), 'ordinary panel width toolbar and Send do not overlap').toBeGreaterThanOrEqual(4);
@@ -250,7 +252,7 @@ test.describe('chat composer with several page contexts attached', () => {
     const narrow = await measureComposerAlignment(narrowRegion);
     expectComposerRowContains(narrow, ['Omp', OMP_FIXTURE_MODEL_NAME], 'minimum panel width');
     expectLabelIntact(narrow, OMP_FIXTURE_MODEL_NAME, 'minimum panel width');
-    expect(narrow.chipCount, 'every pinned range must still have a chip').toBe(RANGES.length);
+    await expect(summary.locator('.chat-context-shelf-count'), 'the count of the rest stays whole').toBeVisible();
     expectComposerAligned(narrow, 'minimum panel width');
     expect(await sendToComposerRightGap(narrowRegion), 'minimum width Send pinned to right').toBeLessThanOrEqual(2);
     expect(await lastControlToSendGap(narrowRegion), 'minimum width gap before Send').toBeGreaterThanOrEqual(4);
@@ -261,7 +263,7 @@ test.describe('chat composer with several page contexts attached', () => {
     const zoomed = await measureComposerAlignment(zoomedRegion);
     expectComposerRowContains(zoomed, ['Omp', OMP_FIXTURE_MODEL_NAME], '200% zoom');
     expectLabelIntact(zoomed, OMP_FIXTURE_MODEL_NAME, '200% zoom');
-    expect(zoomed.chipCount, 'every pinned range must still have a chip at 200%').toBe(RANGES.length);
+    await expect(summary.locator('.chat-context-shelf-count'), 'the count of the rest stays whole').toBeVisible();
     expectComposerAligned(zoomed, '200% zoom');
     expect(await sendToComposerRightGap(zoomedRegion), '200% zoom Send pinned to right').toBeLessThanOrEqual(2);
     expect(await lastControlToSendGap(zoomedRegion), '200% zoom gap before Send').toBeGreaterThanOrEqual(4);
@@ -271,7 +273,7 @@ test.describe('chat composer with several page contexts attached', () => {
   test('pins Send to the right content edge in the reported single-page-range state (Pages 56-62)', async () => {
     await openDocument(70);
 
-    await app.window.getByRole('tab', { name: 'AI Chat' }).click();
+    await app.window.getByRole('tab', { name: 'Chat', exact: true }).click();
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat).toBeVisible();
     await chat.getByRole('button', { name: 'New chat' }).click();
@@ -280,13 +282,13 @@ test.describe('chat composer with several page contexts attached', () => {
     await chooseOmpModel(app.window, chat);
 
     // Attach exact reported range: Pages 56-62
-    const trigger = chat.getByRole('button', { name: 'Add pages to AI context' });
+    const trigger = chat.getByRole('button', { name: 'Add context' });
     await trigger.click();
     await app.window.getByLabel('Start page for context').fill('56');
     await app.window.getByLabel('End page for context').fill('62');
     await app.window.getByRole('button', { name: 'Add range' }).click();
     await expect(trigger).toBeFocused();
-    await expect(chat.getByTestId('chat-context-summary')).toContainText('Context · 1 item');
+    await expect(chat.getByTestId('chat-context-summary')).toHaveAccessibleName('Context, 1 item: Pages 56–62');
 
     // 1. Ordinary width: Send is pinned to the right content edge
     const ordinaryRegion = await visibleChatRegion();
@@ -297,7 +299,7 @@ test.describe('chat composer with several page contexts attached', () => {
     expect(await sendToComposerRightGap(ordinaryRegion), 'single range Send inside right edge').toBeGreaterThanOrEqual(-1);
     expect(await lastControlToSendGap(ordinaryRegion), 'single range toolbar and Send do not overlap').toBeGreaterThanOrEqual(4);
     expect(ordinary.sendInside, 'Send inside composer').toBe(true);
-    expect(ordinary.chipsOutside, 'no chip outside').toBe(0);
+    expect(ordinary.shelfOutside, 'shelf inside the composer').toBe(false);
 
     // 2. Minimum panel width (280px): Send remains pinned to the right edge with compact separation
     await setMinimumPanelWidth();
@@ -309,7 +311,7 @@ test.describe('chat composer with several page contexts attached', () => {
     expect(await sendToComposerRightGap(narrowRegion), 'single range Send inside right edge at 280px').toBeGreaterThanOrEqual(-1);
     expect(await lastControlToSendGap(narrowRegion), 'tight separation before Send at 280px').toBeGreaterThanOrEqual(4);
     expect(narrow.sendInside, 'Send inside composer at 280px').toBe(true);
-    expect(narrow.chipsOutside, 'no chip outside at 280px').toBe(0);
+    expect(narrow.shelfOutside, 'shelf inside the composer at 280px').toBe(false);
 
     // 3. 200% zoom: Send remains pinned to the right edge with compact separation
     await setZoom(2.0);
@@ -321,7 +323,7 @@ test.describe('chat composer with several page contexts attached', () => {
     expect(await sendToComposerRightGap(zoomedRegion), 'single range Send inside right edge at 200%').toBeGreaterThanOrEqual(-1);
     expect(await lastControlToSendGap(zoomedRegion), 'tight separation before Send at 200%').toBeGreaterThanOrEqual(4);
     expect(zoomed.sendInside, 'Send inside composer at 200%').toBe(true);
-    expect(zoomed.chipsOutside, 'no chip outside at 200%').toBe(0);
+    expect(zoomed.shelfOutside, 'shelf inside the composer at 200%').toBe(false);
 
     await setZoom(1.0);
   });

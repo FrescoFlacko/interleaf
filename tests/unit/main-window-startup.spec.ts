@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindowConstructorOptions } from 'electron';
+import type { WindowRevealMode } from '@main/windows/window-reveal-mode';
 import { silentLogger } from '../helpers/silent-logger';
 
 /**
@@ -29,6 +30,11 @@ const electron = vi.hoisted(() => {
 
     maximize(): void { calls.push('maximize'); }
     show(): void { calls.push('show'); }
+    showInactive(): void { calls.push('showInactive'); }
+    setAlwaysOnTop(flag: boolean, level: string, relativeLevel: number): void {
+      calls.push(`setAlwaysOnTop:${String(flag)}:${level}:${String(relativeLevel)}`);
+    }
+    focus(): void { calls.push('focus'); }
     setFullScreen(): void { calls.push('setFullScreen'); }
     setSimpleFullScreen(): void { calls.push('setSimpleFullScreen'); }
     loadURL(): Promise<void> { calls.push('loadURL'); return Promise.resolve(); }
@@ -42,14 +48,18 @@ vi.mock('electron', () => ({ BrowserWindow: electron.FakeBrowserWindow }));
 
 const { createMainWindow, createSecureWebPreferences } = await import('@main/windows/main-window');
 
-function create(): void {
+function create(revealMode?: WindowRevealMode): void {
   createMainWindow({
     indexHtmlPath: '/app/renderer/index.html',
     preloadPath: '/app/preload/index.js',
     iconPath: '/app/icon.png',
     log: silentLogger,
+    ...(revealMode === undefined ? {} : { revealMode }),
   });
 }
+
+const BELOW_ORDINARY = 'setAlwaysOnTop:true:normal:-1';
+const REVEAL_CALLS = new Set(['maximize', 'show', 'showInactive', 'focus', BELOW_ORDINARY]);
 
 describe('main window launch geometry', () => {
   beforeEach(() => {
@@ -66,8 +76,30 @@ describe('main window launch geometry', () => {
 
     electron.once.get('ready-to-show')?.();
 
-    const reveal = electron.calls.filter((call) => call === 'maximize' || call === 'show');
+    const reveal = electron.calls.filter((call) => REVEAL_CALLS.has(call));
     expect(reveal).toEqual(['maximize', 'show']);
+  });
+
+  it('keeps the activating maximize-then-show reveal when the foreground mode is explicit', () => {
+    create('foreground');
+    electron.once.get('ready-to-show')?.();
+    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual(['maximize', 'show']);
+  });
+
+  it('reveals the same maximized window without activating it in the E2E background mode', () => {
+    create('background');
+    expect(electron.constructed[0]?.show).toBe(false);
+    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual([]);
+
+    electron.once.get('ready-to-show')?.();
+
+    // On macOS the window drops below ordinary windows before anything orders it in.
+    const lowered = process.platform === 'darwin' ? [BELOW_ORDINARY] : [];
+    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual([...lowered, 'maximize', 'showInactive']);
+    expect(electron.calls).not.toContain('setFullScreen');
+    // Geometry and security are the foreground window's.
+    expect(electron.constructed[0]).toMatchObject({ width: 1400, height: 900, minWidth: 960, minHeight: 600 });
+    expect(electron.constructed[0]?.webPreferences).toEqual(createSecureWebPreferences('/app/preload/index.js'));
   });
 
   it('remains a normal resizable window rather than entering fullscreen', () => {

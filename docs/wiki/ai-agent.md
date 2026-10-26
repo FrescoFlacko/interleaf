@@ -345,6 +345,16 @@ it is displayed as sanitized text, with links and images kept inert. In the
 activity list the report appears only as a one-line marker, so it is not shown
 twice.
 
+### Diagrams in agent output
+
+A fenced `mermaid` block in the final report, or in an **Agent messages** entry
+in the activity list, is drawn as a picture. Drawing happens on your machine with
+the bundled Pele renderer, offline. The caption names the diagram type, **Show
+source** reveals the original text with **Copy code**, and a wide diagram scrolls
+sideways within its frame. A diagram that can't be drawn shows its source with a
+one-line reason, and at most six are drawn per report or message. **Copy
+Result** copies the original Markdown.
+
 ---
 
 ## Resuming a session

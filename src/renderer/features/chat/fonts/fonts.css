@@ -1,38 +1,35 @@
 @font-face {
-  font-family: 'IBM Plex Mono';
+  font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(./ibm-plex-0.ttf) format('truetype');
+  src: url(./jetbrains-mono-400.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'IBM Plex Mono';
+  font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(./ibm-plex-1.ttf) format('truetype');
+  src: url(./jetbrains-mono-500.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'IBM Plex Sans';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 400;
-  font-stretch: normal;
   font-display: swap;
-  src: url(./ibm-plex-2.ttf) format('truetype');
+  src: url(./inter-400.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'IBM Plex Sans';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 500;
-  font-stretch: normal;
   font-display: swap;
-  src: url(./ibm-plex-3.ttf) format('truetype');
+  src: url(./inter-500.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'IBM Plex Sans';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 600;
-  font-stretch: normal;
   font-display: swap;
-  src: url(./ibm-plex-4.ttf) format('truetype');
+  src: url(./inter-600.woff2) format('woff2');
 }

@@ -2,12 +2,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { ChatContextBudgetMeter } from '../../src/renderer/features/chat/ChatContextBudgetMeter';
+import { createRef } from 'react';
+import { ChatContextShelf } from '../../src/renderer/features/chat/ChatContextShelf';
 import { createChatStore, type ChatStore } from '../../src/renderer/stores/use-chat-store';
 import { renderWithChatStore } from '../helpers/chat-store';
 import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 import { chatContextBudgetSchema } from '@shared/schemas/ai';
-import type { ChatContextBudget, ChatSession } from '@shared/types/ai';
+import type { ChatContextBudget, ChatContextItem, ChatSession } from '@shared/types/ai';
 import type { CleanContextWiring } from '../../src/renderer/features/chat/ChatContextBudgetMeter';
 import { cleanContextControlState } from '../../src/renderer/features/chat/clean-context-readiness';
 import { stubBridge } from '../helpers/interleaf-api';
@@ -81,6 +82,29 @@ function cleanContextFor(activeSession: ChatSession | null): CleanContextWiring 
   };
 }
 
+/**
+ * The wheel as the composer draws it: at the edge of the context shelf, which
+ * reads main's accounting once and hands the readout to the wheel.
+ */
+function Meter({ activeSession, contextItems, isStreaming, cleanContext }: {
+  readonly activeSession: ChatSession | null;
+  readonly contextItems: readonly ChatContextItem[];
+  readonly isStreaming: boolean;
+  readonly cleanContext: CleanContextWiring;
+}) {
+  return (
+    <ChatContextShelf
+      activeSession={activeSession}
+      contextItems={contextItems}
+      isStreaming={isStreaming}
+      disabled={false}
+      cleanContext={cleanContext}
+      addContextRef={createRef<HTMLButtonElement>()}
+      removeContext={() => Promise.resolve()}
+    />
+  );
+}
+
 const NO_FIGURES_LABEL = 'Context window: usage statistics unavailable';
 
 /**
@@ -147,7 +171,7 @@ describe('ChatContextBudgetMeter', () => {
 
   it('renders a named wheel button when main supplies a real total', async () => {
     const { container } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
 
     const meter = await findMeasuredMeter();
@@ -177,7 +201,7 @@ describe('ChatContextBudgetMeter', () => {
   it('draws no proportion, and says why, when no total context window is available', async () => {
     getContextBudget.mockResolvedValue({ ...budget, totalTokens: null, sourceCount: 1 });
     const { container } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
 
     const meter = await findMeasuredMeter();
@@ -204,7 +228,7 @@ describe('ChatContextBudgetMeter', () => {
   });
 
   it('opens an anchored popover carrying the whole truthful figure', async () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
 
     act(() => { meter.click(); });
@@ -233,7 +257,7 @@ describe('ChatContextBudgetMeter', () => {
     // The fixture is what main is contractually allowed to publish.
     expect(chatContextBudgetSchema.safeParse(budget).success).toBe(true);
 
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
     act(() => { meter.click(); });
 
@@ -267,7 +291,7 @@ describe('ChatContextBudgetMeter', () => {
   });
 
   it('draws actual use and the response reserve as separate bands', async () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
     act(() => { meter.click(); });
 
@@ -286,7 +310,7 @@ describe('ChatContextBudgetMeter', () => {
       reservedOutputTokens: 0,
       breakdown: { ...budget.breakdown, historyTokens: 0, reservedResponseTokens: 0 },
     });
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
     act(() => { meter.click(); });
 
@@ -300,7 +324,7 @@ describe('ChatContextBudgetMeter', () => {
   it('escalates through the warning and error thresholds on the wheel and in the panel', async () => {
     getContextBudget.mockResolvedValue(budget);
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     const meter = await findMeasuredMeter();
     expect(meter.getAttribute('data-budget-level')).toBe('normal');
@@ -315,7 +339,7 @@ describe('ChatContextBudgetMeter', () => {
         breakdown: { ...budget.breakdown, documentContextTokens: usedTokens - 1_700 },
       });
       rerender(
-        <ChatContextBudgetMeter
+        <Meter
           activeSession={{ ...session, messageCount }}
           contextItems={[]}
           isStreaming={false}
@@ -341,7 +365,7 @@ describe('ChatContextBudgetMeter', () => {
   });
 
   it('carries no accessibility violations with the panel open', async () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
     act(() => { meter.click(); });
     expect(screen.getByTestId('chat-context-budget-popover')).toBeVisible();
@@ -353,7 +377,7 @@ describe('ChatContextBudgetMeter', () => {
   });
 
   it('closes on Escape, on Close and on a press outside, and restores focus once', async () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
 
     act(() => { meter.click(); });
@@ -384,7 +408,7 @@ describe('ChatContextBudgetMeter', () => {
   it('closes on Escape after the reader has tabbed out of the panel, and leaves focus alone', async () => {
     renderWithChatStore(chat,
       <>
-        <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+        <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
         <button type="button" data-testid="composer-stand-in">Send</button>
       </>
     );
@@ -413,7 +437,7 @@ describe('ChatContextBudgetMeter', () => {
     document.addEventListener('keydown', appRouter);
 
     const { unmount } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     const meter = await findMeasuredMeter();
 
@@ -441,7 +465,7 @@ describe('ChatContextBudgetMeter', () => {
   });
 
   it('takes the portalled panel away when another companion tab is shown', async () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     const meter = await findMeasuredMeter();
     act(() => { meter.click(); });
     expect(screen.getByTestId('chat-context-budget-popover')).toBeVisible();
@@ -458,7 +482,7 @@ describe('ChatContextBudgetMeter', () => {
 
   it('takes the popover away with the figure it described', async () => {
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     const meter = await findMeasuredMeter();
     act(() => { meter.click(); });
@@ -466,7 +490,7 @@ describe('ChatContextBudgetMeter', () => {
 
     getContextBudget.mockImplementation(() => new Promise<ChatContextBudget>(() => undefined));
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, id: 's-2' }}
         contextItems={[]}
         isStreaming={false}
@@ -483,41 +507,41 @@ describe('ChatContextBudgetMeter', () => {
 
   it('shows no figures when the session has packed no request yet', async () => {
     getContextBudget.mockResolvedValue(null);
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     await waitFor(() => { expect(getContextBudget).toHaveBeenCalled(); });
     expectNoFigures();
   });
 
   it('renders nothing without a session, and asks main for nothing', () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={null} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(null)} />);
+    renderWithChatStore(chat, <Meter activeSession={null} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(null)} />);
     expect(screen.queryByTestId('chat-context-budget')).toBeNull();
     expect(getContextBudget).not.toHaveBeenCalled();
   });
 
   it('drops a reply that belongs to another session', async () => {
     getContextBudget.mockResolvedValue({ ...budget, sessionId: 's-other' });
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     await waitFor(() => { expect(getContextBudget).toHaveBeenCalled(); });
     expectNoFigures();
   });
 
   it('drops a reply packed under a different provider', async () => {
     getContextBudget.mockResolvedValue({ ...budget, providerId: 'claude' });
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     await waitFor(() => { expect(getContextBudget).toHaveBeenCalled(); });
     expectNoFigures();
   });
 
   it('blanks the readout while a provider change keeping the same model refreshes', async () => {
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     await findMeasuredMeter();
 
     const pending = deferred();
     getContextBudget.mockImplementation(() => pending.promise);
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, providerId: 'claude' }}
         contextItems={[]}
         isStreaming={false}
@@ -535,14 +559,14 @@ describe('ChatContextBudgetMeter', () => {
 
   it('blanks the readout while a model change refreshes', async () => {
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     await findMeasuredMeter();
 
     const pending = deferred();
     getContextBudget.mockImplementation(() => pending.promise);
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, modelId: 'other/model' }}
         contextItems={[]}
         isStreaming={false}
@@ -571,7 +595,7 @@ describe('ChatContextBudgetMeter', () => {
       .mockImplementationOnce(() => fresh.promise);
 
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={auto} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(auto)} />
+      <Meter activeSession={auto} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(auto)} />
     );
     const shown = await findMeasuredMeter();
     expect(shown.getAttribute('aria-label')).toContain('2,400 of 8,000');
@@ -584,7 +608,7 @@ describe('ChatContextBudgetMeter', () => {
     // The next send lands, so main is asked again while the first re-read is
     // still outstanding.
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...auto, messageCount: 3 }}
         contextItems={[]}
         isStreaming={false}
@@ -611,10 +635,10 @@ describe('ChatContextBudgetMeter', () => {
     getContextBudget.mockImplementationOnce(() => first.promise).mockImplementationOnce(() => second.promise);
 
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, modelId: 'other/model' }}
         contextItems={[]}
         isStreaming={false}
@@ -639,7 +663,7 @@ describe('ChatContextBudgetMeter', () => {
     getContextBudget.mockResolvedValue(completed);
 
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     const meter = await findMeasuredMeter();
     expect(meter.getAttribute('aria-label')).toContain('2,400 of 8,000');
@@ -649,7 +673,7 @@ describe('ChatContextBudgetMeter', () => {
     // emits its first token, so anything read now is the turn being answered.
     getContextBudget.mockResolvedValue(inProgress);
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, messageCount: 3 }}
         contextItems={[]}
         isStreaming
@@ -670,7 +694,7 @@ describe('ChatContextBudgetMeter', () => {
 
     // The answer lands: only now is the new packing a completed request.
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, messageCount: 4 }}
         contextItems={[]}
         isStreaming={false}
@@ -684,7 +708,7 @@ describe('ChatContextBudgetMeter', () => {
   });
 
   it('shows no figures while the very first request is still streaming', async () => {
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming cleanContext={cleanContextFor(session)} />);
     await act(async () => { await Promise.resolve(); });
 
     // There is no completed request to describe, and the one being answered is
@@ -698,13 +722,13 @@ describe('ChatContextBudgetMeter', () => {
     getContextBudget.mockImplementation(() => pending.promise);
 
     const { rerender } = renderWithChatStore(chat,
-      <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
+      <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />
     );
     await waitFor(() => { expect(getContextBudget).toHaveBeenCalledTimes(1); });
 
     // The next turn starts while that read is still in flight.
     rerender(
-      <ChatContextBudgetMeter
+      <Meter
         activeSession={{ ...session, messageCount: 3 }}
         contextItems={[]}
         isStreaming
@@ -723,7 +747,7 @@ describe('ChatContextBudgetMeter', () => {
 
   it('shows no figures when the budget cannot be read', async () => {
     getContextBudget.mockRejectedValue(new Error('session is gone'));
-    renderWithChatStore(chat, <ChatContextBudgetMeter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
+    renderWithChatStore(chat, <Meter activeSession={session} contextItems={[]} isStreaming={false} cleanContext={cleanContextFor(session)} />);
     await waitFor(() => { expect(getContextBudget).toHaveBeenCalled(); });
     expectNoFigures();
   });

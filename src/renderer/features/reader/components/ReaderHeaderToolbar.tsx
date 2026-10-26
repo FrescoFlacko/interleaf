@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { isReaderReady, selectActiveDocument, selectAdapter, useReaderStore } from '../../../stores/use-reader-store';
 import { useUiStore } from '../../../stores/use-ui-store';
 import { useAnnotationStore } from '../../../stores/use-annotation-store';
@@ -7,17 +7,114 @@ import { AppIcon } from '../../../components/AppIcon';
 import { phaseAttributes, usePopoverPresence } from '../../../components/ui/popover-presence';
 import { Select } from '../../../components/ui/select';
 import { LINE_SPACING_OPTIONS, MARGIN_OPTIONS, parseZoomChoice, zoomOptions, zoomSelectValue } from './reader-display-options';
-import {
-  NOTE_SAVE_SHORTCUT_HINT,
-  canSaveNoteDraft,
-  handleNoteSaveShortcut,
-} from '../../../hooks/note-save-shortcut';
+import { NoteComposer, type NoteComposerClose, type NoteComposerHandle } from '../../../components/note/NoteComposer';
+import { createThenUpdateNote, type NewNoteTarget } from '../../../hooks/note-persistence';
+import type { NoteAutosaveOptions } from '../../../hooks/note-autosave';
+import { newNoteDraftKey, type NoteDraft } from '../../../hooks/note-drafts';
+import { useRetainedNoteDraft } from '../../../hooks/use-note-autosave';
 
 
 const REFLOWABLE_FORMATS: ReadonlySet<string> = new Set(['epub', 'mobi', 'docx', 'pptx', 'markdown']);
 
 function isReflowableFormat(format: string | undefined): boolean {
   return format !== undefined && REFLOWABLE_FORMATS.has(format);
+}
+
+/**
+ * One opening of the location note: where it will be written and the position
+ * it names, both read once when the Note button is pressed. `key` is the note's
+ * draft, so every opening gets a fresh composer and autosave session. A kept
+ * draft (one whose write failed after its editor went away) opens here too,
+ * with its own context and quote and without taking focus.
+ */
+type LocationNoteSession = {
+  readonly key: string;
+  readonly documentId: string;
+  readonly label: string;
+  readonly context: string;
+  readonly quote: string | null;
+  readonly target: NewNoteTarget | null;
+  readonly recovered: boolean;
+};
+
+/** "Current position · Page 3 of 12 · 21%", from the reader's real position only. */
+function locationNoteContext(page: number, pageCount: number, progress: number): string {
+  const parts = ['Current position', pageCount > 0 ? `Page ${String(page)} of ${String(pageCount)}` : `Page ${String(page)}`];
+  if (Number.isFinite(progress)) parts.push(`${String(Math.round(Math.min(1, Math.max(0, progress)) * 100))}%`);
+  return parts.join(' · ');
+}
+
+/** A kept draft, shown again in the location note's place. */
+function recoveredNoteSession(draft: NoteDraft): LocationNoteSession {
+  return { key: draft.key, ...draft.meta, target: null, recovered: true };
+}
+
+/** A kept draft is never recreated: if it is gone, nothing is written. */
+const GONE_DRAFT: NoteAutosaveOptions['persist'] = () =>
+  Promise.resolve({ ok: false, message: 'This note is no longer available.', retryable: false });
+
+/**
+ * Keeps the location note with the book it was opened in. Leaving that book
+ * closes it; its unsaved text is still written to that book, not this one, and
+ * if that write fails the draft is kept for when the reader returns. A kept
+ * draft for the open book is shown again, with Retry and Discard, as soon as
+ * the note's place is free. It does not take focus.
+ */
+function useLocationNoteDocument(
+  activeDocument: { readonly id: string } | null | undefined,
+  open: boolean,
+  session: LocationNoteSession | null,
+  setOpen: (open: boolean) => void,
+  setSession: (session: LocationNoteSession) => void,
+): void {
+  const activeDocumentId = activeDocument?.id ?? null;
+  const noteDocumentId = session?.documentId;
+  useEffect(() => {
+    if (open && noteDocumentId !== activeDocumentId) setOpen(false);
+  }, [activeDocumentId, noteDocumentId, open, setOpen]);
+
+  const retainedDraft = useRetainedNoteDraft(activeDocumentId);
+  useEffect(() => {
+    if (open || retainedDraft === null) return;
+    setSession(recoveredNoteSession(retainedDraft));
+    setOpen(true);
+  }, [open, retainedDraft, setOpen, setSession]);
+}
+
+/** The composer for one opening of the location note; nothing before the first opening. */
+function LocationNoteComposer({ session, handle, buttonRef, onClose }: {
+  readonly session: LocationNoteSession | null;
+  readonly handle: RefObject<NoteComposerHandle | null>;
+  readonly buttonRef: RefObject<HTMLButtonElement | null>;
+  readonly onClose: (close: NoteComposerClose) => void;
+}) {
+  if (!session) return null;
+  return (
+    <NoteComposer
+      key={session.key}
+      handle={handle}
+      fieldId="location-note"
+      panelId="location-note-popover"
+      label={session.label}
+      context={session.context}
+      contextIcon="add-note"
+      quote={session.quote}
+      variant="popover"
+      role="dialog"
+      testIdPrefix="location-note"
+      draftKey={session.key}
+      documentId={session.documentId}
+      autoFocus={!session.recovered}
+      autosave={{
+        initialText: '',
+        initialId: null,
+        allowEmpty: false,
+        persist: session.target ? createThenUpdateNote(session.target) : GONE_DRAFT,
+      }}
+      ignoreOutside={[buttonRef]}
+      onClose={onClose}
+    />
+  );
 }
 
 export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
@@ -50,10 +147,8 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
 
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [locationNoteOpen, setLocationNoteOpen] = useState(false);
-  const [locationNoteDraft, setLocationNoteDraft] = useState('');
-  // Shared by the Save button and the shortcut so one note cannot be created
-  // twice by a second press while the first create is still in flight.
-  const [savingLocationNote, setSavingLocationNote] = useState(false);
+  const [locationNote, setLocationNote] = useState<LocationNoteSession | null>(null);
+  const locationNoteHandleRef = useRef<NoteComposerHandle>(null);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const displaySettingsPresence = usePopoverPresence(displaySettingsOpen);
   const locationNotePresence = usePopoverPresence(locationNoteOpen);
@@ -66,26 +161,7 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
     setPageInput(String(currentPage));
   }, [currentPage]);
 
-  useEffect(() => {
-    if (!locationNoteOpen) return;
-    const dismiss = (event: KeyboardEvent | PointerEvent): void => {
-      if (event instanceof KeyboardEvent) {
-        if (event.key !== 'Escape') return;
-        event.preventDefault();
-      } else {
-        const target = event.target;
-        if (target instanceof Node && (locationNotePanelRef.current?.contains(target) || locationNoteButtonRef.current?.contains(target))) return;
-      }
-      setLocationNoteOpen(false);
-      window.queueMicrotask(() => { locationNoteButtonRef.current?.focus(); });
-    };
-    document.addEventListener('keydown', dismiss);
-    document.addEventListener('pointerdown', dismiss);
-    return () => {
-      document.removeEventListener('keydown', dismiss);
-      document.removeEventListener('pointerdown', dismiss);
-    };
-  }, [locationNoteOpen]);
+  useLocationNoteDocument(activeDocument, locationNoteOpen, locationNote, setLocationNoteOpen, setLocationNote);
 
   useEffect(() => {
     if (!displaySettingsOpen) return;
@@ -145,31 +221,39 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
     }
   };
 
-  /**
-   * The one save path for the location note. The Save button and the
-   * Cmd/Ctrl+Enter shortcut both call exactly this, so neither can skip the
-   * blank-draft guard or the reveal that follows a successful create.
-   */
-  const addLocationNote = async (): Promise<void> => {
-    if (!activeDocument || !adapter || !locationNoteDraft.trim() || savingLocationNote) return;
-    setSavingLocationNote(true);
-    const created = await createAnnotation({
+  /** Freezes the current position as the note's anchor and opens the composer. */
+  const openLocationNote = (): void => {
+    if (!activeDocument || !adapter) return;
+    const reading = adapter.getReadingLocation();
+    setLocationNote({
+      key: newNoteDraftKey('location'),
       documentId: activeDocument.id,
-      type: 'note',
-      anchor: locationToAnchor(explicitNavigationLocation ?? adapter.getReadingLocation().location),
-      note: locationNoteDraft,
-      isLocationNote: true,
-    }).finally(() => { setSavingLocationNote(false); });
-    if (created) {
-      setLocationNoteDraft('');
-      setLocationNoteOpen(false);
-      showRightTab('annotations');
-      requestAnnotationReveal(created.documentId, created.id);
-      window.queueMicrotask(() => { locationNoteButtonRef.current?.focus(); });
-    }
+      label: 'Note at current location',
+      context: locationNoteContext(adapter.getCurrentPage(), pageCount, reading.progress),
+      quote: null,
+      target: {
+        documentId: activeDocument.id,
+        anchor: locationToAnchor(explicitNavigationLocation ?? reading.location),
+        isLocationNote: true,
+      },
+      recovered: false,
+    });
+    setLocationNoteOpen(true);
   };
 
-  const canSaveLocationNote = canSaveNoteDraft(locationNoteDraft, savingLocationNote);
+  /**
+   * The composer has stored the newest text (or there was none) and closed.
+   * Only Done opens Annotations on the note, as Save used to; a dismissal
+   * leaves the panels alone. A click elsewhere keeps focus where it landed.
+   */
+  const closeLocationNote = ({ reason, annotationId }: NoteComposerClose): void => {
+    setLocationNoteOpen(false);
+    if (reason === 'done' && annotationId !== null && locationNote) {
+      showRightTab('annotations');
+      requestAnnotationReveal(locationNote.documentId, annotationId);
+    }
+    if (reason !== 'outside') window.queueMicrotask(() => { locationNoteButtonRef.current?.focus(); });
+  };
 
   return (
     <div className="relative min-w-0 max-w-full @container" data-testid="reader-header-toolbar-wrapper">
@@ -423,12 +507,8 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
             aria-controls="location-note-popover"
             aria-label="Add note"
             onClick={() => {
-              if (locationNoteOpen) {
-                setLocationNoteOpen(false);
-                window.queueMicrotask(() => { locationNoteButtonRef.current?.focus(); });
-              } else {
-                setLocationNoteOpen(true);
-              }
+              if (locationNoteOpen) locationNoteHandleRef.current?.requestClose();
+              else openLocationNote();
             }}
             className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-bg-surface px-2 py-1 text-xs font-medium text-text-secondary hover:border-accent hover:text-text-primary"
           >
@@ -439,46 +519,15 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
             <div
               ref={locationNotePanelRef}
               {...phaseAttributes(locationNotePresence.phase)}
-              id="location-note-popover"
               data-top-layer="popover"
-              role="dialog"
-              aria-modal="false"
-              aria-labelledby="location-note-label"
-              className="ui-popover absolute right-0 top-full z-40 mt-2 w-72 origin-top-right rounded-md border border-border-subtle bg-bg-surface-elevated p-3 shadow-popover"
+              className="ui-popover absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] origin-top-right"
             >
-              <label id="location-note-label" htmlFor="location-note" className="block text-left text-xs font-medium text-text-primary">Note at current location</label>
-              <textarea
-                id="location-note"
-                autoFocus
-                maxLength={100_000}
-                value={locationNoteDraft}
-                onChange={(event) => { setLocationNoteDraft(event.target.value); }}
-                onKeyDown={(event) => {
-                  handleNoteSaveShortcut(event, canSaveLocationNote, () => { void addLocationNote(); });
-                }}
-                className="mt-1 h-24 w-full resize-y rounded-md border border-border-subtle bg-bg-surface p-2 text-xs text-text-primary"
+              <LocationNoteComposer
+                session={locationNote}
+                handle={locationNoteHandleRef}
+                buttonRef={locationNoteButtonRef}
+                onClose={closeLocationNote}
               />
-              <div className="mt-2 flex items-center justify-end gap-2">
-                <span className="mr-auto text-2xs text-text-secondary" data-testid="location-note-shortcut-hint">
-                  {NOTE_SAVE_SHORTCUT_HINT}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocationNoteOpen(false);
-                    window.queueMicrotask(() => { locationNoteButtonRef.current?.focus(); });
-                  }}
-                  className="rounded px-2 py-1 text-text-secondary"
-                >Cancel</button>
-                <button
-                  type="button"
-                  disabled={!canSaveLocationNote}
-                  onClick={() => { void addLocationNote(); }}
-                  className="rounded bg-accent px-2 py-1 font-medium text-on-accent disabled:opacity-40"
-                >
-                  Save
-                </button>
-              </div>
             </div>
           )}
         </div>

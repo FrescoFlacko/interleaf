@@ -313,7 +313,7 @@ export function ReaderOutlineSidebar() {
     }
     const extracted = await extractRangeText(adapter, range);
     if (!extracted.text.trim()) {
-      showError('chat', 'This section has no readable text to attach to AI Chat.');
+      showError('chat', 'This section has no readable text to attach to Chat.');
       return false;
     }
     const descriptor = tocRangeToChatDescriptor(range, extracted.unitCount, extracted.unitReferences);
@@ -483,7 +483,7 @@ export function ReaderOutlineSidebar() {
             className={MENU_ITEM_CLASS}
           >
             <span aria-hidden="true" className={MENU_CHECK_SLOT_CLASS} />
-            Add section to AI Chat
+            Add section to Chat
           </button>
           <button
             ref={(element) => { menuItemRefs.current[1] = element; }}

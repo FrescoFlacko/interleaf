@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -12,9 +12,10 @@ import { AgentRegistry } from '@main/agents/agent-adapter';
 import { WorkingDirectoryRegistry } from '@main/agents/working-directory-registry';
 import { AgentEnvironmentManager } from '@main/agents/environment-manager';
 import type { Logger } from '@main/logging/logger';
-import type { AgentService, AgentServiceOptions } from '@main/agents/agent-service';
+import type { AgentServiceOptions } from '@main/agents/agent-service';
 import { createTestAgentService } from '../helpers/agent-service';
 import { posixShell, testAgentRegistryOptions, withEnvironmentShell } from '../helpers/agent-collaborators';
+import { cleanupServiceFixture, waitForTerminal } from '../helpers/session-wait';
 
 const logger: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -22,23 +23,9 @@ function tempRoot(prefix: string): string {
   return mkdtempSync(join(tmpdir(), `interleaf-integration-${prefix}-`));
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => { resolve(); }, ms);
-  });
-}
-
 function writeScript(path: string, lines: readonly string[]): void {
   writeFileSync(path, ['#!/bin/sh', ...lines].join('\n') + '\n', { mode: 0o755 });
   chmodSync(path, 0o755);
-}
-
-async function waitForTerminal(service: AgentService, sessionId: string, attempts: number): Promise<void> {
-  for (let i = 0; i < attempts; i += 1) {
-    const status = service.getSession(sessionId)?.status;
-    if (status === 'completed' || status === 'failed' || status === 'cancelled') return;
-    await delay(10);
-  }
 }
 
 /** A real AgentService over an in-memory database with one seeded document and the canonical `/bin/sh` as the chosen executable. */
@@ -71,7 +58,15 @@ async function createExpertService(root: string, chooseTarget: () => string, ext
   await service.initialize();
   const selectedExec = await service.selectExecutable();
   expect(selectedExec).not.toBeNull();
-  return { db, repository, service, executableHandle: selectedExec!.handle };
+  return {
+    db,
+    repository,
+    service,
+    executableHandle: selectedExec!.handle,
+    cleanup: async () => {
+      await cleanupServiceFixture({ service, db, root });
+    },
+  };
 }
 
 afterEach(() => {
@@ -111,81 +106,82 @@ describe('Expert Shell Real Execution & Environment Integration', () => {
     vi.stubEnv('TMPDIR', inheritedTmpdir);
 
     // Shell binary is the canonical /bin/sh (allowed POSIX shell)
-    const { db, repository, service, executableHandle } = await createExpertService(root, () => target);
+    const created = await createExpertService(root, () => target);
+    const { repository, service, executableHandle } = created;
 
-    const profile = await service.createCustomProfile({
-      name: 'Real POSIX Shell Agent',
-      executableHandle,
-      executionKind: 'expert-shell',
-      shellFamily: 'posix',
-      shellCommand: `"${scriptPath}"`,
-      resumeShellCommand: `"${scriptPath}" --resume`,
-      supportsResume: true,
-      supportsModelSelection: true,
-      supportsReasoningSelection: true,
-      defaultModel: 'test-model-42',
-      reasoningEffort: 'high',
-      environmentOverrides: [{ name: 'TMPDIR', action: 'inherit-allowlisted' }],
-    });
+    try {
+      const profile = await service.createCustomProfile({
+        name: 'Real POSIX Shell Agent',
+        executableHandle,
+        executionKind: 'expert-shell',
+        shellFamily: 'posix',
+        shellCommand: `"${scriptPath}"`,
+        resumeShellCommand: `"${scriptPath}" --resume`,
+        supportsResume: true,
+        supportsModelSelection: true,
+        supportsReasoningSelection: true,
+        defaultModel: 'test-model-42',
+        reasoningEffort: 'high',
+        environmentOverrides: [{ name: 'TMPDIR', action: 'inherit-allowlisted' }],
+      });
 
-    const dir = await service.selectWorkingDirectory();
-    expect(dir).not.toBeNull();
+      const dir = await service.selectWorkingDirectory();
+      expect(dir).not.toBeNull();
 
-    // Start Session
-    const secretSessionPrompt = 'super-secret-user-instructions';
-    const started = await service.startSession({
-      documentId: 'doc-expert',
-      profileId: profile.id,
-      workingDirectoryHandle: dir!.handle,
-      executionMode: 'auto-isolated',
-      prompt: secretSessionPrompt,
-      model: 'custom-model-alpha',
-    }, 1);
+      // Start Session
+      const secretSessionPrompt = 'super-secret-user-instructions';
+      const started = await service.startSession({
+        documentId: 'doc-expert',
+        profileId: profile.id,
+        workingDirectoryHandle: dir!.handle,
+        executionMode: 'auto-isolated',
+        prompt: secretSessionPrompt,
+        model: 'custom-model-alpha',
+      }, 1);
 
-    await waitForTerminal(service, started.session.id, 100);
+      await waitForTerminal(service, started.session.id, 100);
 
-    const completed = service.getSession(started.session.id);
-    expect(completed?.status).toBe('completed');
-    expect(completed?.effectiveModel).toBe('custom-model-alpha');
-    expect(completed?.effectiveReasoningEffort).toBe('high');
+      const completed = service.getSession(started.session.id);
+      expect(completed?.status).toBe('completed');
+      expect(completed?.effectiveModel).toBe('custom-model-alpha');
+      expect(completed?.effectiveReasoningEffort).toBe('high');
 
-    // Inspect events:
-    const events = repository.listEvents(started.session.id);
-    const stdoutEvents = events.filter((e) => e.type === 'stdout');
-    const fullStdout = stdoutEvents.map((e) => e.text).join('');
+      // Inspect events:
+      const events = repository.listEvents(started.session.id);
+      const stdoutEvents = events.filter((e) => e.type === 'stdout');
+      const fullStdout = stdoutEvents.map((e) => e.text).join('');
 
-    // Verify prompt was received via stdin
-    expect(fullStdout).toContain('PROMPT_RECEIVED:');
-    expect(fullStdout).toContain(secretSessionPrompt);
-    // Runtime metadata, working directory, and inherited non-secret
-    // environment values (ambient HOME/PATH/SHELL and the inherited TMPDIR
-    // override) are ordinary local diagnostics and stay visible.
-    expect(fullStdout).toContain(`SESSION:${started.session.id}`);
-    expect(fullStdout).toMatch(/WORKDIR:[^\n]*agent-workspaces/);
-    expect(fullStdout).toContain('EFFORT:high');
-    expect(fullStdout).toContain('HOME:');
-    expect(fullStdout).toContain('PATH_HEAD:');
-    expect(fullStdout).toContain(`TMPDIR_OVERRIDE:${inheritedTmpdir}\n`);
-    expect(fullStdout).not.toContain('TMPDIR_OVERRIDE:[REDACTED]');
-    // Credential-shaped assignments still redact.
-    expect(fullStdout).toContain('token=[REDACTED]');
-    expect(fullStdout).not.toContain('super-credential-shape-42f8');
+      // Verify prompt was received via stdin
+      expect(fullStdout).toContain('PROMPT_RECEIVED:');
+      expect(fullStdout).toContain(secretSessionPrompt);
+      // Runtime metadata, working directory, and inherited non-secret
+      // environment values (ambient HOME/PATH/SHELL and the inherited TMPDIR
+      // override) are ordinary local diagnostics and stay visible.
+      expect(fullStdout).toContain(`SESSION:${started.session.id}`);
+      expect(fullStdout).toMatch(/WORKDIR:[^\n]*agent-workspaces/);
+      expect(fullStdout).toContain('EFFORT:high');
+      expect(fullStdout).toContain('HOME:');
+      expect(fullStdout).toContain('PATH_HEAD:');
+      expect(fullStdout).toContain(`TMPDIR_OVERRIDE:${inheritedTmpdir}\n`);
+      expect(fullStdout).not.toContain('TMPDIR_OVERRIDE:[REDACTED]');
+      // Credential-shaped assignments still redact.
+      expect(fullStdout).toContain('token=[REDACTED]');
+      expect(fullStdout).not.toContain('super-credential-shape-42f8');
 
-    // Resume Session with the static resume command
-    const resumed = await service.resumeSession({
-      sessionId: started.session.id,
-      prompt: 'follow-up on resume',
-    }, 1);
+      // Resume Session with the static resume command
+      const resumed = await service.resumeSession({
+        sessionId: started.session.id,
+        prompt: 'follow-up on resume',
+      }, 1);
 
-    await waitForTerminal(service, resumed.session.id, 100);
+      await waitForTerminal(service, resumed.session.id, 100, { baselineEventCount: completed?.eventCount });
 
-    const resumedDetail = service.getSession(started.session.id);
-    expect(resumedDetail?.status).toBe('completed');
-
-    await service.shutdown();
-    db.close();
-    rmSync(root, { recursive: true, force: true });
-  });
+      const resumedDetail = service.getSession(started.session.id);
+      expect(resumedDetail?.status).toBe('completed');
+    } finally {
+      await created.cleanup();
+    }
+  }, 30_000);
 
   it('persists a synthesized text-mode final report on clean success and leaves a failed run with nothing to copy', async () => {
     if (process.platform === 'win32') return; // POSIX shell test on macOS/Linux
@@ -214,74 +210,75 @@ describe('Expert Shell Real Execution & Environment Integration', () => {
     writeScript(failScript, ['cat > /dev/null', 'echo "partial work"', 'exit 3']);
 
     const clipboardTexts: string[] = [];
-    const { db, repository, service, executableHandle } = await createExpertService(root, () => target, {
+    const created = await createExpertService(root, () => target, {
       clipboard: { writeText: (text) => { clipboardTexts.push(text); return Promise.resolve(); } },
     });
+    const { repository, service, executableHandle } = created;
 
-    const runToTerminal = async (shellCommand: string, name: string): Promise<string> => {
-      const dir = await service.selectWorkingDirectory();
-      expect(dir).not.toBeNull();
-      const profile = await service.createCustomProfile({
-        name, executableHandle, executionKind: 'expert-shell',
-        shellFamily: 'posix', shellCommand,
-      });
-      const started = await service.startSession({
-        documentId: 'doc-expert', profileId: profile.id, workingDirectoryHandle: dir!.handle,
-        executionMode: 'auto-isolated', prompt: 'summarize the work',
-      }, 1);
-      await waitForTerminal(service, started.session.id, 200);
-      return started.session.id;
-    };
+    try {
+      const runToTerminal = async (shellCommand: string, name: string): Promise<string> => {
+        const dir = await service.selectWorkingDirectory();
+        expect(dir).not.toBeNull();
+        const profile = await service.createCustomProfile({
+          name, executableHandle, executionKind: 'expert-shell',
+          shellFamily: 'posix', shellCommand,
+        });
+        const started = await service.startSession({
+          documentId: 'doc-expert', profileId: profile.id, workingDirectoryHandle: dir!.handle,
+          executionMode: 'auto-isolated', prompt: 'summarize the work',
+        }, 1);
+        await waitForTerminal(service, started.session.id, 200);
+        return started.session.id;
+      };
 
-    const okId = await runToTerminal(`"${okScript}"`, 'Synthesis Success Agent');
-    const okSession = service.getSession(okId);
-    expect(okSession?.status).toBe('completed');
-    expect(okSession?.finalReport).toBe('Summary: refactored the loader.\ntoken=[REDACTED]');
-    expect(okSession?.finalReport).not.toContain('super-credential-shape-42f8');
+      const okId = await runToTerminal(`"${okScript}"`, 'Synthesis Success Agent');
+      const okSession = service.getSession(okId);
+      expect(okSession?.status).toBe('completed');
+      expect(okSession?.finalReport).toBe('Summary: refactored the loader.\ntoken=[REDACTED]');
+      expect(okSession?.finalReport).not.toContain('super-credential-shape-42f8');
 
-    // The synthesized report is the last thing said before the run ends.
-    const okTypes = repository.listEvents(okId).map((event) => event.type);
-    expect(okTypes.at(-1)).toBe('ended');
-    expect(okTypes.at(-2)).toBe('final');
-    expect(okTypes.filter((type) => type === 'final')).toHaveLength(1);
+      // The synthesized report is the last thing said before the run ends.
+      const okTypes = repository.listEvents(okId).map((event) => event.type);
+      expect(okTypes.at(-1)).toBe('ended');
+      expect(okTypes.at(-2)).toBe('final');
+      expect(okTypes.filter((type) => type === 'final')).toHaveLength(1);
 
-    expect(await service.copyResult(okId, 1)).toEqual({ copied: true, characterCount: okSession!.finalReport!.length });
-    expect(clipboardTexts).toEqual([okSession?.finalReport]);
+      expect(await service.copyResult(okId, 1)).toEqual({ copied: true, characterCount: okSession!.finalReport!.length });
+      expect(clipboardTexts).toEqual([okSession?.finalReport]);
 
-    // A flood the bounded runner cannot deliver in full: one read hands the
-    // runner more lines than its 256-event queue holds, so frames are dropped.
-    // The run still exits zero, and there is still nothing to copy — a report
-    // synthesized from what survived would present a hole as the agent's
-    // answer. The 400 lines (under 4 KiB) leave the child in a single `cat`
-    // write, which the runner reads and splits into frames synchronously: the
-    // overflow is not a race with the reader, as one `echo` per line was. Few
-    // enough events persist that the drop marker stays in the listed window.
-    target = join(root, 'workspace-flood');
-    mkdirSync(target, { recursive: true });
-    const floodPayload = join(root, 'flood.txt');
-    writeFileSync(floodPayload, Array.from({ length: 400 }, (_, line) => `line ${String(line)}\n`).join(''));
-    const floodScript = join(root, 'flood.sh');
-    writeScript(floodScript, ['cat > /dev/null', `cat '${floodPayload}'`, 'exit 0']);
+      // A flood the bounded runner cannot deliver in full: one read hands the
+      // runner more lines than its 256-event queue holds, so frames are dropped.
+      // The run still exits zero, and there is still nothing to copy — a report
+      // synthesized from what survived would present a hole as the agent's
+      // answer. The 400 lines (under 4 KiB) leave the child in a single `cat`
+      // write, which the runner reads and splits into frames synchronously: the
+      // overflow is not a race with the reader, as one `echo` per line was. Few
+      // enough events persist that the drop marker stays in the listed window.
+      target = join(root, 'workspace-flood');
+      mkdirSync(target, { recursive: true });
+      const floodPayload = join(root, 'flood.txt');
+      writeFileSync(floodPayload, Array.from({ length: 400 }, (_, line) => `line ${String(line)}\n`).join(''));
+      const floodScript = join(root, 'flood.sh');
+      writeScript(floodScript, ['cat > /dev/null', `cat '${floodPayload}'`, 'exit 0']);
 
-    const floodId = await runToTerminal(`"${floodScript}"`, 'Synthesis Flood Agent');
-    expect(service.getSession(floodId)?.status).toBe('completed');
-    const floodTypes = repository.listEvents(floodId).map((event) => event.type);
-    expect(floodTypes).toContain('structured');
-    expect(floodTypes).not.toContain('final');
-    expect(service.getSession(floodId)?.finalReport ?? '').toBe('');
-    await expect(service.copyResult(floodId, 1)).rejects.toThrow(/no report/i);
-    expect(clipboardTexts).toHaveLength(1);
+      const floodId = await runToTerminal(`"${floodScript}"`, 'Synthesis Flood Agent');
+      expect(service.getSession(floodId)?.status).toBe('completed');
+      const floodTypes = repository.listEvents(floodId).map((event) => event.type);
+      expect(floodTypes).toContain('structured');
+      expect(floodTypes).not.toContain('final');
+      expect(service.getSession(floodId)?.finalReport ?? '').toBe('');
+      await expect(service.copyResult(floodId, 1)).rejects.toThrow(/no report/i);
+      expect(clipboardTexts).toHaveLength(1);
 
-    target = join(root, 'workspace-fail');
-    const failId = await runToTerminal(`"${failScript}"`, 'Synthesis Failure Agent');
-    expect(service.getSession(failId)?.status).toBe('failed');
-    expect(service.getSession(failId)?.finalReport ?? '').toBe('');
-    expect(repository.listEvents(failId).map((event) => event.type)).not.toContain('final');
-    await expect(service.copyResult(failId, 1)).rejects.toThrow(/no report/i);
-    expect(clipboardTexts).toHaveLength(1);
-
-    await service.shutdown();
-    db.close();
-    rmSync(root, { recursive: true, force: true });
+      target = join(root, 'workspace-fail');
+      const failId = await runToTerminal(`"${failScript}"`, 'Synthesis Failure Agent');
+      expect(service.getSession(failId)?.status).toBe('failed');
+      expect(service.getSession(failId)?.finalReport ?? '').toBe('');
+      expect(repository.listEvents(failId).map((event) => event.type)).not.toContain('final');
+      await expect(service.copyResult(failId, 1)).rejects.toThrow(/no report/i);
+      expect(clipboardTexts).toHaveLength(1);
+    } finally {
+      await created.cleanup();
+    }
   }, 30_000);
 });

@@ -15,7 +15,8 @@ const CHAT_IMAGE_TITLE = 'Embedded images are not displayed in chat';
 /**
  * Chat wrapper over the shared safe Markdown renderer. Chat is the only surface
  * with a citation envelope, so it is the only one that binds citations, and it
- * supplies its own chat-specific inert-image wording.
+ * supplies its own chat-specific inert-image wording. Mermaid fences are drawn
+ * once the answer has finished streaming.
  */
 export function MarkdownMessage({ content, citations, onCitation, streaming = false }: MarkdownMessageProps) {
   return (
@@ -25,6 +26,8 @@ export function MarkdownMessage({ content, citations, onCitation, streaming = fa
       onCitation={onCitation}
       pendingCitations={streaming}
       imageTitle={CHAT_IMAGE_TITLE}
+      diagrams
+      deferDiagrams={streaming}
     />
   );
 }

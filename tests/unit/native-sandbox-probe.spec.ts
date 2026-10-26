@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { NativeSandboxCapabilityProber, NATIVE_SANDBOX_CONTRACTS } from '@main/agents/native-sandbox-probe';
 import type { MainAgentProfile } from '@main/agents/profile-types';
+import type { Logger } from '@main/logging/logger';
 import { waitForFile } from '../helpers/wait-for-file';
 import { silentLogger } from '../helpers/silent-logger';
 
@@ -120,7 +121,7 @@ async function withProber(
     readonly root: string;
     readonly rewrite: (next: FakeCliScript) => Promise<void>;
   }) => Promise<void>,
-  options: { readonly ttlMs?: number } = {},
+  options: { readonly ttlMs?: number; readonly log?: Logger } = {},
 ): Promise<void> {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'interleaf-native-probe-')));
   const binaryPath = join(root, 'codex');
@@ -128,7 +129,7 @@ async function withProber(
   await mkdir(probeCwd, { recursive: true });
   await writeFakeCli(binaryPath, shape);
   // No TTL by default: every call re-proves, which is what start and resume require.
-  const prober = new NativeSandboxCapabilityProber({ log: silentLogger, probeCwd, ttlMs: options.ttlMs ?? 0 });
+  const prober = new NativeSandboxCapabilityProber({ log: options.log ?? silentLogger, probeCwd, ttlMs: options.ttlMs ?? 0 });
   try {
     await run({
       prober,
@@ -168,24 +169,47 @@ describe('Native Restricted capability probe', () => {
     });
   });
 
-  it('treats help-output drift as an unproven capability', async () => {
-    const drifts: readonly FakeCliScript[] = [
-      // The sandbox selector disappeared from `codex exec`.
-      { execHelp: CODEX_EXEC_HELP.replaceAll('--sandbox', '--mode') },
-      // The named sandbox level Interleaf relies on is gone.
-      { execHelp: CODEX_EXEC_HELP.replaceAll('workspace-write', 'writable') },
-      // `--config`, which carries the sandbox policy on resume, is gone.
-      { resumeHelp: CODEX_RESUME_HELP.replaceAll('--config', '--set') },
-      // A resume-side `--sandbox` appears: a real contract change, not a match.
-      { resumeHelp: `${CODEX_RESUME_HELP}\n  -s, --sandbox <SANDBOX_MODE>  New in this release` },
-      // Output that says nothing at all.
-      { execHelp: '', resumeHelp: '' },
-    ];
-    for (const drift of drifts) {
-      await withProber(drift, async ({ prober, binaryPath }) => {
-        expect(await prober.verify(codexProfile(binaryPath))).toBeNull();
-      });
-    }
+  describe.each([
+    {
+      caseName: 'sandbox selector disappeared from exec help',
+      shape: { execHelp: CODEX_EXEC_HELP.replaceAll('--sandbox', '--mode') },
+      expectedWarn: 'native sandbox capability probe found drifted help output',
+    },
+    {
+      caseName: 'workspace-write sandbox level disappeared from exec help',
+      shape: { execHelp: CODEX_EXEC_HELP.replaceAll('workspace-write', 'writable') },
+      expectedWarn: 'native sandbox capability probe found drifted help output',
+    },
+    {
+      caseName: 'config flag disappeared from resume help',
+      shape: { resumeHelp: CODEX_RESUME_HELP.replaceAll('--config', '--set') },
+      expectedWarn: 'native sandbox capability probe found drifted help output',
+    },
+    {
+      caseName: 'forbidden resume-side sandbox selector appeared',
+      shape: { resumeHelp: `${CODEX_RESUME_HELP}\n  -s, --sandbox <SANDBOX_MODE>  New in this release` },
+      expectedWarn: 'native sandbox capability probe found an unexpected flag',
+    },
+    {
+      caseName: 'help output is empty',
+      shape: { execHelp: '', resumeHelp: '' },
+      expectedWarn: 'native sandbox capability probe found drifted help output',
+    },
+  ])('treats help-output drift as an unproven capability ($caseName)', ({ shape, expectedWarn }) => {
+    it('verifies drift rejection through real process probe and warning diagnostic', async () => {
+      const warnMessages: string[] = [];
+      const testLogger: Logger = {
+        debug: () => undefined,
+        info: () => undefined,
+        warn: (message: string) => { warnMessages.push(message); },
+        error: () => undefined,
+      };
+      await withProber(shape, async ({ prober, binaryPath }) => {
+        const verified = await prober.verify(codexProfile(binaryPath));
+        expect(verified).toBeNull();
+        expect(warnMessages).toContain(expectedWarn);
+      }, { log: testLogger });
+    }, 15_000);
   });
 
   it('rejects an unsupported version, a failing probe, a flood, and a hang', async () => {
@@ -343,8 +367,7 @@ describe('Native Restricted capability probe', () => {
     const invokedPath = `${binaryPath}.invoked`;
     await writeFile(binaryPath, '#!/bin/sh\ntouch "$0.invoked"\nexit 0\n', { mode: 0o755 });
     await chmod(binaryPath, 0o755);
-    let releaseFingerprint!: () => void;
-    const held = new Promise<void>((resolve) => { releaseFingerprint = resolve; });
+    const { promise: held, resolve: releaseFingerprint } = Promise.withResolvers<undefined>();
     const order: string[] = [];
     const prober = new NativeSandboxCapabilityProber({
       log: silentLogger,
@@ -357,7 +380,7 @@ describe('Native Restricted capability probe', () => {
         .then((result) => { order.push('verify'); return result; });
       const closing = prober.close().then(() => { order.push('close'); });
 
-      releaseFingerprint();
+      releaseFingerprint(undefined);
       const [result] = await Promise.all([pending, closing]);
 
       expect(result).toBeNull();

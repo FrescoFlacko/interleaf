@@ -8,20 +8,21 @@ import { makePdfFixture } from '../fixtures/document-fixtures';
 /**
  * Real-window checks for two AI Chat changes that only a browser can settle:
  * a saved-note confirmation must not move anything the reader is pointing at,
- * and the context-window wheel must sit beside Send without colliding with it
- * at the narrowest supported panel or at 200% zoom.
+ * and the context-window wheel must end the context shelf above the field,
+ * whole and clear of the tool row, at the narrowest supported panel or at 200%
+ * zoom.
  *
  * No paid provider call is made. The OpenRouter transport is answered by the
  * deterministic local seam, so the figures the popover prints are main's own
  * accounting for a request that really was packed and sent.
  */
 
-/** Geometry of the composer's trailing control group. */
+/** Geometry of the wheel at the shelf's edge, and of the tool row below it. */
 function measureComposer(): {
-  readonly sharedParent: boolean;
-  readonly gapToSend: number;
-  readonly overlapWithSend: number;
-  readonly sameRow: boolean;
+  readonly endsShelf: boolean;
+  readonly inToolRow: boolean;
+  readonly insideShelf: boolean;
+  readonly aboveSend: boolean;
   readonly meterWidth: number;
   readonly meterHeight: number;
   readonly sendRight: number;
@@ -31,17 +32,25 @@ function measureComposer(): {
   readonly sendDisabled: boolean;
 } {
   const meter = document.querySelector<HTMLElement>('[data-testid="chat-context-budget"]');
+  const shelf = document.querySelector<HTMLElement>('[data-testid="chat-context-bar"]');
   const send = document.querySelector<HTMLButtonElement>('[data-testid="send-chat-button"]');
   const form = document.querySelector<HTMLFormElement>('form:has(#chat-composer)');
-  if (!meter || !send || !form) throw new Error('Chat composer controls were not mounted.');
+  if (!meter || !shelf || !send || !form) throw new Error('Chat composer controls were not mounted.');
   const meterBox = meter.getBoundingClientRect();
+  const shelfBox = shelf.getBoundingClientRect();
   const sendBox = send.getBoundingClientRect();
   const formBox = form.getBoundingClientRect();
   return {
-    sharedParent: meter.parentElement === send.parentElement,
-    gapToSend: sendBox.left - meterBox.right,
-    overlapWithSend: Math.max(0, meterBox.right - sendBox.left),
-    sameRow: meterBox.top < sendBox.bottom && sendBox.top < meterBox.bottom,
+    endsShelf: shelf.lastElementChild === meter,
+    inToolRow: send.parentElement?.contains(meter) === true,
+    // Every edge of the wheel within a pixel of the shelf's.
+    insideShelf: Math.min(
+      meterBox.left - shelfBox.left,
+      shelfBox.right - meterBox.right,
+      meterBox.top - shelfBox.top,
+      shelfBox.bottom - meterBox.bottom
+    ) >= -1,
+    aboveSend: meterBox.bottom <= sendBox.top,
     meterWidth: meterBox.width,
     meterHeight: meterBox.height,
     sendRight: sendBox.right,
@@ -193,21 +202,19 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     expect((await readGeometry()).form).toBe(before.form);
   });
 
-  test('puts the context wheel in the lower composer controls and opens its popover from pointer and keyboard', async () => {
+  test('puts the context wheel at the shelf edge above the field and opens its popover from pointer and keyboard', async () => {
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     const meter = chat.getByTestId('chat-context-budget');
     await expect(meter).toBeVisible();
 
     const layout = await app.window.evaluate(measureComposer);
-    // Under the input, last of the per-session tools in the one tool row, and
-    // kept apart from Send, which is pushed to the row's end because it
-    // answers the draft rather than the conversation the wheel reports on.
-    expect(layout.sharedParent).toBe(true);
-    expect(layout.sameRow).toBe(true);
-    expect(layout.overlapWithSend).toBe(0);
-    expect(layout.gapToSend).toBeGreaterThanOrEqual(4);
-    // Separate control groups under the input, never one strip beside Send;
-    // the exact pixel gap varies with panel width as the menus give way.
+    // It reports on what the next turn reads, so it ends the context shelf
+    // docked above the input, inside the shelf's line; the tool row below is
+    // left to Add context, the model picker and Send, which answers the draft.
+    expect(layout.endsShelf).toBe(true);
+    expect(layout.insideShelf).toBe(true);
+    expect(layout.inToolRow).toBe(false);
+    expect(layout.aboveSend).toBe(true);
     // WCAG 2.2 SC 2.5.8: the wheel is a control, so it is at least 24x24.
     expect(layout.meterWidth).toBeGreaterThanOrEqual(24);
     expect(layout.meterHeight).toBeGreaterThanOrEqual(24);
@@ -221,8 +228,8 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     await composer.fill('A draft that arms Send.');
     const armed = await app.window.evaluate(measureComposer);
     expect(armed.sendDisabled).toBe(false);
-    expect(armed.gapToSend).toBeCloseTo(layout.gapToSend, 1);
-    expect(armed.overlapWithSend).toBe(0);
+    expect(armed.endsShelf).toBe(true);
+    expect(armed.insideShelf).toBe(true);
     await composer.fill('');
 
     // What the popover says is main's accounting, not the panel's arithmetic.
@@ -333,7 +340,7 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     // would float over Search with nothing beneath it.
     await meter.click();
     await expect(popover).toBeVisible();
-    const chatTab = app.window.getByRole('tab', { name: 'AI Chat' });
+    const chatTab = app.window.getByRole('tab', { name: 'Chat', exact: true });
     await chatTab.focus();
     await app.window.keyboard.press('ArrowRight');
     await expect(app.window.getByRole('tab', { name: 'Search' })).toHaveAttribute('aria-selected', 'true');
@@ -348,7 +355,7 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     await expect(popover).toHaveCount(0);
   });
 
-  test('keeps the wheel clear of Send at the minimum panel width and at 200%', async () => {
+  test('keeps the wheel whole at the shelf edge at the minimum panel width and at 200%', async () => {
     const chat = app.window.getByRole('region', { name: 'AI research chat' });
     await expect(chat.getByTestId('chat-context-budget')).toBeVisible();
 
@@ -358,9 +365,9 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     await app.window.waitForTimeout(350);
 
     const narrow = await app.window.evaluate(measureComposer);
-    expect(narrow.overlapWithSend).toBe(0);
-    expect(narrow.gapToSend).toBeGreaterThanOrEqual(4);
-    expect(narrow.sameRow).toBe(true);
+    expect(narrow.endsShelf).toBe(true);
+    expect(narrow.insideShelf).toBe(true);
+    expect(narrow.aboveSend).toBe(true);
     expect(narrow.meterWidth).toBeGreaterThanOrEqual(24);
     expect(narrow.meterHeight).toBeGreaterThanOrEqual(24);
     expect(narrow.sendRight).toBeLessThanOrEqual(narrow.formRight + 1);
@@ -399,9 +406,9 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
     const zoomedMeter = app.window.getByRole('region', { name: 'AI research chat' }).getByTestId('chat-context-budget');
     await expect(zoomedMeter).toBeVisible();
     const zoomed = await app.window.evaluate(measureComposer);
-    expect(zoomed.overlapWithSend).toBe(0);
-    expect(zoomed.gapToSend).toBeGreaterThanOrEqual(4);
-    expect(zoomed.sameRow).toBe(true);
+    expect(zoomed.endsShelf).toBe(true);
+    expect(zoomed.insideShelf).toBe(true);
+    expect(zoomed.aboveSend).toBe(true);
     // CSS pixels are unchanged by zoom; the control keeps its 24px target.
     expect(zoomed.meterWidth).toBeGreaterThanOrEqual(24);
     expect(zoomed.meterHeight).toBeGreaterThanOrEqual(24);

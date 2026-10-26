@@ -100,8 +100,7 @@ an AI provider is actually ready). Dismiss it with **Got it**.
 Supported file types are **.pdf**, **.epub**, **.mobi**, **.azw**, **.azw3**,
 **.docx**, **.pptx**, **.md** and **.markdown**.
 
-Just want to read a file once? **Open** (`⌘ O` / `Ctrl + O`, or the **Open file**
-button in the header) reads it without adding it to your library, and discards
+Just want to read a file once? **Open** (**File ▸ Open…**, `⌘ O` / `Ctrl + O`) reads it without adding it to your library, and discards
 its highlights and notes when you close it. See
 [Open a file without importing it](adding-documents.md#open-a-file-without-importing-it). To capture an article from the web
 instead, use the small caret next to **+ Import** and choose **From web URL…**.
@@ -121,8 +120,9 @@ rather than copying it: [Adding documents](adding-documents.md).
 5. Under **Highlight**, click one of the five colour swatches. Hover or
    keyboard-focus a swatch and its name appears beside it — *Yellow*, *Blue*,
    *Green*, *Pink*, *Purple*.
-6. Click **Add note** to attach a note to that passage. Type it under **Note on
-   selected text** and choose **Save note**.
+6. Click **Add note** to attach a note to that passage. Type it in the note
+   card. It saves as you type. Choose **Done** (or press `⌘ Enter` /
+   `Ctrl + Enter`) when you have finished.
 7. The same toolbar also offers **Copy**, **Ask AI** and **Submit to agent**.
 8. Press `⌘ Shift + N` / `Ctrl + Shift + N` to open **Annotations** in the right
    panel and see everything you have saved.
@@ -143,7 +143,7 @@ API key) and [Local server](providers/local-server.md) (point at a server you
 already run) are the two quickest routes.
 
 1. Press `⌘ Shift + A` / `Ctrl + Shift + A` to open the companion panel, then
-   select the **AI Chat** tab.
+   select the **Chat** tab.
 2. Choose **New conversation**.
 3. Attach what the AI should look at. Select text in the document, or use the
    **+** button on the **CONTEXT** bar to add a page range or the whole

@@ -3,6 +3,7 @@ import { useLibraryStore, type LibrarySection } from '../stores/use-library-stor
 import { FolderTreeItem } from '../features/library/components/FolderTreeItem';
 import { LibraryNavItem } from '../features/library/components/LibraryNavItem';
 import { applyDocumentDrop } from '../features/library/use-document-drag';
+import { useFileImport } from '../features/library/use-file-drop';
 import { useLibraryDestination } from '../features/library/use-library-destination';
 import { AppIcon, type AppIconName } from './AppIcon';
 
@@ -38,6 +39,10 @@ export function LibrarySidebar() {
     applyDocumentDrop(documents, moveDocument, documentId, folderId);
   };
 
+  // Files dropped on a folder are imported into it, or — on All Documents — at
+  // the root; see `useFileImport`.
+  const fileDrop = useFileImport();
+
   // Semantic icons, not emoji: these tint from the button's own text token, so
   // the rail reads correctly in every theme.
   const navItems: { id: LibrarySection; label: string; icon: AppIconName; testId: string }[] = [
@@ -57,7 +62,7 @@ export function LibrarySidebar() {
       <div className="flex flex-col gap-6 p-4 overflow-y-auto">
         {/* Navigation items */}
         <nav aria-label="Library sections" className="flex flex-col gap-1">
-          <h2 className="mb-2 text-2xs font-semibold uppercase tracking-wider text-text-secondary">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
             Library
           </h2>
           {navItems.map((item) => (
@@ -72,6 +77,7 @@ export function LibrarySidebar() {
                 goToDestination(item.id);
               }}
               onDropDocument={dropDocument}
+              fileDrop={fileDrop}
             />
           ))}
         </nav>
@@ -79,7 +85,7 @@ export function LibrarySidebar() {
         {/* Folders hierarchy */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xs font-semibold uppercase tracking-wider text-text-secondary">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Folders
             </h2>
             <button
@@ -90,9 +96,9 @@ export function LibrarySidebar() {
               onClick={() => {
                 setNewFolderModalOpen(true);
               }}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary"
+              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary"
             >
-              <AppIcon name="add" size={12} className="shrink-0" />
+              <AppIcon name="add" size={13} className="shrink-0" />
               New
             </button>
           </div>
@@ -103,7 +109,7 @@ export function LibrarySidebar() {
               aria-label="Virtual folders"
               className="flex flex-col gap-0.5"
             >
-              <p className="px-2 py-1 text-2xs italic text-text-secondary">
+              <p className="px-2 py-1 text-xs italic text-text-secondary">
                 No folders created yet.
               </p>
             </div>
@@ -133,6 +139,7 @@ export function LibrarySidebar() {
                   onDropDocument={(documentId, folderId) => {
                     dropDocument(documentId, folderId);
                   }}
+                  fileDrop={fileDrop}
                 />
               ))}
             </ul>

@@ -6,7 +6,7 @@ import { launchInterleaf, stubOpenDialog, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 
 /** The labels the companion bar owes the reader, in order. */
-const TAB_LABELS = ['AI Chat', 'Search', 'Annotations', 'Agent'] as const;
+const TAB_LABELS = ['Chat', 'Search', 'Annotations', 'Agent'] as const;
 
 /** WCAG 2.2 SC 2.5.8 target minimum. */
 const MIN_TARGET = 24;

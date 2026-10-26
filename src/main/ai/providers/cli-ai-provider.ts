@@ -650,7 +650,7 @@ export function createCliProviderDefinitions(): readonly CliDefinition[] {
         ...(modelId && modelId !== 'codex-default' ? ['--model', modelId] : []),
       ],
       detectAuth: detectCodexAuth,
-      chatUnavailableReason: 'Sign in with ChatGPT in Settings to use your subscription for AI Chat.',
+      chatUnavailableReason: 'Sign in with ChatGPT in Settings to use your subscription for Chat.',
       chatAllowedWhenConnected: true,
       toolActivity: codexToolActivity,
       toolViolationMessage: 'Codex attempted an unsupported tool operation.',
@@ -712,7 +712,7 @@ export function createCliProviderDefinitions(): readonly CliDefinition[] {
       }),
       detectAuth: () => Promise.resolve('unknown'),
       discoverCatalog: (binary, executeFile, cwd, log) => piCatalog({ binary, executeFile, cwd, log }),
-      chatUnavailableReason: 'Sign in to a Pi model provider to use Pi for AI Chat.',
+      chatUnavailableReason: 'Sign in to a Pi model provider to use Pi for Chat.',
       chatAllowedWhenConnected: true,
       toolActivity: piToolActivity,
       toolViolationMessage: 'Pi attempted an unsupported tool operation.',
@@ -736,7 +736,7 @@ export function createCliProviderDefinitions(): readonly CliDefinition[] {
       }),
       detectAuth: () => Promise.resolve('unknown'),
       discoverCatalog: (binary, executeFile, cwd, log) => ompCatalog({ binary, executeFile, cwd, log }),
-      chatUnavailableReason: 'Sign in to an Omp model provider to use Omp for AI Chat.',
+      chatUnavailableReason: 'Sign in to an Omp model provider to use Omp for Chat.',
       chatAllowedWhenConnected: true,
       // Omp emits Pi's event vocabulary, so the shared structural detector
       // covers both; it additionally rejects OpenAI-shaped `function_call`

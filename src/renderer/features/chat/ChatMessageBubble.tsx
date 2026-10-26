@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import type { ChatContextDisclosure, ChatMessage } from '@shared/types/ai';
 import { AppIcon } from '../../components/AppIcon';
 import { LoadingShimmerText } from '../../components/LoadingShimmer';
@@ -8,6 +8,7 @@ import { ChatWebSources } from './ChatWebSources';
 import { disclosureDetail } from './chat-disclosure-text';
 import type { ChatToastTone } from './use-chat-toast';
 import { bridge } from '../../app/api-client';
+import { AnswerActionTooltip, useAnswerActionTooltip } from './ChatAnswerActionTooltip';
 
 type ChatMessageBubbleProps = {
   readonly message: ChatMessage;
@@ -150,6 +151,16 @@ function saveOutcome(saved: boolean): readonly [ChatToastTone, string] {
  * the icon — carries the accessible name, and the 24px box keeps a usable hit
  * target around a 15px glyph without re-introducing the label row's height.
  */
+/**
+ * What each action does, spelled out for the tooltip and the button's
+ * description. Saving anchors a location note where the reader is now.
+ */
+const ACTION_HINTS = {
+  copy: 'Copy the full answer to the clipboard',
+  save: 'Save the answer as a note at your current location in this document',
+} as const;
+type AnswerAction = keyof typeof ACTION_HINTS;
+
 const ACTION_CLASS =
   'flex h-6 w-6 items-center justify-center rounded text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-focus-ring disabled:opacity-40';
 
@@ -164,8 +175,17 @@ function AssistantActions({
   readonly onSaveNote: (content: string) => Promise<boolean>;
   readonly onNotice: (tone: ChatToastTone, message: string) => void;
 }) {
+  const tooltip = useAnswerActionTooltip<AnswerAction>();
+  const hintId = useId();
+  const hintIds = { copy: `${hintId}-copy`, save: `${hintId}-save` } as const;
   const hasContent = content.trim().length > 0;
   if (!hasContent) return null;
+
+  /** The tooltip handlers, with the press that dismisses it also doing the action. */
+  const bind = (action: AnswerAction, activate: () => void) => {
+    const trigger = tooltip.trigger(action);
+    return { ...trigger, onClick: () => { trigger.onClick(); activate(); } };
+  };
 
   const copy = async (): Promise<void> => {
     try {
@@ -193,24 +213,35 @@ function AssistantActions({
         type="button"
         data-testid="copy-chat-answer"
         aria-label="Copy answer"
-        title="Copy answer"
-        onClick={() => { void copy(); }}
+        aria-describedby={hintIds.copy}
+        {...bind('copy', () => { void copy(); })}
         className={ACTION_CLASS}
       >
         <AppIcon name="copy" size={15} />
       </button>
+      <span id={hintIds.copy} hidden>{ACTION_HINTS.copy}</span>
       {canSaveNote && (
-        <button
-          type="button"
-          data-testid="save-chat-answer-note"
-          aria-label="Save answer as note"
-          title="Save answer as note"
-          onClick={() => { void saveNote(); }}
-          className={ACTION_CLASS}
-        >
-          <AppIcon name="add-note" size={15} />
-        </button>
+        <>
+          <button
+            type="button"
+            data-testid="save-chat-answer-note"
+            aria-label="Save answer as note"
+            aria-describedby={hintIds.save}
+            {...bind('save', () => { void saveNote(); })}
+            className={ACTION_CLASS}
+          >
+            <AppIcon name="add-note" size={15} />
+          </button>
+          <span id={hintIds.save} hidden>{ACTION_HINTS.save}</span>
+        </>
       )}
+      <AnswerActionTooltip
+        shown={tooltip.shown}
+        hints={ACTION_HINTS}
+        onPointerEnter={tooltip.keep}
+        onPointerLeave={tooltip.release}
+        onDismiss={tooltip.hide}
+      />
     </div>
   );
 }

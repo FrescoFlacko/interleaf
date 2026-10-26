@@ -8,11 +8,11 @@
 .chat-design {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'IBM Plex Sans', Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
 }
 .chat-design-header { padding: 12px 16px 10px; }
 .chat-design-thread-title {
-  font: 500 13px/1.25 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 13px/1.25 'Inter', Arial, sans-serif;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
@@ -28,7 +28,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 400 14px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 14px/1 'Inter', Arial, sans-serif;
 }
 /* Sessions screen (#2b): the neutral canvas / raised card / hairline-footer
    relationship is kept, expressed as surface → elevated-surface → surface. */
@@ -44,7 +44,7 @@
 }
 .chat-design-sessions-title {
   margin-right: auto;
-  font: 600 14px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 600 14px/1.2 'Inter', Arial, sans-serif;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
@@ -59,7 +59,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 400 13px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/1 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 .chat-design-create {
@@ -72,7 +72,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/1 'Inter', Arial, sans-serif;
 }
 .chat-design-create > span { font-size: 14px; }
 .chat-design-sessions-body {
@@ -125,7 +125,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 500 14px/1.25 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 14px/1.25 'Inter', Arial, sans-serif;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
@@ -133,7 +133,7 @@
 .chat-design-card-current {
   margin-left: auto;
   flex: none;
-  font: 500 11px/1 'IBM Plex Mono', monospace;
+  font: 500 11px/1 'JetBrains Mono', monospace;
   letter-spacing: .08em;
   color: var(--accent);
 }
@@ -150,14 +150,14 @@
      title row so the hit area cannot make the card taller than the reference. */
   margin-block: -1.625px;
   border-radius: 6px;
-  font: 400 13px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/1 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-card-overflow:hover { background: var(--bg-surface); }
 }
 .chat-design-card-preview {
-  font: 400 13px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/1.5 'Inter', Arial, sans-serif;
   color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -176,7 +176,7 @@
   padding: 4px 8px;
   border-radius: 6px;
   background: var(--bg-surface);
-  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  font: 400 11px/1.3 'JetBrains Mono', monospace;
   color: var(--text-secondary);
 }
 .chat-design-card-metatext {
@@ -186,7 +186,7 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
-  font: 400 11px/1 'IBM Plex Mono', monospace;
+  font: 400 11px/1 'JetBrains Mono', monospace;
   color: var(--text-secondary);
 }
 .chat-design-card-footer {
@@ -200,9 +200,9 @@
   background: var(--bg-surface);
 }
 /* The chevron is a block-level icon, so the label and it sit in one row. */
-.chat-design-resume { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--accent); }
-.chat-design-rename { margin-left: auto; font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--text-secondary); }
-.chat-design-delete { font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--danger); }
+.chat-design-resume { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font: 500 12px/1 'Inter', Arial, sans-serif; color: var(--accent); }
+.chat-design-rename { margin-left: auto; font: 400 12px/1 'Inter', Arial, sans-serif; color: var(--text-secondary); }
+.chat-design-delete { font: 400 12px/1 'Inter', Arial, sans-serif; color: var(--danger); }
 /* The card is the selector: this covers it so a pointer anywhere resumes the
    conversation, while the overflow control above it keeps its own actions. */
 .chat-design-card-open { position: absolute; inset: 0; z-index: 1; border-radius: 12px; cursor: pointer; }
@@ -243,7 +243,7 @@
   padding: 6px 8px;
   border-radius: 6px;
   text-align: left;
-  font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 13px/20px 'Inter', Arial, sans-serif;
   color: var(--text-primary);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -252,7 +252,7 @@
 .chat-design-menu button:focus-visible { outline: none; background: var(--accent-muted); }
 .chat-design-menu button[data-tone="danger"] { color: var(--danger); }
 .chat-design-menu [role="separator"] { height: 1px; margin: 4px; background: var(--border-subtle); }
-.chat-design-menu-check { display: flex; flex: none; justify-content: center; width: 12px; font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif; color: var(--accent); }
+.chat-design-menu-check { display: flex; flex: none; justify-content: center; width: 12px; font: 400 11px/1 'Inter', Arial, sans-serif; color: var(--accent); }
 /* Informational panel anchored to a composer control, on the same portalled,
    viewport-positioned layer as the menu above and for the same reason: the
    configuration row it sits beside clips and scrolls. */
@@ -292,13 +292,13 @@
   overflow: hidden;
 }
 .chat-model-picker:has(> .chat-model-picker-notice, > .chat-model-picker-status) { max-height: min(280px, calc(100vh - 16px)); }
-.chat-model-picker-notice { flex: none; margin: 6px 6px 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--warning); color: var(--text-primary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-notice { flex: none; margin: 6px 6px 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--warning); color: var(--text-primary); font: 400 12px/16px 'Inter', Arial, sans-serif; }
 .chat-model-picker-search { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
-.chat-model-picker-search > input { flex: 1; min-width: 0; background: transparent; color: var(--text-primary); font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif; outline: none; }
+.chat-model-picker-search > input { flex: 1; min-width: 0; background: transparent; color: var(--text-primary); font: 400 13px/20px 'Inter', Arial, sans-serif; outline: none; }
 .chat-model-picker-search:focus-within { box-shadow: inset 0 -2px 0 var(--focus-ring); }
 .chat-model-picker-list { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
-.chat-model-picker-group { padding: 6px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
-.chat-model-picker-option { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 4px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-group { padding: 6px 8px 2px; color: var(--text-secondary); font: 500 11px/14px 'Inter', Arial, sans-serif; }
+.chat-model-picker-option { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 4px 8px; border-radius: 6px; cursor: default; color: var(--text-primary); font: 400 13px/18px 'Inter', Arial, sans-serif; }
 .chat-model-picker-option[data-active="true"] { background: var(--accent-muted); box-shadow: inset 2px 0 0 var(--accent); }
 @media (hover: hover) and (pointer: fine) {
   .chat-model-picker-option:hover:not([aria-disabled="true"]) { background: var(--accent-muted); }
@@ -306,15 +306,15 @@
 .chat-model-picker-option[aria-disabled="true"] { color: var(--text-secondary); }
 .chat-model-picker-check { flex: none; display: inline-flex; width: 12px; height: 18px; align-items: center; color: var(--accent); }
 .chat-model-picker-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.chat-model-picker-name { overflow-wrap: anywhere; font: 400 13px/18px 'IBM Plex Sans', Arial, sans-serif; }
-.chat-model-picker-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Mono', monospace; }
-.chat-model-picker-badge { flex: none; margin-top: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-secondary); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-name { overflow-wrap: anywhere; font: 400 13px/18px 'Inter', Arial, sans-serif; }
+.chat-model-picker-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: 400 11px/14px 'JetBrains Mono', monospace; }
+.chat-model-picker-badge { flex: none; margin-top: 2px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-secondary); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 .chat-model-picker-empty,
-.chat-model-picker-status { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--text-secondary); font: 400 12px/16px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-status { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--text-secondary); font: 400 12px/16px 'Inter', Arial, sans-serif; }
 .chat-model-picker-status[data-tone="error"] { color: var(--danger); }
 .chat-model-picker-status > button { margin-left: auto; min-height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border-subtle); color: var(--text-primary); }
 .chat-model-picker-footer { flex: none; padding: 4px; border-top: 1px solid var(--border-subtle); }
-.chat-model-picker-footer > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 400 13px/20px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-picker-footer > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 24px; padding: 2px 8px; border-radius: 6px; color: var(--text-primary); font: 400 13px/20px 'Inter', Arial, sans-serif; }
 @media (hover: hover) and (pointer: fine) {
   .chat-model-picker-footer > button:hover { background: var(--accent-muted); }
 }
@@ -325,7 +325,7 @@
 .chat-design-assistant > div:first-child { height: 11px; }
 .chat-design-assistant > div:first-child > span:first-child { background: var(--accent); }
 .chat-design-assistant > div:first-child > span:last-child {
-  font: 500 11px/1 'IBM Plex Mono', monospace;
+  font: 500 11px/1 'JetBrains Mono', monospace;
   letter-spacing: .1em;
   color: var(--text-secondary);
 }
@@ -364,7 +364,7 @@
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-elevated);
   box-shadow: 0 6px 20px color-mix(in srgb, var(--text-primary) 14%, transparent);
-  font: 400 12px/1.35 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.35 'Inter', Arial, sans-serif;
   color: var(--text-primary);
 }
 /* A success notice has nothing to click, and it floats over the action row that
@@ -373,45 +373,9 @@
    Dismiss control, so that one stays clickable. */
 .chat-design-toast[data-tone="success"] { pointer-events: none; }
 .chat-design-toast[data-tone="error"] { border-color: var(--danger); color: var(--danger); }
-.chat-design-footer > .chat-design-context { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; }
-/* Inside the composer card the context row sits above the field; the card's
-   own gap separates them, so the row adds no trailing margin of its own. */
-.chat-design-composer > .chat-design-context { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.chat-design-composer > .chat-design-context .chat-design-chips { margin-bottom: 0; }
-.chat-design-composer > .chat-design-context .chat-design-chips:empty { display: none; }
 .chat-design-composer-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.chat-design-footer > .chat-design-composer { flex: none; }
-/* The summary carries the "@ Add context" pill first, then the count. Every
- * item keeps its intrinsic width; the count takes the one automatic margin, so
- * it sits at the far end. It is a companion meta line: sentence-case sans 11px. */
-.chat-design-context-summary { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 8px; min-width: 0; font: 400 11px/16px 'IBM Plex Sans', Arial, sans-serif; color: var(--text-secondary); }
-.chat-design-context-summary > span { flex: none; }
-.chat-design-context-summary > .chat-design-context-add + span { margin-left: auto; }
-/* "@ Add context": the pill that leads the context row inside the composer
- * card (DESIGN.md, Inline context). It keeps the 24px minimum target height
- * (WCAG 2.2 SC 2.5.8) and never wraps its short label. */
-.chat-design-context-add {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  color: var(--accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
-  white-space: nowrap;
-}
-.chat-design-context-add-at { font: 500 12px/1 'IBM Plex Mono', monospace; }
-@media (hover: hover) and (pointer: fine) {
-  .chat-design-context-add:hover:not(:disabled) { border-color: var(--accent); }
-}
-.chat-design-context-add[aria-expanded="true"] { border-color: var(--accent); }
-.chat-design-context-add:disabled { opacity: .4; }
-/* Context-window wheel, in the composer's control row with the other
- * session-level controls. The track is always drawn so the control keeps one
+/* Context-window wheel, at the edge of the context shelf (chat-context-shelf.css)
+ * beside what it reports on. The track is always drawn so the control keeps one
  * shape; the value arc appears only when main supplies a real model window, and
  * the accounting that keeps the glance honest lives in the panel it opens. The
  * 26px square matches Send's painted height and clears the 24px minimum target
@@ -448,9 +412,9 @@
   justify-content: space-between;
   gap: 8px;
   color: var(--text-primary);
-  font: 400 12px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.3 'Inter', Arial, sans-serif;
 }
-.chat-design-budget-quota-value { font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+.chat-design-budget-quota-value { font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); }
 .chat-design-budget-quota[data-budget-level="warning"] .chat-design-budget-quota-value { color: var(--warning); }
 .chat-design-budget-quota[data-budget-level="error"] .chat-design-budget-quota-value { color: var(--danger); }
 .chat-design-budget-bar {
@@ -470,7 +434,7 @@
   align-items: center;
   gap: 4px;
   color: var(--text-secondary);
-  font: 400 11px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1.3 'Inter', Arial, sans-serif;
 }
 .chat-design-budget-legend-swatch {
   width: 8px;
@@ -481,7 +445,7 @@
 .chat-design-budget-details { display: flex; flex-direction: column; gap: 8px; }
 .chat-design-budget-category-header {
   color: var(--text-secondary);
-  font: 500 11px/1.2 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 11px/1.2 'Inter', Arial, sans-serif;
 }
 .chat-design-budget-row {
   display: flex;
@@ -489,12 +453,12 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--text-primary);
-  font: 400 11px/1.5 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1.5 'Inter', Arial, sans-serif;
 }
 .chat-design-budget-row > dt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-design-budget-row > dd { flex: none; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+.chat-design-budget-row > dd { flex: none; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); }
 .chat-design-budget-row[data-budget-row="share"] { padding-left: 10px; color: var(--text-secondary); }
-.chat-design-budget-warning { color: var(--danger); font: 400 11px/1.4 'IBM Plex Sans', Arial, sans-serif; }
+.chat-design-budget-warning { color: var(--danger); font: 400 11px/1.4 'Inter', Arial, sans-serif; }
 /* Clean Context inside that panel: separated from the accounting above it,
  * and a column so the question it asks wraps instead of widening the panel. */
 .chat-design-clean-context {
@@ -505,45 +469,20 @@
   padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
 }
-.chat-design-chips { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; min-height: 0; max-height: 130px; overflow-y: auto; }
-.chat-design-chip { display: flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 8px 4px 8px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif; }
-.chat-design-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The remove target is 20px inside an 11px chip line, pulled back so the chip
- * keeps its height while the × stays easy to hit. */
-.chat-design-chip > button {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin: -4px -6px -4px -2px;
-  border-radius: 6px;
-  color: var(--text-secondary);
-}
-@media (hover: hover) and (pointer: fine) {
-  .chat-design-chip > button:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-surface-elevated); }
-}
-.chat-design-chip > button:disabled { opacity: .4; }
-.chat-design-chip[data-kind="range"] {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  font-family: 'IBM Plex Mono', monospace;
-}
 /* The prompt is readable text, so it follows the companion text-size
-   preference; `min-height` follows it too, or a larger line would be cropped
-   by the one-line resting height. The shorthand keeps the family and weight
-   and hands the size to the scale. */
+   preference, and it is the composer's primary surface: it rests at three
+   lines and grows with what is written. `min-height` follows the scale too, or
+   a larger line would be cropped by the resting height. The shorthand keeps
+   the family and weight and hands the size to the scale. */
 .chat-design-input {
   width: 100%;
-  min-height: calc(19.6px * var(--companion-text-scale, 1));
-  max-height: 140px;
+  min-height: calc(58.8px * var(--companion-text-scale, 1));
+  max-height: 200px;
   resize: none;
   field-sizing: content;
   background: transparent;
   color: var(--text-primary);
-  font: 400 calc(14px * var(--companion-text-scale, 1))/1.4 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 calc(14px * var(--companion-text-scale, 1))/1.4 'Inter', Arial, sans-serif;
   outline: none;
 }
 .chat-design-input::placeholder { color: var(--text-secondary); }
@@ -553,8 +492,8 @@
    the `.chat-design button:focus-visible` rule below. */
 .chat-design-input:focus,
 .chat-design-input:focus-visible { outline: none; box-shadow: none; }
-/* The tool row under the field: Add context, the model picker, web search and
-   the meter, with Send at the right end. The picker gives way first, down to
+/* The tool row under the field: Add context, the model picker and web search,
+   with Send at the right end. The picker gives way first, down to
    a short ellipsized name; past that the row wraps instead of scrolling, so
    nothing ever hides behind a scrollbar. */
 .chat-design-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
@@ -573,7 +512,7 @@
   padding: 0 4px 0 6px;
   border-radius: 8px;
   color: var(--text-primary);
-  font: 500 12px/16px 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/16px 'Inter', Arial, sans-serif;
   white-space: nowrap;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -601,7 +540,7 @@
 @container (max-width: 119px) {
   .chat-model-trigger-lead { display: none; }
 }
-.chat-model-trigger-badge { flex: none; display: inline-flex; padding: 0 4px; border-radius: 6px; border: 1px solid var(--warning); color: var(--warning); font: 400 11px/14px 'IBM Plex Sans', Arial, sans-serif; }
+.chat-model-trigger-badge { flex: none; display: inline-flex; padding: 0 4px; border-radius: 6px; border: 1px solid var(--warning); color: var(--warning); font: 400 11px/14px 'Inter', Arial, sans-serif; }
 .chat-model-trigger-badge-icon { display: none; }
 /* Too narrow for the model name and the word together, the badge becomes its
    warning glyph so the model stays legible; the trigger's accessible name and
@@ -640,14 +579,13 @@
   .chat-design-header { padding: 8px 12px 6px; }
   .chat-design-messages { padding: 4px 12px 0; gap: 12px; }
   .chat-design-footer { padding: 8px 12px 10px; }
-  .chat-design-context-summary { margin-bottom: 6px; }
-  .chat-design-chips { max-height: 56px; margin-bottom: 6px; }
-  .chat-design-chips:empty { margin-bottom: 0; }
   .chat-design-composer { padding: 8px; gap: 8px; }
+  .chat-design-input { min-height: calc(39.2px * var(--companion-text-scale, 1)); max-height: 96px; }
 }
 
-/* Add context: portalled and anchored to its pill, like the model picker, so
-   a narrow or zoomed panel shrinks it instead of clipping it. */
+/* Add context and the shelf's attachment list: portalled and anchored to their
+   triggers, like the model picker, so a narrow or zoomed panel shrinks them
+   instead of clipping them. */
 .chat-context-popover { gap: 10px; }
 .chat-context-range { display: flex; flex-direction: column; gap: 6px; }
 .chat-context-range-submit {
@@ -657,10 +595,10 @@
   border-radius: 6px;
   background: var(--accent);
   color: var(--on-accent);
-  font: 500 12px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 500 12px/1 'Inter', Arial, sans-serif;
 }
 .chat-context-range-submit:disabled { opacity: .4; }
-.chat-context-close { align-self: flex-start; min-height: 24px; padding: 0 4px; border-radius: 6px; color: var(--accent); font: 400 12px/1 'IBM Plex Sans', Arial, sans-serif; }
+.chat-context-close { align-self: flex-start; min-height: 24px; padding: 0 4px; border-radius: 6px; color: var(--accent); font: 400 12px/1 'Inter', Arial, sans-serif; }
 
 /* Empty thread: the document it is about, then starters that only fill the
    composer (DESIGN.md, Empty states / Nothing auto-sends). */
@@ -675,7 +613,7 @@
   color: var(--text-primary);
   text-align: left;
   overflow-wrap: anywhere;
-  font: 400 12px/1.35 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 12px/1.35 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-starter:hover:not(:disabled) { border-color: var(--accent); }
@@ -686,7 +624,7 @@
    fill the composer and never send. */
 .chat-design-follow-ups { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-top: -8px; }
 .chat-design-follow-ups-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.chat-design-follow-ups-label { color: var(--text-secondary); font: 400 11px/1 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+.chat-design-follow-ups-label { color: var(--text-secondary); font: 400 11px/1 'JetBrains Mono', monospace; letter-spacing: .04em; }
 .chat-design-follow-ups-refresh {
   display: inline-flex;
   align-items: center;
@@ -711,7 +649,7 @@
   min-height: 24px;
   padding: 0 2px;
   color: var(--text-secondary);
-  font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-prompt-details-toggle:hover { color: var(--text-primary); }
@@ -727,8 +665,8 @@
   border-radius: 8px;
 }
 .chat-design-prompt-details-body[hidden] { display: none; }
-.chat-design-prompt-details-label { color: var(--text-secondary); font: 400 11px/1 'IBM Plex Mono', monospace; letter-spacing: .04em; }
-.chat-design-prompt-details-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-primary); font: 400 12px/1.4 'IBM Plex Sans', Arial, sans-serif; }
+.chat-design-prompt-details-label { color: var(--text-secondary); font: 400 11px/1 'JetBrains Mono', monospace; letter-spacing: .04em; }
+.chat-design-prompt-details-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-primary); font: 400 12px/1.4 'Inter', Arial, sans-serif; }
 .chat-design-prompt-details-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .chat-design-prompt-details-actions > button {
   min-height: 24px;
@@ -736,7 +674,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   color: var(--text-primary);
-  font: 400 11px/1 'IBM Plex Sans', Arial, sans-serif;
+  font: 400 11px/1 'Inter', Arial, sans-serif;
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-design-prompt-details-actions > button:hover:not(:disabled) { border-color: var(--accent); }
@@ -753,7 +691,29 @@
   padding: 4px 6px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  font: 400 11px/1.3 'IBM Plex Mono', monospace;
+  font: 400 11px/1.3 'JetBrains Mono', monospace;
 }
 .chat-design-param-token > dt { flex: none; color: var(--text-secondary); }
 .chat-design-param-token > dd { min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); }
+/* Answer-action tooltip: the menu surface at its smallest, fading in over
+   125ms with a 0.97 scale; a neighbour opened while one is showing appears at
+   once. Reduced motion collapses the transition globally. */
+.chat-design-tooltip {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  width: max-content;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--elevation-popover);
+  color: var(--text-primary);
+  font: 400 11px/16px 'Inter', Arial, sans-serif;
+  transition: opacity 125ms var(--ease-out), transform 125ms var(--ease-out);
+}
+@starting-style {
+  .chat-design-tooltip { opacity: 0; transform: scale(0.97); }
+}
+.chat-design-tooltip[data-instant] { transition: none; }

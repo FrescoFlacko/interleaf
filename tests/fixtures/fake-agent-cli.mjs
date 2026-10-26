@@ -52,7 +52,12 @@ process.stdout.write(`${JSON.stringify({ type: 'thread.started', thread_id: 'fak
 process.stdout.write(`${JSON.stringify({ type: 'progress', message: 'fixture structured output' })}\n`);
 process.stdout.write(`${JSON.stringify({ type: 'changed-files', files: [args.includes('--mutate-workspace') ? 'interleaf-fixture-change.txt' : 'fixture.txt'] })}\n`);
 process.stdout.write(`${JSON.stringify({ type: 'tests', status: 'passed', count: 1 })}\n`);
-process.stdout.write(`${JSON.stringify({ type: 'final', text: 'fixture final report' })}\n`);
+// A prompt carrying the diagram marker gets Markdown output with fenced Mermaid
+// diagrams, so diagram rendering in Agent output can be exercised offline.
+const DIAGRAM_MESSAGE = ['Mapped the excerpt:', '', '```mermaid', 'flowchart LR', '  Q[Query] --> A[Attention]', '  A --> O[Output]', '```'].join('\n');
+const DIAGRAM_REPORT = ['## Fixture report', '', 'The run produced this sequence:', '', '```mermaid', 'sequenceDiagram', '  participant R as Reader', '  participant A as Agent', '  R->>A: Summarise excerpt', '  A-->>R: Report', '```', '', 'And a code sample:', '', '```text', 'fixture code', '```'].join('\n');
+const closing = prompt.includes('e2e-pele-diagrams') ? [{ type: 'agent_message', text: DIAGRAM_MESSAGE }, { type: 'final', text: DIAGRAM_REPORT }] : [{ type: 'final', text: 'fixture final report' }];
+process.stdout.write(closing.map((event) => `${JSON.stringify(event)}\n`).join(''));
 if (args.includes('--sleep')) await new Promise((resolve) => setTimeout(resolve, 5_000));
 if (args.includes('--fail')) process.exitCode = 7;
 else process.stdout.write('fixture final\n');

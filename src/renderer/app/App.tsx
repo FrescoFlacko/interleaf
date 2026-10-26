@@ -20,6 +20,7 @@ import { ResizablePanel } from "../components/ResizablePanel";
 import { CompactDrawer } from "../components/CompactDrawer";
 import { OpenFileNotice } from "../components/OpenFileNotice";
 import { followFileCommands } from "../stores/use-open-file-store";
+import { flushNoteDrafts } from "../hooks/note-drafts";
 import { useAppliedPalette } from "../styles/use-applied-palette";
 export function App() {
   // The one chat controller this window runs, shared by every view below and
@@ -108,10 +109,15 @@ export function App() {
   // The File menu and operating-system open requests arrive as commands.
   useEffect(() => followFileCommands(), []);
 
+  // Before the window closes, the reading position and every note's newest
+  // text are written; main waits for both (up to its handshake timeout).
   useEffect(() => {
-    return bridge.app.onBeforeClose(() =>
-      useReaderStore.getState().flushPendingReadingPosition()
-    );
+    return bridge.app.onBeforeClose(async () => {
+      await Promise.allSettled([
+        useReaderStore.getState().flushPendingReadingPosition(),
+        flushNoteDrafts(),
+      ]);
+    });
   }, []);
 
   useAppliedPalette(palette, loadedSettings !== null);

@@ -130,7 +130,7 @@ test.describe('Companion panel content margins', () => {
    * instead of guessing a duration.
    */
   async function openTab(name: string, probe: string): Promise<void> {
-    const tab = app.window.getByRole('tab', { name });
+    const tab = app.window.getByRole('tab', { name, exact: true });
     await tab.click();
     await expect(tab).toHaveAttribute('aria-selected', 'true');
     await app.window.locator(probe).first().waitFor({ state: 'visible' });
@@ -145,7 +145,7 @@ test.describe('Companion panel content margins', () => {
     await expect(app.window.getByLabel('Task description')).toBeVisible();
     await setPanelWidth(REFERENCE_WIDTH);
 
-    await openTab('AI Chat', PROBES.chat);
+    await openTab('Chat', PROBES.chat);
     const chat = await gutters(PROBES.chat);
     await openTab('Search', PROBES.search);
     const search = await gutters(PROBES.search);

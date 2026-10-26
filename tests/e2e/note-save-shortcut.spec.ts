@@ -136,7 +136,7 @@ test.describe('Note save shortcut', () => {
 
     await field.fill(NOTE_BODY);
     await field.press(SHORTCUT);
-    // The same completion clicking Save produces: the toolbar closes only once
+    // The same completion clicking Done produces: the toolbar closes only once
     // the annotation has been created.
     await expect(toolbar).toBeHidden();
     await clearSelection(app.window);

@@ -9,7 +9,7 @@ import { ChatPanel } from "../features/chat/ChatPanel";
 import "./companion-text.css";
 
 const TABS: readonly { id: RightTab; label: string }[] = [
-  { id: "chat", label: "AI Chat" },
+  { id: "chat", label: "Chat" },
   { id: "search", label: "Search" },
   { id: "annotations", label: "Annotations" },
   { id: "agent", label: "Agent" },

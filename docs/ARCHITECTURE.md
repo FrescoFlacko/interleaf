@@ -320,7 +320,7 @@ The main process exclusively manages database connections using synchronous WAL 
 - **Link-in-Place (Optional)**: Retains original filesystem location, storing file path, modification timestamp, size, and SHA-256 hash for drift detection.
 
 ### 2a. Files Opened Without Importing (ADR 0014)
-- **Delivery**: the File menu (*Open…*, *Import to Library…*), the header Open file control, `fileAssociations`, macOS `open-file` (registered at module load and queued before `ready`), the launch argv and `second-instance` argv. `OpenFileRequestQueue` keeps the latest request; main pushes `files:command` and the renderer claims it through `files:openPending` or asks for `files:openDialog`. The renderer never supplies a path.
+- **Delivery**: the File menu (*Open…*, *Import to Library…*), `fileAssociations`, macOS `open-file` (registered at module load and queued before `ready`), the launch argv and `second-instance` argv. `OpenFileRequestQueue` keeps the latest request; main pushes `files:command` and the renderer claims it through `files:openPending` or asks for `files:openDialog`. The renderer never supplies a path.
 - **Isolation**: `OpenFileManager` holds at most one `OpenFileStore` — an `InterleafDatabase.open(':memory:')` with its own repository and service set plus a private staged copy under `<userData>/open-files`. Document- and session-scoped IPC is routed to the owning store (`open-file-routing.ts`); every other request uses the library's services.
 - **Lifetime**: open, close and replace are serialized. Closing the reader, opening another file or a library document, closing the window and quitting dispose the store (cancel chat streams, revoke capabilities, close the database, delete staging); startup sweeps leftovers. Closed ids stay refused. Agent Mode is refused for opened files.
 
@@ -465,7 +465,8 @@ an updater and never contact the network.
   process is not yet reaped. The final idle reading, the shutdown-barrier
   reservation and closing every service's admission happen in one synchronous
   step before the renderer is asked to flush, so nothing new starts during the
-  handshake while flush writes such as reading positions still land. The
+  handshake while flush writes such as reading positions and unsaved note
+  text still land. The
   install then runs after the same drain as an ordinary quit
   (`src/main/app/shutdown-barrier.ts`).
 - `smoke-trust.ts` lets only a build made with `INTERLEAF_UPDATE_SMOKE_TRUST`

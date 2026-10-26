@@ -2,9 +2,9 @@ import { Marked, type Token, type Tokens } from 'marked';
 import { useMemo, type ReactNode } from 'react';
 import type { ChatCitation } from '@shared/types/ai';
 import { CITATION_MARKER_PATTERN, chatCitationLabel, isGroundedSourceId } from '@shared/chat-citation-label';
-import { MarkdownCodeBlock } from './MarkdownCodeBlock';
 import { MarkdownMath } from './MarkdownMath';
 import { mathExtensions, type MathToken } from './markdown-math';
+import { MarkdownFence, useDiagramFences } from './diagram/MarkdownFence';
 
 type MarkdownContentProps = {
   readonly content: string;
@@ -24,6 +24,13 @@ type MarkdownContentProps = {
   readonly pendingCitations?: boolean;
   /** Tooltip on the inert placeholder that replaces an embedded image. */
   readonly imageTitle?: string;
+  /**
+   * Draw complete ` ```mermaid ` fences as diagrams. Only AI chat and agent
+   * output opt in; notes keep every fence as code.
+   */
+  readonly diagrams?: boolean;
+  /** Keep diagram fences as source for now, e.g. while the reply is still streaming. */
+  readonly deferDiagrams?: boolean;
 };
 
 /** Per-surface rendering inputs threaded through the token walk. */
@@ -32,6 +39,7 @@ type MarkdownRenderOptions = {
   readonly onCitation: (sourceId: string) => Promise<void>;
   readonly pendingCitations: boolean;
   readonly imageTitle: string;
+  readonly diagramFences: ReadonlySet<Tokens.Code>;
 };
 
 const SAFE_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:']);
@@ -46,7 +54,8 @@ const markdown = new Marked({ gfm: true, breaks: true, extensions: [...mathExten
  * raw HTML, images, and unsafe URLs inert by construction.
  *
  * This is the single Markdown implementation for every renderer surface: chat
- * messages (through `MarkdownMessage`) and saved annotation note bodies.
+ * messages (through `MarkdownMessage`), agent output and saved annotation note
+ * bodies.
  */
 export function MarkdownContent({
   content,
@@ -54,8 +63,9 @@ export function MarkdownContent({
   onCitation = IGNORE_CITATION,
   pendingCitations = false,
   imageTitle = DEFAULT_IMAGE_TITLE,
+  diagrams,
+  deferDiagrams,
 }: MarkdownContentProps) {
-  const options: MarkdownRenderOptions = { citations, onCitation, pendingCitations, imageTitle };
   const tokens = useMemo(() => {
     try {
       return markdown.lexer(content);
@@ -65,6 +75,8 @@ export function MarkdownContent({
       return [{ type: 'text', raw: content, text: content } satisfies Tokens.Text];
     }
   }, [content]);
+  const diagramFences = useDiagramFences(tokens, diagrams, deferDiagrams);
+  const options: MarkdownRenderOptions = { citations, onCitation, pendingCitations, imageTitle, diagramFences };
 
   return (
     <div data-testid="markdown-content" className="min-w-0 max-w-full break-words">
@@ -159,8 +171,7 @@ function renderToken(
       );
     }
     case 'code': {
-      const code = token as Tokens.Code;
-      return <MarkdownCodeBlock key={key} code={code.text} info={code.lang ?? ''} />;
+      return <MarkdownFence key={key} token={token as Tokens.Code} diagramFences={options.diagramFences} />;
     }
     case 'codespan': {
       const code = token as Tokens.Codespan;

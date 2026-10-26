@@ -3,8 +3,6 @@ import type { PaletteId } from "@shared/constants/palettes";
 import type { AppSettings } from "@shared/schemas/settings";
 import { persistSettings } from "../app/api-client";
 import { useUiStore } from "../stores/use-ui-store";
-import { openFileFromDialog } from "../stores/use-open-file-store";
-import { AppIcon } from "./AppIcon";
 import { ThemeMenu } from "../features/theme/ThemeMenu";
 import { withPalette } from "../features/theme/theme-choice";
 import interleafLogo from "../assets/interleaf-logo.png";
@@ -129,13 +127,13 @@ export function AppHeader({ compact }: { readonly compact: boolean }) {
         <span className="ml-1.5 flex items-baseline gap-1 sm:gap-2 min-w-0">
           <span
             data-testid="app-header-name"
-            className="text-sm sm:text-base font-semibold tracking-tight shrink-0"
+            className="text-base sm:text-lg font-semibold tracking-tight shrink-0"
           >
             {APP_NAME}
           </span>
           <span
             data-testid="app-header-tagline"
-            className="hidden min-[680px]:inline text-sm text-text-secondary truncate"
+            className="hidden min-[680px]:inline text-base text-text-secondary truncate"
           >
             {APP_TAGLINE}
           </span>
@@ -148,16 +146,6 @@ export function AppHeader({ compact }: { readonly compact: boolean }) {
           onChoose={handlePaletteSelect}
           onAllThemes={() => { openSettings('theme'); }}
         />
-        <button
-          type="button"
-          data-testid="open-file"
-          onClick={() => { void openFileFromDialog(); }}
-          aria-label="Open file"
-          title="Open file (Ctrl+O)"
-          className="rounded-md p-1.5 sm:p-2 text-text-secondary hover:bg-bg-surface hover:text-text-primary shrink-0"
-        >
-          <AppIcon name="open-file" size={18} />
-        </button>
         <button
           type="button"
           data-testid="open-settings"

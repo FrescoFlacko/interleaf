@@ -23,7 +23,11 @@ is never modified.
 1. Select text in the reader. The **Selection actions** toolbar appears next to
    your selection.
 2. Under the word **Highlight**, click one of the five colour swatches.
-3. The highlight is saved immediately.
+3. The highlight is saved immediately and painted on the page. The toolbar
+   closes and you keep reading: the companion panel stays as it was — closed,
+   or open on whichever tab you had — and on a narrow window the companion
+   drawer does not open. To see your highlights, open the **Annotations** tab
+   yourself (see [The Annotations browser](#the-annotations-browser)).
 
 The five colours are **Yellow**, **Blue**, **Green**, **Pink** and **Purple**.
 Yellow is the default. Colour is never the only cue: hovering or
@@ -44,16 +48,53 @@ The same toolbar also offers:
 
 ## Notes
 
-There are two kinds, and they behave differently.
+There are two kinds, and they behave differently. Both use the same note card,
+in your reading font. A note on selected text opens inside the selection
+toolbar itself, below its buttons, and the toolbar's **×** closes it.
+
+Notes save themselves as you type: a moment after you pause, the card's status
+changes from *Unsaved changes* to *Saved*. There is no Save or Cancel button.
+
+- **Done**, or `⌘ Enter` / `Ctrl + Enter`, saves the latest text and closes
+  the card.
+- `Esc`, the **×** in the corner, or clicking elsewhere also save the latest
+  text before they close it.
+- Plain `Enter` starts a new line.
+- A card you close without typing anything creates no note.
+- If a save fails, the card stays open with your text and says why. Choose
+  **Retry**, or **Discard** to give up the unsaved text. When the save cannot
+  succeed by trying again, only **Discard** is offered.
+- If the card goes away for another reason, such as when you open another
+  document, the selection changes, or you edit a different row in the
+  Annotations panel, your latest text is still saved to the note it was opened
+  on. If that save fails, the note is kept. It reappears under **Note** the next
+  time that document is open, with the text, the place it was anchored, the
+  reason, and **Discard**, plus **Retry** when the save can be tried again.
+  Only **Discard** gives the text up. It does not move your cursor. If the note already
+  exists, editing it again from the Annotations panel continues the same
+  unsaved text.
+- Quitting Interleaf saves any note you are still typing first. Kept notes
+  exist only while Interleaf is running, so if a save keeps failing at quit,
+  or the app stops unexpectedly, the unsaved text is lost.
 
 ### A note on selected text
 
 1. Select the passage.
 2. Click **Add note** in the selection toolbar.
-3. Type under **Note on selected text**.
-4. Click **Save note** (or **Cancel** to discard).
+3. The toolbar expands to hold the note. Type below the passage you selected,
+   which is quoted above your text. The toolbar keeps its top-left corner
+   where it was and grows downward as you type, even if that covers the
+   passage. It moves only when it would not otherwise fit in the reader,
+   and then only as far as it must. The passage stays marked in the page
+   while you type. The mark is not a highlight and goes away when the note
+   closes.
+4. Click **Done** when you have finished.
 
-The note is anchored to that passage, so it travels with the text.
+The note is anchored to that passage, so it travels with the text. Unlike a
+highlight, a note finished with **Done** opens the Annotations panel and
+scrolls the new note into view (except in Focus Mode, which stays
+distraction-free). Saving as you type, and closing the card any other way,
+leave the panels as they were.
 
 ### A note at your current location
 
@@ -61,8 +102,9 @@ Use this when there is nothing in particular to select — a thought about the
 page as a whole.
 
 1. Click **Note** in the reader toolbar.
-2. Type under **Note at current location**.
-3. Click **Save**.
+2. Type in the note card. Its top line shows where you are: the page and how
+   far through the document.
+3. Click **Done**.
 
 In the Annotations browser, the two are labelled *Text note* and *Location note*.
 
@@ -111,7 +153,11 @@ on a crowded row cannot destroy an annotation.
 
 ## Editing and deleting
 
-Editing is inline: choose **Edit**, change the text, and save — or **Cancel**.
+Editing is inline. Choose **Edit** and change the text. A note's text, or a
+highlight's note, opens in the same note card and saves as you type. Choose
+**Done** when you have finished. Emptying a highlight's note removes the
+note but keeps the highlight. A note needs some text, so to remove a note,
+delete it instead. A bookmark's label still has **Save** and **Cancel**.
 
 Deleting asks *Delete this annotation? This cannot be undone.* There is no undo
 afterwards, so the confirmation is the only safety net.

@@ -2,15 +2,13 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { phaseAttributes, usePopoverPresence } from '../../components/ui/popover-presence';
 import type { SlidePhase } from '../../components/slide-presence';
 import { createPortal } from 'react-dom';
-import type { ChatContextItem, ChatSession } from '@shared/types/ai';
 import { useUiStore } from '../../stores/use-ui-store';
 import { useAnchoredPosition } from '../../components/ui/use-anchored-position';
-import { useContextBudget } from './use-context-budget';
 import { ChatCleanContextAction } from './ChatCleanContextAction';
 import { ChatContextWindowBody } from './ChatContextWindowBody';
 import type { CleanContextControlState } from './clean-context-readiness';
 import { TITLE_ID } from './ChatContextUsageDetails';
-import { contextWindowReadout, showsContextWindow, type ContextWindowReadout } from './context-window-readout';
+import type { ContextWindowReadout } from './context-window-readout';
 import { holdsFocus, resolveEscape } from './context-window-escape';
 
 /** Whether this conversation can be compacted, and the request that compacts it. */
@@ -21,12 +19,6 @@ export type CleanContextWiring = {
 
 /** The compaction wiring, passed straight through from the chat panel that already derives it. */
 type CleanContextProp = { readonly cleanContext: CleanContextWiring };
-
-type ChatContextBudgetMeterProps = CleanContextProp & {
-  readonly activeSession: ChatSession | null;
-  readonly contextItems: readonly ChatContextItem[];
-  readonly isStreaming: boolean;
-};
 
 const RING_RADIUS = 5.5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -95,7 +87,9 @@ function BudgetPopover({
   const panelRef = useRef<HTMLDivElement>(null);
   const cleanTriggerRef = useRef<HTMLButtonElement>(null);
   const [confirmingClean, setConfirmingClean] = useState(false);
-  const anchorStyle = useAnchoredPosition(triggerRef, panelRef, 'bottom');
+  // Above the shelf, so the figures never cover the field or Send; the wheel
+  // ends the shelf, so the viewport clamp keeps the panel at the right edge.
+  const anchorStyle = useAnchoredPosition(triggerRef, panelRef, 'top');
 
   useEffect(() => { panelRef.current?.focus(); }, []);
 
@@ -204,9 +198,15 @@ function BudgetTrigger({
 }
 
 /**
- * The composer's context wheel and the panel it opens.
+ * Context-window indicator at the edge of the Chat context shelf, and the panel
+ * it opens — which is also where `Clean Context` is offered, beside the figures
+ * that say whether the conversation needs compacting.
+ *
+ * It is given its readout rather than reading the budget itself, so the shelf
+ * that decides whether to draw at all and the wheel share one request to main
+ * (`useContextWindowReadout`).
  */
-function ContextBudgetControl({
+export function ChatContextBudgetMeter({
   readout,
   cleanContext,
 }: CleanContextProp & { readonly readout: ContextWindowReadout }) {
@@ -245,25 +245,4 @@ function ContextBudgetControl({
       )}
     </>
   );
-}
-
-/**
- * Context-budget indicator for the AI Chat composer, and the panel it opens —
- * which is also where `Clean Context` is offered, beside the figures that say
- * whether the conversation needs compacting.
- *
- * Main's accounting is held in memory, so a conversation can be compactable with
- * no figures to show for it. The wheel then still opens a panel that says the
- * statistics are unavailable and offers compaction; only when there is neither
- * accounting nor a compaction to offer does the wheel disappear.
- */
-export function ChatContextBudgetMeter({
-  activeSession,
-  contextItems,
-  isStreaming,
-  cleanContext,
-}: ChatContextBudgetMeterProps) {
-  const budget = useContextBudget({ session: activeSession, contextItems, isStreaming });
-  if (!showsContextWindow(budget, cleanContext)) return null;
-  return <ContextBudgetControl readout={contextWindowReadout(budget)} cleanContext={cleanContext} />;
 }

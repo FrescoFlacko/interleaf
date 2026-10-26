@@ -148,14 +148,14 @@ test.describe('PDF Reader End-to-End Workflow (Phase 4 Slice)', () => {
     const selectionNoteText = app.window.getByRole('textbox', { name: 'Note on selected text' });
     await expect(selectionNoteText).toBeFocused();
     await selectionNoteText.fill('Keyboard-created selected-text note.');
-    const saveSelectionNote = app.window.getByRole('button', { name: 'Save note' });
+    const saveSelectionNote = app.window.getByRole('button', { name: /^Done/u });
     await saveSelectionNote.focus();
     await app.window.keyboard.press('Enter');
     await expect(app.window.getByTestId('pdf-viewport-container')).toBeFocused();
 
     await app.window.getByTestId('annotation-page-list').getByRole('button', { name: 'Add note' }).click();
     await app.window.getByLabel('Note text').fill('Deep passage note survives restart.');
-    await app.window.getByRole('button', { name: 'Save', exact: true }).click();
+    await app.window.getByRole('button', { name: /^Done/u }).click();
     await expect(app.window.getByText('Deep passage note survives restart.')).toBeVisible();
 
     const userDataDir = app.userDataDir;
