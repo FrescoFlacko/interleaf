@@ -12,6 +12,7 @@ import { resolveDiagnosticsAppVersion } from '../../src/main/diagnostics/packet'
 import { buildDiagnosticsHandlers, type DiagnosticsHandlerDeps } from '../../src/main/ipc/diagnostics-handlers';
 import { failureMessage } from '../../src/renderer/stores/use-diagnostics-store';
 import { InterleafError } from '@shared/errors/interleaf-error';
+import packageJson from '../../package.json';
 
 /**
  * The diagnostics boundary outside the service: the sender-scoped IPC
@@ -164,9 +165,9 @@ describe('analysis text', () => {
 });
 
 describe('resolveDiagnosticsAppVersion', () => {
-  it('returns main-owned package metadata 0.13.0 for unpackaged development runs', () => {
+  it('returns main-owned package metadata for unpackaged development runs', () => {
     const devApp = { getVersion: () => '44.7.0', isPackaged: false };
-    expect(resolveDiagnosticsAppVersion(devApp)).toBe('0.13.0');
+    expect(resolveDiagnosticsAppVersion(devApp)).toBe(packageJson.version);
   });
 
   it('returns app.getVersion for genuine packaged installations', () => {

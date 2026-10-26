@@ -356,7 +356,7 @@ child environments. Diagnostics are bounded and redacted; durable application
 logs exclude raw stdout/stderr and confidential bodies, while session events may
 show bounded redacted output for run monitoring.
 
-**Private diagnostics** (Settings › Advanced › *Run diagnostics*) builds a
+**Private diagnostics** (Settings › Advanced › *Prepare report*) builds a
 small, allowlisted packet in the main process. It contains app and runtime
 versions, OS family and architecture, packaging, provider readiness states and
 counts of known log failure codes. Main uses fixed local diagnostics and readiness
@@ -397,7 +397,7 @@ sanitization, IPC, path, credential, prompt-injection, and agent controls.
   an overwrite.
 - **Secure key storage unavailable:** configure a supported OS keychain/secret
   service. Interleaf fails closed instead of storing the raw key.
-- **Need to report a problem:** open Settings › Advanced › *Run diagnostics*.
+- **Need to report a problem:** open Settings › Advanced › *Prepare report*.
   Review the packet, then optionally ask a tool-free provider for analysis and
   export the report locally. It helps with provider detection or sign-in,
   imports, startup, packaging, updates and agent preparation. It does not

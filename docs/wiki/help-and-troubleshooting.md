@@ -149,32 +149,44 @@ question, try the [FAQ](faq.md).
 - **Settings ▸ Advanced** has *Record diagnostic debug logging*, and the
   Settings dialog has **Export Debug Log** at the bottom. Turn logging on,
   reproduce the problem, then export.
-- **Settings ▸ Advanced ▸ Run diagnostics** builds a private report without
-  needing an open document or AI:
-  1. Choose **Run diagnostics**. You see the exact packet first. It holds
-     Interleaf, Electron, Chrome and Node versions, OS family and
-     architecture, packaging, each provider's readiness and counts of known
-     log failure codes. Main uses fixed local diagnostics and readiness probes;
-     raw log messages, settings, credentials, library or SQLite content,
-     documents, notes, chats, environment, host or user names, or other files
-     are never included in the packet or shared. Status checks may connect to
-     configured providers, but diagnostics packets leave this device only if you
-     explicitly choose to analyze or export.
-  2. Optionally describe the problem, then choose **Review report**. Emails,
-     paths and secret-shaped text are removed. Still read it yourself, because
-     the result is not guaranteed to be anonymous.
-  3. Optionally pick a ready, tool-free provider and model, then choose
-     **Analyze with …**. That sends the reviewed packet and description once,
-     with no history, sources, web search or tools, and the provider may
-     process and keep them under its own terms. Analysis uses a supported
-     tool-free CLI provider, such as Claude Code. ChatGPT (subscription) is not
-     offered because it retains a tool surface. OpenRouter and local-server
-     analysis are disabled because their cancellation is not yet safe.
-     Collection and export are always available.
-     Nothing is chosen for you, and opening the screen sends nothing.
-  4. **Export report** saves exactly the report shown, through the save
-     dialog. Nothing is uploaded.
+- **Settings ▸ Advanced ▸ Private diagnostics** builds a private report
+  without needing an open document or AI. *What the report includes* lists
+  what is collected and what is never included:
+  1. Optionally describe the problem, then choose **Prepare report**. Interleaf
+     collects a small packet on this device: Interleaf, Electron, Chrome and
+     Node versions, OS family and architecture, packaging, each provider's
+     readiness and counts of known log failure codes. Main uses fixed local
+     diagnostics and readiness probes; raw log messages, settings,
+     credentials, library or SQLite content, documents, notes, chats,
+     environment, host or user names, or other files are never included in
+     the packet or shared. Status checks may connect to configured providers,
+     but diagnostics packets leave this device only if you explicitly choose
+     to analyze or export. Emails, paths and secret-shaped text are removed
+     from your description.
+  2. Review the summary: version and system, provider readiness and any
+     recorded problem codes, and your description as it will be shared.
+     **Show the exact collected data** and **Show the full report file** open
+     the exact packet and the exact file Export saves. Still read it yourself,
+     because the result is not guaranteed to be anonymous. Editing the
+     description hides the review until you choose **Update report**;
+     **Collect again** gathers a fresh packet.
+  3. **Export report** saves exactly the full report file, through the save
+     dialog. Nothing is uploaded, and it needs no AI.
+  4. Optionally, under *Optional: ask AI to analyze*, pick a ready, tool-free
+     provider and model, then choose **Analyze with …**. That sends the
+     reviewed packet and description once, with no history, sources, web
+     search or tools, and the provider may process and keep them under its own
+     terms. Analysis uses a supported tool-free CLI provider, such as Claude
+     Code. ChatGPT (subscription) is not offered because it retains a tool
+     surface. OpenRouter and local-server analysis are disabled because their
+     cancellation is not yet safe. If no provider qualifies, connect Claude
+     Code in **AI Providers**, then return and prepare the report again.
+     Nothing is chosen for you, and opening the screen sends nothing. The
+     answer appears as plain text in a separate *Unverified AI analysis* panel
+     and is added to the exported report; Interleaf never runs anything it
+     suggests.
 
+  Leaving Advanced or closing Settings discards the report.
   It is most useful for provider detection or sign-in, imports, startup,
   packaging, updates and agent preparation. The analysis is a guide, not a
   diagnosis.

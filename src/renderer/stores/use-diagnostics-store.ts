@@ -19,10 +19,15 @@ import { bridge } from '../app/api-client';
 
 export type DiagnosticsStep = 'idle' | 'collecting' | 'ready' | 'reviewing' | 'analyzing' | 'exporting';
 
-/** The exact report main will export, and whether it includes an analysis. */
+/**
+ * The exact report main will export, and whether it includes an analysis.
+ * `reviewedText` is the report main returned at review, before any analysis,
+ * so the panel can show what an analysis added without parsing the report.
+ */
 type DiagnosticsReport = {
   readonly issue: string;
   readonly text: string;
+  readonly reviewedText: string;
   readonly analyzed: boolean;
 };
 
@@ -38,10 +43,14 @@ type DiagnosticsStore = {
   readonly issue: string;
   readonly report: DiagnosticsReport | null;
   readonly notice: DiagnosticsNotice | null;
-  readonly collect: () => Promise<void>;
-  /** Editing the issue retires the reviewed report until it is reviewed again. */
+  /**
+   * Collects a packet when there is none (or `fresh` asks for a new one), then
+   * asks main for the reviewed report. The draft description is kept across
+   * the collection and replaced only by main's sanitized copy.
+   */
+  readonly prepare: (fresh?: boolean) => Promise<void>;
+  /** Editing the issue retires the reviewed report, and any outcome about it, until it is prepared again. */
   readonly setIssue: (issue: string) => void;
-  readonly review: () => Promise<void>;
   readonly analyze: (providerId: DiagnosticsProviderId, modelId: string | null) => Promise<void>;
   readonly cancel: () => void;
   readonly exportReport: () => Promise<void>;
@@ -106,40 +115,48 @@ export const useDiagnosticsStore = create<DiagnosticsStore>()((set, get) => {
     if (handle !== undefined) void bridge.diagnostics.discard(handle).catch(() => undefined);
   }
 
+  /** Replaces the packet; true when this collection is still the current one. */
+  async function collect(): Promise<boolean> {
+    release();
+    const mine = generation;
+    // The draft description survives; everything derived from the old packet does not.
+    set({ ...INITIAL, issue: get().issue, step: 'collecting' });
+    try {
+      const collected = await bridge.diagnostics.collect();
+      if (mine === generation) {
+        set({ step: 'ready', collected });
+        return true;
+      }
+      void bridge.diagnostics.discard(collected.handle).catch(() => undefined);
+    } catch (caught) {
+      if (mine === generation) {
+        set({ step: 'idle', notice: { kind: 'error', message: failureMessage(caught instanceof Error ? caught : null) } });
+      }
+    }
+    return false;
+  }
+
   return {
     ...INITIAL,
-    collect: async () => {
-      if (get().step === 'collecting') return;
-      release();
-      const mine = generation;
-      set({ ...INITIAL, step: 'collecting' });
-      try {
-        const collected = await bridge.diagnostics.collect();
-        if (mine === generation) {
-          set({ step: 'ready', collected });
-        } else {
-          void bridge.diagnostics.discard(collected.handle).catch(() => undefined);
-        }
-      } catch (caught) {
-        if (mine === generation) {
-          set({ step: 'idle', notice: { kind: 'error', message: failureMessage(caught instanceof Error ? caught : null) } });
-        }
-      }
+    prepare: async (fresh = false) => {
+      const current = get().step;
+      if (current !== 'idle' && current !== 'ready') return;
+      if ((fresh || get().collected === null) && !(await collect())) return;
+      await step('reviewing', async (handle) => {
+        const preview = await bridge.diagnostics.preview(handle, get().issue);
+        return { issue: preview.issue, report: { issue: preview.issue, text: preview.report, reviewedText: preview.report, analyzed: false } };
+      });
     },
     setIssue: (issue) => {
-      set({ issue, report: null });
+      set({ issue, report: null, notice: null });
     },
-    review: () =>
-      step('reviewing', async (handle) => {
-        const preview = await bridge.diagnostics.preview(handle, get().issue);
-        return { issue: preview.issue, report: { issue: preview.issue, text: preview.report, analyzed: false } };
-      }),
     analyze: (providerId, modelId) =>
       step('analyzing', async (handle) => {
         if (get().report === null) return {};
         const result = await bridge.diagnostics.analyze(handle, providerId, modelId);
         if (result.status === 'failed') return { notice: { kind: 'analysis-failed', reason: result.reason } };
-        return { report: { issue: result.issue, text: result.report, analyzed: true } };
+        const reviewedText = get().report?.reviewedText ?? result.report;
+        return { report: { issue: result.issue, text: result.report, reviewedText, analyzed: true } };
       }),
     cancel: () => {
       const { collected, step: current } = get();

@@ -1,243 +1,169 @@
-import { useEffect, useState, type ReactElement } from 'react';
-import { AI_PROVIDER_DISPLAY_NAMES } from '@shared/constants/ai';
-import {
-  DIAGNOSTICS_LIMITS,
-  type DiagnosticsCollectResult,
-  type DiagnosticsFailure,
-  type DiagnosticsProviderId,
-} from '@shared/schemas/diagnostics';
+import { useEffect, useRef, type ReactElement } from 'react';
+import { DIAGNOSTICS_LIMITS } from '@shared/schemas/diagnostics';
 import { Button } from '../../components/ui/button';
-import { Select } from '../../components/ui/select';
-import { useDiagnosticsStore, type DiagnosticsNotice } from '../../stores/use-diagnostics-store';
+import { Separator } from '../../components/ui/separator';
+import { useDiagnosticsStore } from '../../stores/use-diagnostics-store';
+import { DiagnosticsDisclosure } from './DiagnosticsDisclosure';
+import { DiagnosticsNotice } from './DiagnosticsNotice';
+import { DiagnosticsReview } from './DiagnosticsReview';
 
 /**
- * Private diagnostics, in Settings › Advanced.
+ * Private diagnostics, in Settings › Advanced: describe the problem, prepare
+ * and review the report, export it, and optionally ask an AI provider about it.
  *
- * Collection is local and needs neither a document nor an AI provider. The
- * user reviews the exact packet and report before anything is sent, chooses a
- * provider themselves, and exports only by picking a file in a native dialog.
- * The packet and handle are dropped when the panel closes.
+ * Collection is local and needs neither a document nor an AI provider. Main
+ * collects, sanitizes and builds every report; this panel shows exactly what
+ * main returned, sends nothing until the user picks a provider and model and
+ * asks, and exports only through a native save dialog. The packet and handle
+ * are dropped when the panel closes.
  */
-
-const FAILURE_COPY: Record<DiagnosticsFailure, string> = {
-  'provider-unavailable': 'That provider is no longer ready to analyze without tools. Run diagnostics again to refresh the list.',
-  'model-unavailable': 'That model is no longer offered by the provider. Choose another model.',
-  busy: 'Another diagnostics analysis is still running. Wait for it to finish or cancel it.',
-  timeout: 'The provider took too long to answer. Try again, or export the report without an analysis.',
-  'too-long': 'The provider\'s answer was longer than diagnostics allow, so it was not used.',
-  empty: 'The provider returned no usable answer.',
-  'provider-failed': 'The provider could not complete the analysis. Check its connection in AI Providers, then try again.',
-  cancelled: 'Analysis cancelled. Nothing from it was kept.',
-};
-
-function noticeText(notice: DiagnosticsNotice): string {
-  switch (notice.kind) {
-    case 'error': return notice.message;
-    case 'analysis-failed': return FAILURE_COPY[notice.reason];
-    case 'exported': return `Saved ${notice.fileName}. Review it before sharing it with anyone.`;
-    case 'export-cancelled': return 'Export cancelled. Nothing was saved.';
-  }
-}
-
 export function DiagnosticsSection(): ReactElement {
-  const step = useDiagnosticsStore((state) => state.step);
-  const collected = useDiagnosticsStore((state) => state.collected);
-  const notice = useDiagnosticsStore((state) => state.notice);
-  const collect = useDiagnosticsStore((state) => state.collect);
+  const report = useDiagnosticsStore((state) => state.report);
+  const prepare = useDiagnosticsStore((state) => state.prepare);
   const discard = useDiagnosticsStore((state) => state.discard);
+  const sectionRef = useRef<HTMLElement>(null);
+  const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusReviewWhenReady = useRef(false);
 
   // Closing Settings or leaving Advanced forgets the packet here and in main.
   useEffect(() => discard, [discard]);
 
-  const failed = notice !== null && (notice.kind === 'error' || notice.kind === 'analysis-failed');
+  // Only an explicit Prepare moves focus, and only if the user has not moved it out of this panel meanwhile.
+  useEffect(() => {
+    if (report === null || !focusReviewWhenReady.current) return;
+    focusReviewWhenReady.current = false;
+    const active = document.activeElement;
+    if (active === null || active === document.body || sectionRef.current?.contains(active) === true) reviewHeadingRef.current?.focus();
+  }, [report]);
+
+  const requestReport = (fresh: boolean): void => {
+    focusReviewWhenReady.current = true;
+    void prepare(fresh);
+  };
+
   return (
-    <section aria-labelledby="settings-diagnostics-heading" data-testid="settings-diagnostics" className="mt-6 max-w-xl border-t border-border-subtle pt-4">
-      <h4 id="settings-diagnostics-heading" className="text-sm font-semibold text-text-primary">Private diagnostics</h4>
-      <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-        Helps with provider detection and sign-in, imports, startup, packaging and updates, and agent preparation.
-        Interleaf collects its version, runtime versions, OS family and architecture, whether it is packaged, each
-        provider&apos;s readiness, and counts of local log records by category, level and known failure code.
-        Raw log messages, settings, credentials, library contents, documents, notes, chats, file paths, and account names
-        are never included in the packet or shared. Status checks may connect to configured providers, but diagnostics packets
-        leave this device only if you explicitly choose to analyze or export.
-      </p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button
-          variant={collected === null ? 'primary' : 'outline'}
-          size="sm"
-          data-testid="diagnostics-run"
-          onClick={() => { void collect(); }}
-          disabled={step !== 'idle' && step !== 'ready'}
-          aria-busy={step === 'collecting'}
-        >
-          {step === 'collecting' ? 'Collecting…' : collected === null ? 'Run diagnostics' : 'Run diagnostics again'}
-        </Button>
-        {collected !== null && (
-          <Button variant="ghost" size="sm" data-testid="diagnostics-discard" onClick={discard} disabled={step !== 'ready'}>
-            Discard
-          </Button>
-        )}
-      </div>
-      {step === 'collecting' && <p role="status" aria-live="polite" className="mt-2 text-xs text-text-secondary">Collecting diagnostics on this device…</p>}
-      {notice !== null && (
-        <p
-          role={failed ? 'alert' : 'status'}
-          data-testid="diagnostics-notice"
-          className={failed ? 'mt-3 rounded-md bg-danger/10 p-2 text-xs text-danger' : 'mt-3 text-xs text-text-secondary'}
-        >
-          {noticeText(notice)}
-        </p>
-      )}
-      {collected !== null && <CollectedDiagnostics collected={collected} />}
+    <section
+      ref={sectionRef}
+      aria-labelledby="settings-diagnostics-heading"
+      data-testid="settings-diagnostics"
+      className="mt-6 flex max-w-xl flex-col gap-4"
+    >
+      <Separator />
+      <DiagnosticsIntro />
+      <DiagnosticsDraft onPrepare={() => { requestReport(false); }} onCollectAgain={() => { requestReport(true); }} />
+      {report !== null && <DiagnosticsReview headingRef={reviewHeadingRef} onCollectAgain={() => { requestReport(true); }} />}
     </section>
   );
 }
 
-function CollectedDiagnostics({ collected }: { readonly collected: DiagnosticsCollectResult }): ReactElement {
+function DiagnosticsIntro(): ReactElement {
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 id="settings-diagnostics-heading" className="text-sm font-semibold text-text-primary">Private diagnostics</h4>
+      <p className="text-xs leading-relaxed text-text-secondary">
+        Prepare a short technical report to help find problems with providers and sign-in, imports, startup and updates.
+      </p>
+      <p className="text-xs leading-relaxed text-text-secondary">
+        Your documents, notes, chats and credentials are never included, and the report stays on this device unless you
+        export it or ask an AI provider to analyze it.
+      </p>
+      <DiagnosticsDisclosure label="What the report includes">
+        <div className="flex flex-col gap-2 text-2xs leading-relaxed text-text-secondary">
+          <p>
+            <span className="font-medium text-text-primary">Included: </span>
+            Interleaf&apos;s version and runtime versions, the operating system family and architecture, whether Interleaf is
+            installed or a development build, each AI provider&apos;s readiness, counts of local log records by category, level
+            and known failure code, and the description you write, after Interleaf removes common secrets, email addresses and
+            file paths.
+          </p>
+          <p>
+            <span className="font-medium text-text-primary">Never included: </span>
+            raw log messages, settings, credentials, library contents, documents, notes, chats, file paths and account names.
+          </p>
+          <p>
+            Checking provider readiness may contact providers you have configured. The report itself leaves this device only
+            when you export it or choose to analyze it.
+          </p>
+        </div>
+      </DiagnosticsDisclosure>
+    </div>
+  );
+}
+
+type DraftProps = { readonly onPrepare: () => void; readonly onCollectAgain: () => void };
+
+/** The description stays editable beside the review; changing it retires the review until the report is updated. */
+function DiagnosticsDraft({ onPrepare, onCollectAgain }: DraftProps): ReactElement {
   const step = useDiagnosticsStore((state) => state.step);
+  const reviewed = useDiagnosticsStore((state) => state.report !== null);
   const issue = useDiagnosticsStore((state) => state.issue);
-  const report = useDiagnosticsStore((state) => state.report);
   const setIssue = useDiagnosticsStore((state) => state.setIssue);
-  const review = useDiagnosticsStore((state) => state.review);
-  const exportReport = useDiagnosticsStore((state) => state.exportReport);
-  const idle = step === 'ready';
+  // Editing waits while main works, so its sanitized copy never overwrites newer typing.
+  const editable = step === 'idle' || step === 'ready';
 
   return (
-    <div className="mt-4 space-y-4">
-      <div>
-        <h5 className="text-xs font-semibold text-text-primary">Collected on this device</h5>
-        <pre
-          data-testid="diagnostics-packet"
-          tabIndex={0}
-          aria-label="Collected diagnostics packet"
-          className="mt-1 max-h-48 overflow-auto rounded-md border border-border-subtle bg-bg-surface p-2 text-2xs leading-relaxed text-text-primary"
-        >
-          {collected.packetText}
-        </pre>
-      </div>
-      <label className="block text-xs text-text-secondary">
+    <div className="flex flex-col gap-3">
+      <label className="flex flex-col gap-1 text-xs text-text-secondary">
         <span className="font-medium text-text-primary">Describe the problem (optional)</span>
         <textarea
           data-testid="diagnostics-issue"
           value={issue}
           maxLength={DIAGNOSTICS_LIMITS.issueMaxLength}
           rows={3}
-          disabled={!idle}
+          disabled={!editable}
           onChange={(event) => { setIssue(event.target.value); }}
           aria-describedby="diagnostics-issue-help"
-          className="mt-1 block w-full rounded-md border border-border-strong bg-bg-primary p-2 text-xs text-text-primary placeholder:text-text-secondary disabled:opacity-50"
+          className="block w-full rounded-md border border-border-strong bg-bg-primary p-2 text-xs text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
           placeholder="For example: Claude shows as not signed in after I sign in from the terminal."
         />
-        <span id="diagnostics-issue-help" className="mt-1 block text-2xs leading-relaxed">
-          {issue.length}/{DIAGNOSTICS_LIMITS.issueMaxLength}. Interleaf removes common secrets, email addresses and file paths before
-          showing the report. Leave out anything else you would not share.
+        <span id="diagnostics-issue-help" className="text-2xs leading-relaxed">
+          {issue.length}/{DIAGNOSTICS_LIMITS.issueMaxLength}. Common secrets, email addresses and file paths are removed before
+          you review the report. Leave out anything else you would not share.
         </span>
       </label>
-      <Button variant="outline" size="sm" data-testid="diagnostics-review" onClick={() => { void review(); }} disabled={!idle} aria-busy={step === 'reviewing'}>
-        {step === 'reviewing' ? 'Preparing…' : report === null ? 'Review report' : 'Review report again'}
-      </Button>
-      {report === null ? (
-        <p className="text-2xs text-text-secondary">Review the report to enable analysis and export.</p>
-      ) : (
-        <>
-          <div>
-            <h5 className="text-xs font-semibold text-text-primary">Report preview</h5>
-            <p className="mt-1 text-2xs leading-relaxed text-text-secondary">
-              This is exactly what Export saves. Review it before sharing it: Interleaf cannot guarantee it identifies no one.
-            </p>
-            <pre
-              data-testid="diagnostics-report"
-              tabIndex={0}
-              aria-label="Diagnostics report preview"
-              className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border-subtle bg-bg-surface p-2 text-2xs leading-relaxed text-text-primary"
-            >
-              {report.text}
-            </pre>
-          </div>
-          <DiagnosticsAnalysis key={collected.handle} providers={collected.providers} />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" data-testid="diagnostics-export" onClick={() => { void exportReport(); }} disabled={!idle} aria-busy={step === 'exporting'}>
-              {step === 'exporting' ? 'Exporting…' : 'Export report…'}
-            </Button>
-            <span className="text-2xs text-text-secondary">Saves a Markdown file where you choose. Nothing is uploaded or shared.</span>
-          </div>
-        </>
-      )}
+      {!reviewed && <DraftActions onPrepare={onPrepare} onCollectAgain={onCollectAgain} />}
     </div>
   );
 }
 
-function DiagnosticsAnalysis({ providers }: { readonly providers: DiagnosticsCollectResult['providers'] }): ReactElement {
+/**
+ * Once a packet exists, Collect again stays beside Update report, so an expired
+ * packet can be replaced without losing the edited description.
+ */
+function DraftActions({ onPrepare, onCollectAgain }: DraftProps): ReactElement {
   const step = useDiagnosticsStore((state) => state.step);
-  const analyzed = useDiagnosticsStore((state) => state.report?.analyzed === true);
-  const analyze = useDiagnosticsStore((state) => state.analyze);
-  const cancel = useDiagnosticsStore((state) => state.cancel);
-  // Nothing is chosen for the user; the first request waits for their choice.
-  const [providerId, setProviderId] = useState<DiagnosticsProviderId | ''>('');
-  const [modelId, setModelId] = useState('');
+  const collected = useDiagnosticsStore((state) => state.collected);
+  const notice = useDiagnosticsStore((state) => state.notice);
+  const discard = useDiagnosticsStore((state) => state.discard);
+  const editable = step === 'idle' || step === 'ready';
+  const working = step === 'collecting' || step === 'reviewing';
 
-  if (providers.length === 0) {
-    return (
-      <p data-testid="diagnostics-no-provider" className="rounded-md border border-border-subtle bg-bg-surface p-2 text-xs leading-relaxed text-text-secondary">
-        No connected provider can analyze this without tools. Collection and export still work. Optional analysis uses a
-        supported tool-free CLI provider, such as Claude Code, connected in AI Providers. ChatGPT (subscription) retains a tool
-        surface. OpenRouter and local-server analysis are disabled until their cancellation is safe.
-      </p>
-    );
-  }
-
-  const provider = providers.find((entry) => entry.id === providerId);
-  const name = provider === undefined ? null : AI_PROVIDER_DISPLAY_NAMES[provider.id];
-  const ready = provider?.models.some((model) => model.id === modelId) === true;
   return (
-    <div className="space-y-2 rounded-md border border-border-subtle p-3">
-      <h5 className="text-xs font-semibold text-text-primary">Optional AI analysis</h5>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Select
-          aria-label="Provider for diagnostics analysis"
-          data-testid="diagnostics-provider"
-          value={providerId}
-          placeholder="Choose a provider"
-          disabled={step !== 'ready'}
-          size="sm"
-          options={providers.map((entry) => ({ value: entry.id, label: AI_PROVIDER_DISPLAY_NAMES[entry.id] }))}
-          onValueChange={(value) => { setProviderId(value); setModelId(''); }}
-        />
-        <Select
-          aria-label="Model for diagnostics analysis"
-          data-testid="diagnostics-model"
-          value={modelId}
-          placeholder="Choose a model"
-          disabled={step !== 'ready' || provider === undefined}
-          size="sm"
-          options={(provider?.models ?? []).map((model) => ({ value: model.id, label: model.name }))}
-          onValueChange={setModelId}
-        />
-      </div>
-      <p id="diagnostics-analysis-disclosure" className="text-2xs leading-relaxed text-text-secondary">
-        Analysis sends the collected packet and your reviewed description, and nothing else, to {name ?? 'the provider you choose'}.
-        That provider, or the account it uses, may process and keep them under its own terms. The answer is unverified,
-        and Interleaf never runs or applies anything it suggests.
-      </p>
+    <>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="primary"
-          size="sm"
-          data-testid="diagnostics-analyze"
-          disabled={step !== 'ready' || !ready}
-          aria-describedby="diagnostics-analysis-disclosure"
-          onClick={() => { if (provider !== undefined) void analyze(provider.id, modelId); }}
-        >
-          {name === null ? 'Analyze' : `Analyze with ${name}`}
+        <Button variant="primary" size="sm" data-testid="diagnostics-prepare" onClick={onPrepare} disabled={!editable} aria-busy={working}>
+          {step === 'collecting' ? 'Collecting…' : step === 'reviewing' ? 'Preparing…' : collected === null ? 'Prepare report' : 'Update report'}
         </Button>
-        {step === 'analyzing' && (
+        {collected !== null && (
           <>
-            <Button variant="danger" size="sm" data-testid="diagnostics-cancel" onClick={cancel}>Cancel analysis</Button>
-            <span role="status" aria-live="polite" className="text-xs text-text-secondary">Waiting for {name ?? 'the provider'}…</span>
+            <Button variant="ghost" size="sm" data-testid="diagnostics-recollect" onClick={onCollectAgain} disabled={!editable}>
+              Collect again
+            </Button>
+            <Button variant="ghost" size="sm" data-testid="diagnostics-discard" onClick={discard} disabled={!editable}>
+              Discard
+            </Button>
           </>
         )}
-        {step !== 'analyzing' && analyzed && <span role="status" className="text-xs text-text-secondary">Analysis added to the report preview.</span>}
       </div>
-    </div>
+      {working && (
+        <p role="status" aria-live="polite" className="text-xs text-text-secondary">
+          {step === 'collecting' ? 'Collecting diagnostics on this device…' : 'Preparing the report for review…'}
+        </p>
+      )}
+      {!working && collected !== null && notice === null && (
+        <p className="text-2xs leading-relaxed text-text-secondary">The description changed. Update the report to review it again.</p>
+      )}
+      {notice !== null && <DiagnosticsNotice notice={notice} />}
+    </>
   );
 }
