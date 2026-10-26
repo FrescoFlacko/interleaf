@@ -7,6 +7,7 @@
  * with the window, and the toolbar is narrowed to fit them when the reader is
  * the narrower of the two. It prefers the space above the selection, flips
  * below when that does not fit, and is clamped inside the bounds either way.
+ * Once its note opens it stays at that top-left origin and grows downward.
  */
 
 export type ToolbarRect = { readonly left: number; readonly top: number; readonly width: number; readonly height: number };
@@ -43,4 +44,44 @@ export function selectionToolbarPosition(selection: ToolbarRect, size: ToolbarSi
   const rawTop = spaceAbove < size.height + MARGIN && spaceBelow >= size.height + MARGIN ? below : above;
   const top = Math.max(minTop, Math.min(maxTop, rawTop));
   return { left, top, maxWidth };
+}
+
+/** Where the toolbar was when its note opened: its own top-left origin. */
+export type ToolbarAnchor = { readonly left: number; readonly top: number };
+
+/** The anchor of a toolbar placed at `position`. */
+export function toolbarAnchor(position: { readonly left: number; readonly top: number }): ToolbarAnchor {
+  return { left: position.left, top: position.top };
+}
+
+/**
+ * Where the open note box sits: at the origin of the toolbar it opened from,
+ * growing downward. A box that fits does not move at all as it opens, as the
+ * reader types or as the status changes, even when it grows over the passage.
+ * It moves only by the least that keeps it inside the bounds, never to the
+ * other side of the selection. A box taller than the bounds is capped to them
+ * and scrolls, so its controls stay reachable.
+ */
+function anchoredToolbarPosition(anchor: ToolbarAnchor, size: ToolbarSize, bounds: ToolbarRect): ToolbarPosition & { readonly maxHeight: number } {
+  const maxWidth = Math.max(0, bounds.width - MARGIN * 2);
+  const width = Math.min(size.width, maxWidth);
+  const minLeft = bounds.left + MARGIN;
+  const maxLeft = Math.max(minLeft, bounds.left + bounds.width - width - MARGIN);
+  const minTop = bounds.top + MARGIN;
+  const maxTop = Math.max(minTop, bounds.top + bounds.height - size.height - MARGIN);
+  return {
+    left: Math.max(minLeft, Math.min(maxLeft, anchor.left)),
+    top: Math.max(minTop, Math.min(maxTop, anchor.top)),
+    maxWidth,
+    maxHeight: Math.max(0, bounds.height - MARGIN * 2),
+  };
+}
+
+/**
+ * The toolbar's style: placed around the selection, or grown from `anchor`
+ * when its note is open. Only the open box is height-capped and scrolls.
+ */
+export function selectionToolbarStyle(selection: ToolbarRect, anchor: ToolbarAnchor | null, size: ToolbarSize, bounds: ToolbarRect): ToolbarPosition & { readonly maxHeight?: number; readonly overflowY?: 'auto' } {
+  if (anchor === null) return selectionToolbarPosition(selection, size, bounds);
+  return { ...anchoredToolbarPosition(anchor, size, bounds), overflowY: 'auto' };
 }
