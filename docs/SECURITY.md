@@ -287,6 +287,41 @@ API-free session: a strong boundary against the diagram library mishandling
 hostile input. It is not isolation from a hostile process already running as this
 user, and is not claimed as such.
 
+### Diagrams in AI output
+
+A fenced `mermaid` block in a chat answer or in agent output is model output and
+just as untrusted. It is drawn on a separate, smaller path than document
+diagrams: the pinned [Pele](https://github.com/obsidianmd/pele) renderer (1.10.0),
+which needs no DOM, runs in a dedicated Web Worker started from the app's own
+bundle (`components/markdown/diagram/`). This is a thread inside the main window's
+renderer process, not a separate process, so the boundary is narrower than the
+document path's. The worker has no preload, no `interleafAPI` and no DOM. Pele
+is bundled locally, and nothing on this path makes a network request.
+
+The app, never the source, sets every render option: links and images are off,
+their scheme lists are empty, and there are no icon or math callbacks. Fixed
+bounds:
+
+- source: 8,000 characters and 300 lines, checked before dispatch and again in
+  the worker, plus Pele's own cap of 200 edges;
+- output: 400,000 characters of SVG and 4,000 px per side;
+- per message: six diagrams;
+- queue: 24 jobs, one render at a time;
+- deadline: 4 seconds. When it fires, the worker is terminated rather than
+  raced, and the next diagram starts a fresh one. Unmounting or a changed source
+  cancels a job, and a reply for an abandoned job is discarded.
+
+Rendering waits until a reply has finished streaming and the fence is closed.
+
+Worker replies are validated at runtime. The SVG is then rebuilt on the UI thread
+by the same element and attribute allow-list as the document path
+(`svg-allowlist.ts`), and the only colours added afterwards are the app's own
+theme values. The result is shown only as the `src` of an `<img>`, so no
+model-supplied markup enters the DOM. A failure shows a fixed generic sentence
+and the escaped source; Pele's error messages, which quote the source, are never
+displayed. Unlike the document path, there is no separate main-process lexical
+re-scan: here, the allow-list rebuild plus `<img>` inertness is the guarantee.
+
 ## Credentials and privacy
 
 OpenRouter credentials are accepted only through the narrow validated
