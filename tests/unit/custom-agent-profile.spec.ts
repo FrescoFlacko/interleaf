@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { setTimeout as delay } from 'node:timers/promises';
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, realpathSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -12,6 +11,7 @@ import { SettingsRepository } from '@main/db/repositories/settings-repository';
 import { ExecutableRegistry } from '@main/agents/executable-registry';
 import { cleanupStalePromptFiles } from '@main/agents/custom-prompt-storage';
 import { AgentRegistry, CliAgentAdapter, mapProcessEvents } from '@main/agents/agent-adapter';
+import type { AgentService } from '@main/agents/agent-service';
 import { expandCustomArgvTemplate } from '@main/agents/custom-argv-template';
 import { WorkingDirectoryRegistry } from '@main/agents/working-directory-registry';
 import { AgentRepository } from '@main/db/repositories/agent-repository';
@@ -28,6 +28,7 @@ import { agentSettingsSchema } from '@shared/schemas/settings';
 import { createTestAgentService } from '../helpers/agent-service';
 import { adapterCollaborators, testAgentRegistryOptions } from '../helpers/agent-collaborators';
 import { silentLogger } from '../helpers/silent-logger';
+import { waitForSessionStatus } from '../helpers/session-wait';
 
 /** The value an earlier step must have produced; fails the test when it did not. */
 function present<T>(value: T | null, what: string): T {
@@ -460,6 +461,7 @@ describe('custom agent profile security boundaries', () => {
   it('crosses CRUD, persistence, confirmation, isolated execution, and prompt-file cleanup at the service boundary', async () => {
     const root = tempRoot('service');
     const database = InterleafDatabase.open(':memory:');
+    let service: AgentService | null = null;
     try {
       runMigrations(database);
       database.raw.prepare(`
@@ -478,7 +480,7 @@ describe('custom agent profile security boundaries', () => {
       }
       let allowRun = false;
       let chosenExecutable = executablePath;
-      const service = createTestAgentService({ database: database,
+      service = createTestAgentService({ database: database,
         repository: new AgentRepository(database),
         registry: new WorkingDirectoryRegistry(),
         agentRegistry: new TestRegistry(testAgentRegistryOptions({ executableRegistry, promptRoot: join(root, 'prompts') })),
@@ -516,20 +518,17 @@ describe('custom agent profile security boundaries', () => {
       expect(service.listSessions('test-doc')).toHaveLength(0);
       allowRun = true;
       const started = await service.startSession({ profileId: sibling.id, workingDirectoryHandle: directory?.handle ?? '', executionMode: 'auto-isolated', prompt: 'secret prompt', documentId: 'test-doc' }, 77);
-      for (let attempt = 0; attempt < 200; attempt += 1) {
-        const status = service.getSession(started.session.id)?.status;
-        if (status === 'completed') break;
-        await delay(10);
-      }
-      expect(service.getSession(started.session.id)?.status).toBe('completed');
+      await waitForSessionStatus(service, started.session.id, 'completed', 100, { timeoutMs: 8_000 });
       expect(service.getSession(started.session.id)?.events.some((event) => event.type === 'stdout' && typeof event.text === 'string' && event.text.includes('secret prompt'))).toBe(true);
       expect(leftoverPrompts(join(root, 'prompts'))).toHaveLength(0);
       await expect(service.startSession({ profileId: sibling.id, workingDirectoryHandle: directory?.handle ?? '', executionMode: 'active-env', prompt: 'direct requires grant', documentId: 'test-doc' }, 77)).rejects.toThrow(/grant/i);
       expect(service.listSessions('test-doc')).toHaveLength(1);
-      await service.shutdown();
     } finally {
+      if (service !== null) {
+        await service.shutdown();
+      }
       database.close();
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });

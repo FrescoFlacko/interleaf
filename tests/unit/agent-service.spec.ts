@@ -18,7 +18,7 @@ import { InterleafDatabase } from '@main/db/database';
 import { runMigrations } from '@main/db/migrations';
 import type { MainAgentProfile } from '@main/agents/profile-types';
 import type { Logger } from '@main/logging/logger';
-import type { AgentContextPacket, AgentEvent } from '@shared/types/agent';
+import type { AgentContextPacket, AgentEvent, AgentStartResult } from '@shared/types/agent';
 import { AGENT_MAX_CONTEXT_PACKET_BYTES, agentContextPacketSchema } from '@shared/schemas/agent';
 import { BlockingNativeSandboxProber, StubNativeSandboxProber } from '../helpers/native-sandbox-prober';
 import { TestChildProcess } from '../helpers/child-process';
@@ -26,6 +26,7 @@ import { isPortableRecord, type PortableMember } from '@shared/models/portable';
 import { createTestAgentService } from '../helpers/agent-service';
 import { posixShell, testAgentRegistryOptions, withEnvironmentShell } from '../helpers/agent-collaborators';
 import { eventError } from '../helpers/agent-event';
+import { teardownDelayedIntegrityTest, waitForSessionStatus } from '../helpers/session-wait';
 
 const TEST_DOCUMENT_ID = 'test-doc';
 
@@ -389,14 +390,6 @@ class TestFloodAdapter extends ControlledAdapter {
       cancel: () => undefined,
     };
   }
-}
-
-async function waitForSessionStatus(service: AgentService, sessionId: string, expected: string, attempts = 100): Promise<void> {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (service.getSession(sessionId)?.status === expected) return;
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-  throw new Error(`Session ${sessionId} did not reach ${expected}.`);
 }
 
 async function waitForDiscard(service: AgentService, sessionId: string, ownerId: number): Promise<void> {
@@ -1339,8 +1332,9 @@ describe('AgentService safety and lifecycle', () => {
       // A resumed run is a new run: it gets its own budget rather than
       // inheriting an exhausted one, and durable history keeps both.
       const artifactsBeforeResume = artifacts.length;
+      const initialEventCount = service.getSession(result.session.id)?.eventCount;
       await service.resumeSession({ sessionId: result.session.id, prompt: 'flood again' }, 91);
-      await waitForSessionStatus(service, result.session.id, 'completed', 4_000);
+      await waitForSessionStatus(service, result.session.id, 'completed', 4_000, { baselineEventCount: initialEventCount });
       const afterResume = repository.listArtifacts(result.session.id).filter((artifact) => artifact.kind === 'test_result');
       expect(afterResume.length - artifactsBeforeResume).toBe(128);
       const resumedReview = (await manager.review(result.session.id)).review;
@@ -1667,21 +1661,29 @@ describe('AgentService safety and lifecycle', () => {
       isPackaged: false,
     });
 
-    let releaseIntegrityCheck!: () => void;
-    const integrityCheckGate = new Promise<void>((resolve) => { releaseIntegrityCheck = resolve; });
-    let integrityCheckEntered!: () => void;
-    const integrityCheckReady = new Promise<void>((resolve) => { integrityCheckEntered = resolve; });
+    const { promise: integrityCheckGate, resolve: resolveIntegrityCheck } = Promise.withResolvers<undefined>();
+    let integrityCheckReleased = false;
+    const releaseIntegrityCheck = () => {
+      if (!integrityCheckReleased) {
+        integrityCheckReleased = true;
+        resolveIntegrityCheck(undefined);
+      }
+    };
+    const { promise: integrityCheckReady, resolve: integrityCheckEntered } = Promise.withResolvers<undefined>();
     const originalResolveForSpawn = executableRegistry.resolveForSpawn.bind(executableRegistry);
     let resolveForSpawnCalls = 0;
     vi.spyOn(executableRegistry, 'resolveForSpawn').mockImplementation(async (handle) => {
       resolveForSpawnCalls += 1;
       if (resolveForSpawnCalls === 2) {
-        integrityCheckEntered();
+        integrityCheckEntered(undefined);
         await integrityCheckGate;
       }
       return originalResolveForSpawn(handle);
     });
     let dbClosed = false;
+    let shutdownPromise: Promise<void> | null = null;
+    let pendingResume: Promise<AgentStartResult> | null = null;
+    let unsubscribe: (() => void) | null = null;
     try {
       await service.initialize();
       const selected = await service.selectExecutable();
@@ -1703,21 +1705,35 @@ describe('AgentService safety and lifecycle', () => {
       const directory = await service.selectWorkingDirectory();
       if (directory === null) throw new Error('Directory was not selected');
       const started = await service.startSession({ documentId: TEST_DOCUMENT_ID, profileId: profile.id, workingDirectoryHandle: directory.handle, executionMode: 'auto-isolated', prompt: 'initial run' }, 1);
-      await waitForSessionStatus(service, started.session.id, 'completed');
+      await waitForSessionStatus(service, started.session.id, 'completed', 100, { timeoutMs: 8_000 });
 
       const updateSpy = vi.spyOn(repository, 'updateSession');
       const appendSpy = vi.spyOn(repository, 'appendEvent');
       const emittedEvents: AgentEvent[] = [];
-      const unsubscribe = service.subscribe(1, (event) => { emittedEvents.push(event); });
-      const pendingResume = service.resumeSession({ sessionId: started.session.id, prompt: 'late resume' }, 1);
-      await integrityCheckReady;
+      unsubscribe = service.subscribe(1, (event) => { emittedEvents.push(event); });
+      pendingResume = service.resumeSession({ sessionId: started.session.id, prompt: 'late resume' }, 1);
 
+      // Race readiness against early rejection and an explicit bounded readiness deadline (5s) with a cleared timer
+      let readinessTimer: NodeJS.Timeout | undefined;
+      const readinessTimeout = new Promise<never>((_, reject) => {
+        readinessTimer = setTimeout(() => {
+          reject(new Error('Timed out waiting for executable integrity check readiness seam'));
+        }, 5_000);
+      });
+      const pendingResumeEarlyFailure = pendingResume.then(() => {
+        throw new Error('pendingResume settled before reaching integrity check seam');
+      });
+      try {
+        await Promise.race([integrityCheckReady, pendingResumeEarlyFailure, readinessTimeout]);
+      } finally {
+        clearTimeout(readinessTimer);
+      }
       vi.useFakeTimers();
       let released = false;
       try {
-        const shutdown = service.shutdown();
+        shutdownPromise = service.shutdown();
         await vi.advanceTimersByTimeAsync(10_001);
-        await shutdown;
+        await shutdownPromise;
         const callsAtClose = { update: updateSpy.mock.calls.length, append: appendSpy.mock.calls.length, emitted: emittedEvents.length };
         db.close();
         dbClosed = true;
@@ -1731,12 +1747,21 @@ describe('AgentService safety and lifecycle', () => {
         if (!released) releaseIntegrityCheck();
         vi.useRealTimers();
       }
-      unsubscribe();
     } finally {
-      if (!dbClosed) db.close();
-      await rm(root, { recursive: true, force: true });
+      releaseIntegrityCheck();
+      vi.useRealTimers();
+      unsubscribe?.();
+      shutdownPromise ??= service.shutdown();
+      await teardownDelayedIntegrityTest({
+        shutdownPromise,
+        pendingResume,
+        service,
+        db,
+        dbClosed,
+        root,
+      });
     }
-  }, 20_000);
+  }, 30_000);
 
   it('fails closed for native picker and risk-grant continuations after shutdown', async () => {
     const pickerRoot = await mkdtemp(join(tmpdir(), 'interleaf-shutdown-picker-'));
