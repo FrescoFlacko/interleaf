@@ -1,7 +1,6 @@
 import { useEffect, useRef, type ReactElement } from 'react';
 import type { AgentExecutionMode } from '@shared/constants/agent-modes';
 import { toSelectableExecutionMode } from '@shared/constants/agent-mode-selection';
-import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import type { AppSettings } from '@shared/schemas/settings';
 import { MAX_AGENT_PROFILE_MODELS, isAgentModelIdentifier } from '@shared/constants/agent-models';
 import { persistSettings } from '../../app/api-client';
@@ -50,7 +49,11 @@ export function AgentComposer(): ReactElement {
     // Direct-workspace modes are deliberate, single-run choices and can never
     // become a persisted default.
     if (mode === 'active-env' || mode === 'native-restricted') return;
-    const base = loadedSettings ?? DEFAULT_APP_SETTINGS;
+    // A settings write replaces the whole saved document, so until main's copy
+    // has loaded the choice stays with this run rather than saving defaults
+    // over every other preference.
+    const base = loadedSettings;
+    if (base === null) return;
     const next: AppSettings = { ...base, agent: { ...base.agent, defaultExecutionMode: mode } };
     setLoadedSettings(next);
     persistSettings(next);
@@ -61,14 +64,15 @@ export function AgentComposer(): ReactElement {
    * owns, so it is written back to `agent.profiles[id].defaultModel` instead of
    * becoming a second source of truth. Custom profiles are main-owned and are
    * never addressable through renderer settings, so their choice stays
-   * session-local.
+   * session-local, as does any choice made before settings have loaded.
    */
   function handleModelChange(model: string | null): void {
     useAgentStore.getState().setSelectedModel(model);
     if (selectedProfileId === null) return;
     const definition = findProfileEditorDefinition(selectedProfileId);
     if (definition === undefined) return;
-    const base = loadedSettings ?? DEFAULT_APP_SETTINGS;
+    const base = loadedSettings;
+    if (base === null) return;
     const currentPreference = base.agent.profiles[definition.id] ?? defaultProfilePreference(definition);
     if (base.agent.profiles[definition.id]?.defaultModel === model) return;
     const next: AppSettings = {

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { InterleafDatabase } from '../database';
+import { normalizeSqliteTimestamp } from '../sqlite-timestamp';
 import { InterleafError } from '@shared/errors/interleaf-error';
 import {
   customAgentProfileConfigSchema,
@@ -201,8 +202,8 @@ export class CustomAgentProfileRepository {
       canonicalPath: row.binary_path,
       identity,
       config,
-      createdAt: normalizeTimestamp(row.created_at),
-      updatedAt: normalizeTimestamp(row.updated_at),
+      createdAt: normalizeSqliteTimestamp(row.created_at),
+      updatedAt: normalizeSqliteTimestamp(row.updated_at),
     };
   }
 }
@@ -235,11 +236,6 @@ function decodeStoredJson(json: string): PortableValue {
       cause: error instanceof Error ? error : null,
     });
   }
-}
-
-function normalizeTimestamp(value: string): string {
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/u.test(value)) return `${value.replace(' ', 'T')}.000Z`;
-  return value;
 }
 
 function assertCustomId(id: string): void {

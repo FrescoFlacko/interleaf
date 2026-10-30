@@ -167,6 +167,16 @@ function onSenderDestroyed(sender: InvocationSender, listener: () => void): () =
   return () => { sender.removeListener('destroyed', listener); };
 }
 
+/**
+ * The invoking renderer's web contents, for handlers that stream to it, bind
+ * ownership to it, or must not run once it is gone. `message` names the action
+ * so the rejection stays specific to it.
+ */
+function requireLiveSender(event: InvocationEvent, message: string): InvocationSender {
+  if (!event.sender) throw new InterleafError('sender-rejected', message);
+  return event.sender;
+}
+
 function buildHandlers(deps: IpcDispatcherDeps): {
   [K in keyof IpcContracts]: ChannelHandler<K>;
 } {
@@ -307,8 +317,7 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     // provider, model, transcript, prior summary and attached context itself.
     'chat:clean-context': (req) => servicesForSession(deps, req.sessionId).chat.cleanContext(req.sessionId),
     'chat:send-message': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Chat streaming requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Chat streaming requires a live renderer sender.');
       return servicesForSession(deps, req.sessionId).chat.sendMessage(req, {
         id: sender.id,
         send: (channel, payload) => { sender.send(channel, payload); },
@@ -317,8 +326,7 @@ function buildHandlers(deps: IpcDispatcherDeps): {
       });
     },
     'chat:cancel': async (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Chat cancellation requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Chat cancellation requires a live renderer sender.');
       await cancelChatRouted(deps, req.requestId, sender.id);
       return undefined;
     },
@@ -330,63 +338,52 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'agent:list-working-directories': () => deps.agent.listWorkingDirectories(),
     'agent:select-working-directory': () => deps.agent.selectWorkingDirectory(),
     'agent:start-session': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Agent streaming requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Agent streaming requires a live renderer sender.');
       assertLibraryDocument(deps, req.documentId);
       return deps.agent.startSession(req, ensureAgentSubscription(deps, sender));
     },
     'agent:resume-session': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Agent streaming requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Agent streaming requires a live renderer sender.');
       return deps.agent.resumeSession(req, ensureAgentSubscription(deps, sender));
     },
     'agent:stop-session': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Agent cancellation requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Agent cancellation requires a live renderer sender.');
       return deps.agent.stopSession(req.sessionId, sender.id).then(() => undefined);
     },
     'agent:get-session': (req) => isOpenFileDocument(deps, req.documentId) ? null : deps.agent.getSessionForDocument(req.sessionId, req.documentId),
     'agent:list-sessions': (req) => isOpenFileDocument(deps, req.documentId) ? [] : deps.agent.listSessions(req.documentId),
     'agent:copy-result': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Clipboard copy requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Clipboard copy requires a live renderer sender.');
       return deps.agent.copyResult(req.sessionId, sender.id);
     },
     // Item C: the replacement window takes over a destroyed owner's session
     // explicitly, and subscribes to its events as part of the same handoff.
     'agent:claim-session': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Claiming an agent session requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Claiming an agent session requires a live renderer sender.');
       return deps.agent.claimSession(req.sessionId, ensureAgentSubscription(deps, sender));
     },
     'agent:issue-risk-grant': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Risk confirmation requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Risk confirmation requires a live renderer sender.');
       return deps.agent.issueRiskGrant(req, sender.id);
     },
     'agent:get-environment-review': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Reading an agent review requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Reading an agent review requires a live renderer sender.');
       return deps.agent.getEnvironmentReview(req.sessionId, sender.id);
     },
     'agent:apply-changes': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Applying changes requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Applying changes requires a live renderer sender.');
       return deps.agent.applyChanges(req.sessionId, sender.id);
     },
     'agent:discard-sandbox': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Discarding a sandbox requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Discarding a sandbox requires a live renderer sender.');
       return deps.agent.discardSandbox(req.sessionId, sender.id).then(() => undefined);
     },
     'agent:export-patch': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Exporting a patch requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Exporting a patch requires a live renderer sender.');
       return deps.agent.exportPatch(req.sessionId, sender.id);
     },
     'agent:open-folder': (req, event) => {
-      const sender = event.sender;
-      if (!sender) throw new InterleafError('sender-rejected', 'Opening an agent folder requires a live renderer sender.');
+      const sender = requireLiveSender(event, 'Opening an agent folder requires a live renderer sender.');
       return deps.agent.openFolder(req.sessionId, sender.id);
     },
     'agent:get-mode-availability': (req) => deps.agent.listModeAvailability(req.profileId),

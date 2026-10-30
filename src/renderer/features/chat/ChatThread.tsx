@@ -1,6 +1,6 @@
 import type { AIProviderStatus, ChatContextItem, ChatMessage, ChatSession } from '@shared/types/ai';
 import type { DocumentLocation } from '@shared/types/document';
-import { resolveChatCitation } from '../../app/api-client';
+import { bridge } from '../../app/api-client';
 import { ChatFollowUps } from './ChatFollowUps';
 import { ChatMessageBubble } from './ChatMessageBubble';
 import { ChatPromptDetails } from './ChatPromptDetails';
@@ -57,7 +57,7 @@ export function ChatThread({
   const latest = latestAnswerState(messages, isStreaming);
   const resolveCitation = async (messageId: string, sourceId: string): Promise<void> => {
     if (!activeSessionId) return;
-    const target = await resolveChatCitation(activeSessionId, messageId, sourceId);
+    const target = await bridge.chat.resolveCitation(activeSessionId, messageId, sourceId);
     if (target?.location) await goToLocation(target.location);
   };
 
