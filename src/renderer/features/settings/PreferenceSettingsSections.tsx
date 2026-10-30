@@ -10,7 +10,7 @@ import { useReaderStore } from '../../stores/use-reader-store';
 import { companionTextSizeLabel } from '../../components/companion-text-size-label';
 import { Select } from '../../components/ui/select';
 import type { SelectOption } from '../../components/ui/select-model';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
 
 const FONT_FAMILY_OPTIONS: readonly SelectOption<AppSettings['reader']['fontFamily']>[] = [
   { value: 'system', label: 'System' },

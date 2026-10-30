@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { InterleafDatabase } from '../database';
+import { normalizeSqliteTimestamp } from '../sqlite-timestamp';
 import { InterleafError } from '@shared/errors/interleaf-error';
 import { normalizeLegacyStoredAgentEvent } from '@shared/legacy/legacy-agent-error';
 import type {
@@ -581,8 +582,8 @@ function mapSession(row: SessionRow): AgentSession {
     contextSummary: row.context_summary,
     effectiveModel: row.effective_model ?? null,
     effectiveReasoningEffort: row.effective_reasoning_effort ?? null,
-    createdAt: normalizeTimestamp(row.created_at),
-    updatedAt: normalizeTimestamp(row.updated_at),
+    createdAt: normalizeSqliteTimestamp(row.created_at),
+    updatedAt: normalizeSqliteTimestamp(row.updated_at),
     finalReport: row.final_report,
     environment,
     eventCount: row.event_count,
@@ -601,9 +602,4 @@ function parseEnvironment(value: string | null): AgentSessionEnvironment | null 
   } catch {
     return null;
   }
-}
-
-function normalizeTimestamp(value: string): string {
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/u.test(value)) return `${value.replace(' ', 'T')}.000Z`;
-  return value;
 }

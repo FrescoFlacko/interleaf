@@ -83,14 +83,17 @@ receive only bounded in-memory jobs, and never gain main privileges.
 src/
 ├── main/                           # Electron Main Process (Privileged Node.js)
 │   ├── index.ts                    # Main entry point & app lifecycle
+│   ├── app/                        # Lifecycle services: shutdown barrier, active work,
+│   │   └── settings-update.ts      #   settings:update rules (revalidation, unsafe confirm, runtime effects)
 │   ├── windows/                    # BrowserWindow creation & management
 │   ├── ipc/                        # IPC dispatchers & request routing
-│   │   └── dispatcher.ts            # Domain IPC handlers and validation wiring
+│   │   └── dispatcher.ts            # Validation wiring; routes each channel to its owning service
 │   ├── db/                         # Database layer
 │   │   ├── database.ts             # SQLite connection & WAL configuration
 │   │   ├── migrations.ts            # Versioned schema migrations
 │   │   └── repositories/           # Domain repositories (Document, Annotation, Chat, Agent, Search)
-│   │       └── search-repository.ts # FTS5 state and query ownership
+│   │       ├── search-repository.ts # FTS5 state and query ownership
+│   │       └── search-preview-chunks.ts # The index's read-only preview query (library previews)
 │   ├── library/                    # Library storage & file hashing
 │   │   ├── storage-manager.ts      # Managed copy vs Link-in-place
 │   │   └── metadata-extractor.ts   # Cover & metadata extraction
@@ -108,6 +111,7 @@ src/
 │   │   ├── agent-service.ts        # Session lifecycle and event persistence
 │   │   ├── agent-adapter.ts        # CLI/fake adapter registry and argv
 │   │   ├── environment-manager.ts # Worktree/copy/direct environment lifecycle
+│   │   ├── environment-change-plan.ts # Pure manifest comparison and Apply refusal rules
 │   │   └── process-runner.ts       # Bounded shell-free subprocess runner
 │   └── security/                   # Hardening & verification
 │       ├── protocol-handler.ts     # interleaf-media:// custom scheme
@@ -122,7 +126,7 @@ src/
 │   ├── main.tsx                    # React mount & provider tree
 │   ├── mermaid-sandbox/            # Isolated, preload-free diagram renderer page
 │   ├── app/                        # App shell, routing, layout
-│   ├── components/                 # Shared React/native accessible UI primitives
+│   ├── components/                 # Shell compositions and shared accessible UI primitives (`ui/`)
 │   ├── features/                   # Domain feature slices
 │   │   ├── reader/                 # Reader viewport & format engine host
 │   │   │   ├── adapters/           # PDF.js, pinned Foliate, direct OOXML drivers/workers
@@ -131,13 +135,16 @@ src/
 │   │   ├── annotations/            # Highlights, notes, Kindle-style browser
 │   │   ├── chat/                   # AI chat panel, context chips, citations
 │   │   ├── agent/                  # Agent task composer, stream, diff viewer
+│   │   ├── settings/               # Settings dialog: providers, credentials UX, preferences, updates
 │   │   ├── library/                # Book grid, folder tree, recent reads
 │   │   └── search/                 # Indexed search UI and chunk normalization
 │   ├── stores/                     # Zustand state stores
 │   │   ├── use-reader-store.ts     # Active document, location, zoom, theme
 │   │   ├── use-annotation-store.ts # Highlight & note cache
 │   │   ├── use-chat-store.ts       # Active conversation & context items
+│   │   ├── chat/                   # Slices and helpers owned by use-chat-store
 │   │   ├── use-agent-store.ts      # Active runs, streaming output, diffs
+│   │   ├── agent/                  # Context capture, run attempts and drafts owned by use-agent-store
 │   │   ├── use-library-store.ts    # Documents and folders
 │   │   ├── use-search-store.ts     # Search state
 │   │   └── use-ui-store.ts         # Palette, panels, focus mode
@@ -147,7 +154,7 @@ src/
     ├── types/                      # TypeScript definitions (Document, Annotation, AI, Agent)
     ├── schemas/                    # Zod runtime validation schemas
     ├── models/                     # Cross-process transport and caught-value models
-    ├── constants/                  # IPC channel names, default prompts, limits
+    ├── constants/                  # IPC channel names, default prompts, limits, document-format registry
     └── errors/                     # Structured domain error hierarchy
 ```
 
@@ -554,3 +561,13 @@ If a follow-up materially changes scope, the agent identifies the new boundary a
 ```
 
 All stores update asynchronously in response to typed IPC events pushed from the main process, ensuring the UI is never frozen by background file operations or AI streaming.
+
+Async ordering is owned by the module that owns the race. Latest-wins
+generation counters (hydration, profile refresh, session focus, loading turns)
+are private, non-reactive module state of the store that issues the requests,
+so bumping one never re-renders anything. The one counter another module needs
+— the Agent context revision — is owned by `stores/agent/context-attach.ts` and
+never handed out: other code takes a claim on it or declares an explicit choice
+with `supersedeAgentContext()`. A store's dialog state that admits only one
+open dialog is a single discriminated slot (`useLibraryStore.libraryModal`), not
+a flag per dialog.

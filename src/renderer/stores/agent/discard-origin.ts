@@ -1,5 +1,5 @@
 import type { AgentEvent, AgentSessionDetail } from '@shared/types/agent';
-import { runAttemptOf } from './agent-run-attempts';
+import { runAttemptOf } from './run-attempts';
 
 function latestEventOrdinal(events: readonly AgentEvent[], type: AgentEvent['type']): number | undefined {
   let latest: number | undefined;

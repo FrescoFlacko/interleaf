@@ -390,7 +390,7 @@ describe('Library Renderer UI', () => {
       new Error('Folder rename failed safely.')
     ) } });
     useLibraryStore.setState({
-      renameFolderModal: MOCK_FOLDERS[0]!,
+      libraryModal: { kind: 'rename-folder', folder: MOCK_FOLDERS[0]! },
     });
     render(<LibraryModalHost />);
 
@@ -412,7 +412,7 @@ describe('Library Renderer UI', () => {
       new Error('Folder delete failed safely.')
     ) } });
     useLibraryStore.setState({
-      deleteFolderModal: MOCK_FOLDERS[0]!,
+      libraryModal: { kind: 'delete-folder', folder: MOCK_FOLDERS[0]! },
     });
     render(<LibraryModalHost />);
 
@@ -431,7 +431,7 @@ describe('Library Renderer UI', () => {
       new Error('Document move failed safely.')
     ) } });
     useLibraryStore.setState({
-      moveDocumentModal: MOCK_DOCS[0]!,
+      libraryModal: { kind: 'move-document', document: MOCK_DOCS[0]! },
     });
     render(<LibraryModalHost />);
 
@@ -450,7 +450,7 @@ describe('Library Renderer UI', () => {
       new Error('Document delete failed safely.')
     ) } });
     useLibraryStore.setState({
-      deleteDocumentModal: MOCK_DOCS[0]!,
+      libraryModal: { kind: 'delete-document', document: MOCK_DOCS[0]! },
     });
     render(<LibraryModalHost />);
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import { useAgentStore } from '../../src/renderer/stores/use-agent-store';
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@shared/schemas/settings';
 import { settingsModalFixture } from '../helpers/settings-modal';

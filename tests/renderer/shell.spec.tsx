@@ -526,7 +526,7 @@ describe("launch layout", () => {
   });
 
   test("a later settings load in the same session does not close a drawer the user opened", async () => {
-    const { hydrateStoresFromLoad, withLiveLayout } = await import("../../src/renderer/features/chat/settings-store-sync");
+    const { hydrateStoresFromLoad, withLiveLayout } = await import("../../src/renderer/features/settings/settings-store-sync");
     await launch(optedOut);
 
     useUiStore.getState().showRightTab("annotations");

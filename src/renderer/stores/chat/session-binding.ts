@@ -1,8 +1,8 @@
 import type { AIProviderId, ChatSession, ReasoningEffort } from '@shared/types/ai';
-import { bridge } from '../app/api-client';
-import { discoveryBlockMessage, type SessionBindingIntent, type SessionBindingIntents } from './chat-provider-readiness';
-import { chatDocumentId, documentLoadStillCurrent, errorMessage, type ChatRuntime } from './chat-runtime';
-import type { ChatState } from './use-chat-store';
+import { bridge } from '../../app/api-client';
+import { discoveryBlockMessage, type SessionBindingIntent, type SessionBindingIntents } from './provider-readiness';
+import { chatDocumentId, documentLoadStillCurrent, errorMessage, type ChatRuntime } from './runtime';
+import type { ChatState } from '../use-chat-store';
 
 /**
  * The newest binding decision made about each conversation, by session id.

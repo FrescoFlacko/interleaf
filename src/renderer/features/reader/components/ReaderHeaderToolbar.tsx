@@ -12,12 +12,12 @@ import { createThenUpdateNote, type NewNoteTarget } from '../../../hooks/note-pe
 import type { NoteAutosaveOptions } from '../../../hooks/note-autosave';
 import { newNoteDraftKey, type NoteDraft } from '../../../hooks/note-drafts';
 import { useRetainedNoteDraft } from '../../../hooks/use-note-autosave';
+import type { DocumentFormat } from '@shared/types/document';
+import { REFLOWABLE_DOCUMENT_FORMATS } from '@shared/constants/document-formats';
 
 
-const REFLOWABLE_FORMATS: ReadonlySet<string> = new Set(['epub', 'mobi', 'docx', 'pptx', 'markdown']);
-
-function isReflowableFormat(format: string | undefined): boolean {
-  return format !== undefined && REFLOWABLE_FORMATS.has(format);
+function isReflowableFormat(format: DocumentFormat | undefined): boolean {
+  return format !== undefined && REFLOWABLE_DOCUMENT_FORMATS.has(format);
 }
 
 /**

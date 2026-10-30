@@ -1,11 +1,11 @@
 import type { ChatContextAttachInput, ChatContextItem } from '@shared/types/ai';
 import type { ChatSelectionDescriptor, DocumentLocation, DocumentMetadata } from '@shared/types/document';
-import { bridge } from '../app/api-client';
-import { errorMessage, sameDocumentLoad, type ChatRuntime } from './chat-runtime';
-import { ensureSessionForDocument } from './chat-session-actions';
-import { upsertContextItem } from './chat-transcript';
-import { useReaderStore } from './use-reader-store';
-import type { ChatState } from './use-chat-store';
+import { bridge } from '../../app/api-client';
+import { errorMessage, sameDocumentLoad, type ChatRuntime } from './runtime';
+import { ensureSessionForDocument } from './session-actions';
+import { upsertContextItem } from './transcript';
+import { useReaderStore } from '../use-reader-store';
+import type { ChatState } from '../use-chat-store';
 
 export const ATTACH_FAILED_ERROR = 'Could not add nearby document context.';
 const AUTOMATIC_PDF_PAGE_RADIUS = 10;

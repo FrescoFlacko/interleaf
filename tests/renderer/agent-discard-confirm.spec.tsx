@@ -9,7 +9,7 @@ import { CompactDrawer } from '../../src/renderer/components/CompactDrawer';
 import { AgentSessionView } from '../../src/renderer/features/agent/AgentSessionView';
 import { useShortcuts } from '../../src/renderer/hooks/use-shortcuts';
 import { useAgentStore } from '../../src/renderer/stores/use-agent-store';
-import { discardOriginOf, type AgentDiscardOrigin } from '../../src/renderer/stores/agent-discard-origin';
+import { discardOriginOf, type AgentDiscardOrigin } from '../../src/renderer/stores/agent/discard-origin';
 import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 import { stubBridge } from '../helpers/interleaf-api';
 

@@ -1,8 +1,8 @@
 import type { AIProviderId, ChatSession, ReasoningEffort } from '@shared/types/ai';
 import type { DocumentMetadata } from '@shared/types/document';
-import { bridge } from '../app/api-client';
-import { applyDefaultChatBinding, resolveNewSessionBinding } from './chat-provider-readiness';
-import { loadDocumentProviders } from './chat-provider-discovery';
+import { bridge } from '../../app/api-client';
+import { applyDefaultChatBinding, resolveNewSessionBinding } from './provider-readiness';
+import { loadDocumentProviders } from './provider-discovery';
 import {
   chatDocumentId,
   documentLoadStillCurrent,
@@ -10,18 +10,18 @@ import {
   sameDocumentLoad,
   supersedeTurn,
   type ChatRuntime,
-} from './chat-runtime';
+} from './runtime';
 import {
   claimCreatedSessionIntent,
   clearedPendingSelection,
   publishCreatedSession,
   rebindCreatedSession,
   withoutBindingIntent,
-} from './chat-session-binding';
-import { titleRefreshKey } from './chat-session-summaries';
-import { mergeContextItems } from './chat-transcript';
-import { useUiStore } from './use-ui-store';
-import type { ChatState } from './use-chat-store';
+} from './session-binding';
+import { titleRefreshKey } from './session-summaries';
+import { mergeContextItems } from './transcript';
+import { useUiStore } from '../use-ui-store';
+import type { ChatState } from '../use-chat-store';
 
 /** The state of a document load that has just begun or a document just closed. */
 function emptyDocumentState(): Partial<ChatState> {

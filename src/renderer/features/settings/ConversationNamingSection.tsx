@@ -5,9 +5,9 @@ import type { AIModelInfo, AIProviderStatus } from '@shared/types/ai';
 import { Select } from '../../components/ui/select';
 import type { SelectOption } from '../../components/ui/select-model';
 import { isProviderReady } from '../../stores/use-chat-store';
-import { buildModelOptions } from './openrouter-model-options';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
-import { useOpenRouterCatalog } from './use-openrouter-catalog';
+import { buildModelOptions } from '../chat/openrouter-model-options';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
+import { useOpenRouterCatalog } from '../chat/use-openrouter-catalog';
 
 type NamingMode = AppSettings['ai']['conversationNaming'];
 type NamingProviderId = Exclude<NamingMode, 'auto' | null>['providerId'];

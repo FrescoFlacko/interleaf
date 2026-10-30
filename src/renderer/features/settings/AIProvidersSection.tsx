@@ -4,7 +4,7 @@ import { AddProviderButton, OpenRouterPanel, type OpenRouterPanelProps } from '.
 import { AgentProviderPanel, type AgentProviderPanelProps } from './AgentProviderPanel';
 import { LocalProviderPanel, type LocalProviderPanelProps } from './LocalProviderPanel';
 import { groupProviderRows, type ProviderRow } from './provider-rows';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
 
 export type AIProvidersSectionProps = {
   readonly rows: readonly ProviderRow[];

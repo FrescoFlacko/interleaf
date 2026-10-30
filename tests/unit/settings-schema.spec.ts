@@ -602,3 +602,56 @@ describe('Startup drawer preference contract', () => {
     });
   });
 });
+
+describe('One source for every settings default', () => {
+  /** The defaults as they shipped before the sections were derived from field defaults. */
+  const SHIPPED_DEFAULTS = {
+    version: 1,
+    appearance: { palette: 'paper' },
+    reader: { background: 'palette', fontSize: 1, fontFamily: 'system', lineSpacing: 1.65, contentWidth: 72, paragraphSpacing: 0.8, pageMargin: 2.5 },
+    layout: { leftWidth: 256, rightWidth: 320, leftOpen: true, rightOpen: true, openRightPanelOnStartup: true },
+    agent: {
+      defaultExecutionMode: 'auto-isolated',
+      defaultProfileId: null,
+      defaultWorkingDirectory: null,
+      workingDirectories: [],
+      defaultWorkingDirectoryByProfile: {},
+      profiles: {},
+    },
+    ai: {
+      openRouterModel: 'openrouter/auto',
+      defaultChat: null,
+      conversationNaming: 'auto',
+      local: { mode: 'ollama', endpoint: DEFAULT_LOCAL_ENDPOINT, model: null },
+    },
+    library: { defaultView: 'grid', defaultSort: 'recent_added' },
+    privacy: { confirmExternalLinks: false },
+    advanced: { debugLogging: false },
+    companion: { textSize: 1 },
+    updates: { automaticChecks: true },
+    onboarding: { version: 1, status: 'not-started', lastStageAcknowledged: null, completedAt: null },
+  };
+
+  it('keeps the shipped fresh-profile defaults exactly', () => {
+    expect(DEFAULT_APP_SETTINGS).toStrictEqual(SHIPPED_DEFAULTS);
+  });
+
+  it('fills an absent section and an empty one from the same field defaults', () => {
+    const minimal = { version: 1, appearance: { palette: 'paper' }, agent: { defaultExecutionMode: 'auto-isolated' } };
+    const emptySections = {
+      ...minimal,
+      reader: {}, layout: {}, ai: { local: {} }, library: {}, privacy: {}, advanced: {}, companion: {}, updates: {}, onboarding: {},
+    };
+    expect(appSettingsSchema.parse(minimal)).toStrictEqual(SHIPPED_DEFAULTS);
+    expect(appSettingsSchema.parse(emptySections)).toStrictEqual(SHIPPED_DEFAULTS);
+  });
+
+  it('never shares a defaulted section object between parses', () => {
+    const minimal = { version: 1, appearance: { palette: 'paper' }, agent: { defaultExecutionMode: 'auto-isolated' } };
+    const first = appSettingsSchema.parse(minimal);
+    const second = appSettingsSchema.parse(minimal);
+    expect(first.reader).not.toBe(second.reader);
+    expect(first.ai.local).not.toBe(second.ai.local);
+    expect(first.reader).not.toBe(DEFAULT_APP_SETTINGS.reader);
+  });
+});

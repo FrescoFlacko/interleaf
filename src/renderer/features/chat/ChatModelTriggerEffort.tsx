@@ -1,7 +1,7 @@
 import { REASONING_EFFORT_LABELS } from '@shared/constants/reasoning';
 import type { AIProviderId, AIProviderStatus, ReasoningEffort } from '@shared/types/ai';
 import { AppIcon } from '../../components/AppIcon';
-import { isEffortStale } from '../../stores/chat-reasoning';
+import { isEffortStale } from '../../stores/chat/reasoning';
 import type { OpenRouterCatalogState } from './use-openrouter-catalog';
 import type { PickerRow } from './model-picker-options';
 

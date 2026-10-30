@@ -4,7 +4,7 @@ import {
   type CredentialStorageStatus,
   type OpenRouterKeyPreview,
 } from '@shared/schemas/credential-preview';
-import { modelMetadataItems, modelSelectLabel, type ModelOption } from './openrouter-model-options';
+import { modelMetadataItems, modelSelectLabel, type ModelOption } from '../chat/openrouter-model-options';
 import { openRouterCredentialState } from './provider-rows';
 import {
   CredentialStorageNotice,

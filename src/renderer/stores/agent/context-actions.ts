@@ -1,6 +1,6 @@
 import type { AgentContextPacket } from '@shared/types/agent';
 import type { DocumentLocation, DocumentMetadata } from '@shared/types/document';
-import type { DocumentAdapter } from '../features/reader/types';
+import type { DocumentAdapter } from '../../features/reader/types';
 import {
   captureEntireDocument,
   capturePageRange,
@@ -9,9 +9,10 @@ import {
   ENTIRE_DOCUMENT_SCOPE,
   holdsAgentContext,
   releaseAgentContext,
+  supersedeAgentContext,
   type AgentContextCapture,
   type AgentContextClaim,
-} from './agent-context-attach';
+} from './context-attach';
 
 /** A capture still reading the book, shown to the reader until it lands or is cancelled. */
 export type AgentPendingContext = { readonly revision: number; readonly label: string };
@@ -44,6 +45,10 @@ export type AgentContextActions = {
   attachEntireDocument(document: DocumentMetadata, location: DocumentLocation, explicitText?: string, options?: AgentContextCaptureOptions): Promise<boolean>;
   /** Withdraws the capture in progress, keeping whatever was attached before it. */
   cancelContextCapture(): void;
+  /** Removes the attachment and withdraws any capture in progress. */
+  clearSelection(): void;
+  /** The composer's Remove; the same explicit choice as `clearSelection`. */
+  clearContextPacket(): void;
 };
 
 function pageLabel(pageStart: number, pageEnd: number): string {
@@ -104,6 +109,11 @@ export function createContextActions(
     return false;
   };
 
+  const clearContext = (): void => {
+    supersedeAgentContext();
+    set({ contextPacket: null, pendingContext: null });
+  };
+
   return {
     attachPageRange: (document, pageStart, pageEnd, explicitText, options = {}) =>
       run(document, pageLabel(pageStart, pageEnd), options, (claim) => capturePageRange(claim, document, pageStart, pageEnd, explicitText)),
@@ -119,5 +129,7 @@ export function createContextActions(
       releaseAgentContext(claim);
       set({ pendingContext: null });
     },
+    clearSelection: clearContext,
+    clearContextPacket: clearContext,
   };
 }

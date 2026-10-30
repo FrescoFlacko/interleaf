@@ -106,6 +106,21 @@ describe('Agent book context: stale captures', () => {
     expect(useAgentStore.getState().contextPacket).toBeNull();
   });
 
+  it('treats clearing the selection as the same explicit choice as Remove', async () => {
+    const book = pdf('book-clear-selection', 3);
+    const held = gate();
+    gatedPdf(book, 'Text', held.promise);
+
+    const attaching = useAgentStore.getState().attachPageRange(book, 1, 2);
+    expect(useAgentStore.getState().pendingContext).not.toBeNull();
+    useAgentStore.getState().clearSelection();
+    expect(useAgentStore.getState().pendingContext).toBeNull();
+    held.open();
+
+    await expect(attaching).resolves.toBe(false);
+    expect(useAgentStore.getState().contextPacket).toBeNull();
+  });
+
   it('lets a newer selection win over an older page capture that settles later', async () => {
     const book = pdf('book-newer', 3);
     const held = gate();

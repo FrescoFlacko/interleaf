@@ -1,7 +1,7 @@
 import type { AIModelInfo } from '@shared/types/ai';
 import { credentialStorageBlocked, openRouterKeyIssue } from './credential-storage-ux';
 import type { CredentialStorageStatus } from '@shared/schemas/credential-preview';
-import type { OpenRouterCatalogState } from './use-openrouter-catalog';
+import type { OpenRouterCatalogState } from '../chat/use-openrouter-catalog';
 
 const DEFAULT_OPENROUTER_MODEL = 'openrouter/auto';
 

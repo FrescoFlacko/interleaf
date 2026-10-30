@@ -4,7 +4,7 @@ import type { AIProviderStatus, ChatSession } from '@shared/types/ai';
 import type { DocumentMetadata } from '@shared/types/document';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import type { AppSettings } from '@shared/schemas/settings';
-import { applyDefaultChatBinding } from '../../src/renderer/stores/chat-provider-readiness';
+import { applyDefaultChatBinding } from '../../src/renderer/stores/chat/provider-readiness';
 import { initialDraftProfileId } from '../../src/renderer/stores/use-agent-store';
 import type { AgentProfile } from '@shared/types/agent';
 import { createChatStore, type ChatStore } from '../../src/renderer/stores/use-chat-store';

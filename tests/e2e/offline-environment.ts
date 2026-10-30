@@ -1,4 +1,5 @@
-import { accessSync, constants, existsSync, statSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 /**
@@ -158,10 +159,57 @@ export function isolatedLaunchEnvironment(options: {
 }
 
 /**
- * Chromium's mock keychain: Electron `safeStorage` encrypts the suite's
- * placeholder keys without reading or writing the host's login keychain.
+ * Whether the runner asked for Linux credential workflows to use the session's
+ * real secret service: `INTERLEAF_E2E_LINUX_SECRET_SERVICE=1` on Linux.
+ *
+ * Off by default, because it is only correct inside a disposable D-Bus session
+ * whose gnome-keyring holds nothing but this run's placeholder keys (see
+ * `tests/e2e/run-with-linux-keyring.sh`). It must never point an app under test
+ * at the person's own login keyring.
  */
-export const ISOLATED_ELECTRON_SWITCHES: readonly string[] = ['--use-mock-keychain'];
+function usesLinuxSecretService(): boolean {
+  return process.platform === 'linux' && process.env.INTERLEAF_E2E_LINUX_SECRET_SERVICE === '1';
+}
+
+/**
+ * Puts back the real Linux secret service for an app under test.
+ *
+ * Playwright's Electron loader appends `--password-store=basic` to every
+ * launch, which makes Linux `safeStorage` select the plaintext-equivalent
+ * `basic_text` backend whatever the session provides. Main correctly refuses
+ * to store a credential there, so credential workflows cannot run under the
+ * suite at all. This module, preloaded with `-r` after Playwright's loader,
+ * selects libsecret again; it mocks nothing. The runner supplies the disposable
+ * unlocked gnome-keyring, and main's own backend check still decides: without a
+ * usable secret service Electron falls back to `basic_text` and main refuses.
+ *
+ * Written to a private temporary file because Electron can only preload a
+ * JavaScript file, and removed when the test worker exits.
+ */
+const LINUX_SECRET_SERVICE_PRELOAD = [
+  "const { app } = require('electron');",
+  "app.commandLine.appendSwitch('password-store', 'gnome-libsecret');",
+  '',
+].join('\n');
+
+function linuxSecretServicePreload(): string {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'interleaf-e2e-secret-service-'));
+  const preload = path.join(directory, 'select-libsecret.cjs');
+  writeFileSync(preload, LINUX_SECRET_SERVICE_PRELOAD, { mode: 0o600 });
+  process.once('exit', () => { rmSync(directory, { recursive: true, force: true }); });
+  return preload;
+}
+
+/**
+ * Chromium's mock keychain: on macOS, Electron `safeStorage` encrypts the
+ * suite's placeholder keys without reading or writing the host's login keychain.
+ * Linux has no mock keychain; when the runner opts in, the secret-service
+ * preload above precedes the app entry, as `-r` must.
+ */
+export const ISOLATED_ELECTRON_SWITCHES: readonly string[] = [
+  '--use-mock-keychain',
+  ...(usesLinuxSecretService() ? ['-r', linuxSecretServicePreload()] : []),
+];
 
 /**
  * Fails the run — before any application starts — if the sanitized `PATH`

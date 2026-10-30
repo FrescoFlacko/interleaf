@@ -1,4 +1,4 @@
-import { useLibraryStore } from '../stores/use-library-store';
+import { isLibraryModalOpen, useLibraryStore } from '../stores/use-library-store';
 import { useUiStore } from '../stores/use-ui-store';
 import { useOnboardingOwnsScreen } from '../features/onboarding/OnboardingHost';
 
@@ -22,24 +22,11 @@ export type ShellInertState = {
   readonly drawerInert: boolean;
 };
 
-/** True while any library dialog owns the screen. */
-function useLibraryModalOpen(): boolean {
-  return useLibraryStore((state) =>
-    state.newFolderModalOpen ||
-    state.renameFolderModal !== null ||
-    state.deleteFolderModal !== null ||
-    state.moveDocumentModal !== null ||
-    state.deleteDocumentModal !== null ||
-    state.selectedDocumentDetails !== null ||
-    state.webImportModalOpen
-  );
-}
-
 export function useShellInertState(compactPresentation: boolean): ShellInertState {
   const shortcutsOpen = useUiStore((state) => state.shortcutsOpen);
   const settingsOpen = useUiStore((state) => state.settingsOpen);
   const compactActivePanel = useUiStore((state) => state.compactActivePanel);
-  const libraryModalOpen = useLibraryModalOpen();
+  const libraryModalOpen = useLibraryStore(isLibraryModalOpen);
   const onboardingOpen = useOnboardingOwnsScreen();
 
   const modalOpen = shortcutsOpen || libraryModalOpen || settingsOpen || onboardingOpen;

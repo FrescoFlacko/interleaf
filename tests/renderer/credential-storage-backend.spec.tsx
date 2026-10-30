@@ -2,11 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import {
   credentialStorageNotice,
   openRouterKeyIssue,
-} from '../../src/renderer/features/chat/credential-storage-ux';
+} from '../../src/renderer/features/settings/credential-storage-ux';
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@shared/schemas/settings';
 import type { CredentialStorageStatus } from '@shared/schemas/credential-preview';
 import { stubBridge } from '../helpers/interleaf-api';

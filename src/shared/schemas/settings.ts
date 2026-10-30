@@ -295,11 +295,7 @@ const aiSettingsSchema = z.object({
    * still loads with every other preference intact, rather than failing
    * validation and being replaced wholesale by defaults.
    */
-  local: localProviderSettingsSchema.default({
-    mode: 'ollama',
-    endpoint: DEFAULT_LOCAL_ENDPOINT,
-    model: null,
-  }),
+  local: localProviderSettingsSchema.prefault({}),
 });
 
 /** The document orderings the library list/grid may be sorted by. Kept in step
@@ -376,36 +372,27 @@ export const onboardingSettingsSchema = z.object({
   completedAt: z.iso.datetime().nullable().default(null),
 }).strict();
 
+// Every section but the two that have no default is `prefault({})`: an absent
+// section is parsed from an empty object, so each field's own `.default` above
+// is the one place its default is written, for a fresh profile, a document that
+// predates the section, and `DEFAULT_APP_SETTINGS` alike.
 export const appSettingsSchema = z.object({
   /** Settings shape version — bump when a migration must rewrite stored JSON. */
   version: z.literal(1),
   appearance: appearanceSettingsSchema,
-  reader: readerSettingsSchema.default({
-    background: 'palette', fontSize: 1, fontFamily: 'system', lineSpacing: 1.65,
-    contentWidth: 72, paragraphSpacing: 0.8, pageMargin: 2.5,
-  }),
-  layout: layoutSettingsSchema.default({ leftWidth: 256, rightWidth: 320, leftOpen: true, rightOpen: true, openRightPanelOnStartup: true }),
+  reader: readerSettingsSchema.prefault({}),
+  layout: layoutSettingsSchema.prefault({}),
   agent: agentSettingsSchema,
-  ai: aiSettingsSchema.default({
-    openRouterModel: 'openrouter/auto',
-    defaultChat: null,
-    conversationNaming: 'auto',
-    local: { mode: 'ollama', endpoint: DEFAULT_LOCAL_ENDPOINT, model: null },
-  }),
+  ai: aiSettingsSchema.prefault({}),
   // Sections added after the first shipped shape. Each one is defaulted so a
   // settings document written before it existed still loads unchanged instead
   // of failing validation and discarding every other preference.
-  library: librarySettingsSchema.default({ defaultView: 'grid', defaultSort: 'recent_added' }),
-  privacy: privacySettingsSchema.default({ confirmExternalLinks: false }),
-  advanced: advancedSettingsSchema.default({ debugLogging: false }),
-  companion: companionSettingsSchema.default({ textSize: COMPANION_TEXT_SIZE_DEFAULT }),
-  updates: updateSettingsSchema.default({ automaticChecks: true }),
-  onboarding: onboardingSettingsSchema.default({
-    version: ONBOARDING_SETTINGS_VERSION,
-    status: 'not-started',
-    lastStageAcknowledged: null,
-    completedAt: null,
-  }),
+  library: librarySettingsSchema.prefault({}),
+  privacy: privacySettingsSchema.prefault({}),
+  advanced: advancedSettingsSchema.prefault({}),
+  companion: companionSettingsSchema.prefault({}),
+  updates: updateSettingsSchema.prefault({}),
+  onboarding: onboardingSettingsSchema.prefault({}),
 });
 
 export type LocalProviderSettings = z.infer<typeof localProviderSettingsSchema>;
@@ -416,42 +403,12 @@ export type AppSettings = z.infer<typeof appSettingsSchema>;
  * the schema parser. */
 export type AppSettingsInput = z.input<typeof appSettingsSchema>;
 
-export const DEFAULT_APP_SETTINGS: AppSettings = {
+/**
+ * A fresh profile's settings: the two sections that have no default, with every
+ * other value taken from the schema's own field defaults.
+ */
+export const DEFAULT_APP_SETTINGS: AppSettings = appSettingsSchema.parse({
   version: 1,
   appearance: { palette: DEFAULT_PALETTE },
-  reader: {
-    background: 'palette',
-    fontSize: 1,
-    fontFamily: 'system',
-    lineSpacing: 1.65,
-    contentWidth: 72,
-    paragraphSpacing: 0.8,
-    pageMargin: 2.5,
-  },
-  layout: { leftWidth: 256, rightWidth: 320, leftOpen: true, rightOpen: true, openRightPanelOnStartup: true },
-  agent: {
-    defaultExecutionMode: DEFAULT_AGENT_EXECUTION_MODE,
-    defaultProfileId: null,
-    defaultWorkingDirectory: null,
-    workingDirectories: [],
-    defaultWorkingDirectoryByProfile: {},
-    profiles: {},
-  },
-  ai: {
-    openRouterModel: 'openrouter/auto',
-    defaultChat: null,
-    conversationNaming: 'auto',
-    local: { mode: 'ollama', endpoint: DEFAULT_LOCAL_ENDPOINT, model: null },
-  },
-  library: { defaultView: 'grid', defaultSort: 'recent_added' },
-  privacy: { confirmExternalLinks: false },
-  advanced: { debugLogging: false },
-  companion: { textSize: COMPANION_TEXT_SIZE_DEFAULT },
-  updates: { automaticChecks: true },
-  onboarding: {
-    version: ONBOARDING_SETTINGS_VERSION,
-    status: 'not-started',
-    lastStageAcknowledged: null,
-    completedAt: null,
-  },
-};
+  agent: { defaultExecutionMode: DEFAULT_AGENT_EXECUTION_MODE },
+});

@@ -399,7 +399,7 @@ describe('Phase 10 layout contracts', () => {
   it('nested modal Escape closes modal, leaves drawer open, restores focus inside drawer, and second Escape closes drawer and restores toggle button', async () => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 480 });
     useUiStore.setState({ compactActivePanel: null });
-    useLibraryStore.setState({ newFolderModalOpen: false, documents: [], folders: [], folderTree: [] });
+    useLibraryStore.setState({ libraryModal: null, documents: [], folders: [], folderTree: [] });
 
     const { unmount } = render(<App />);
 

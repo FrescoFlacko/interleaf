@@ -308,6 +308,12 @@ npm run package:win
 npm run package:linux
 ```
 
+On Linux, run the Electron suite inside a disposable unlocked keyring so
+credential workflows reach a real Secret Service rather than failing closed:
+`npm run build && tests/e2e/run-with-linux-keyring.sh npx playwright test`
+(requires `dbus-run-session` and `gnome-keyring-daemon`; see
+[docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md)).
+
 Platform signing/notarization and native toolchains are required for
 distribution artifacts. Do not treat an unsigned local package as a release.
 

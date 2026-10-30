@@ -1,6 +1,6 @@
-import { bridge } from '../app/api-client';
-import { withoutContextItems } from './chat-transcript';
-import { errorMessage, type ChatRuntime } from './chat-runtime';
+import { bridge } from '../../app/api-client';
+import { withoutContextItems } from './transcript';
+import { errorMessage, type ChatRuntime } from './runtime';
 
 /**
  * Conversations with a `Clean Context` request in flight, by session id.

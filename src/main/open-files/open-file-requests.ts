@@ -1,9 +1,10 @@
 import { extname, isAbsolute, resolve } from 'node:path';
+import { documentFormatForExtension } from '@shared/constants/document-formats';
 
-/** Extensions the operating system may hand to Interleaf, compared case-insensitively. */
-export const OPENABLE_EXTENSIONS: ReadonlySet<string> = new Set([
-  '.pdf', '.epub', '.mobi', '.azw', '.azw3', '.docx', '.pptx', '.md', '.markdown',
-]);
+/** Whether the operating system may hand Interleaf a file with this extension; compared case-insensitively. */
+function isOpenableExtension(extension: string): boolean {
+  return extension.length > 0 && documentFormatForExtension(extension) !== null;
+}
 
 /** Bounds an argv path before it reaches the filesystem; real validation happens on open. */
 const MAX_REQUEST_PATH_LENGTH = 4096;
@@ -12,7 +13,7 @@ export function isOpenablePath(filePath: string): boolean {
   return filePath.length > 0 &&
     filePath.length <= MAX_REQUEST_PATH_LENGTH &&
     !filePath.includes('\0') &&
-    OPENABLE_EXTENSIONS.has(extname(filePath).toLowerCase());
+    isOpenableExtension(extname(filePath));
 }
 
 /**

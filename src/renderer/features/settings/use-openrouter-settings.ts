@@ -8,10 +8,10 @@ import {
 } from '@shared/schemas/credential-preview';
 import { bridge } from '../../app/api-client';
 import { useOpenRouterKeyRemoval } from './openrouter-credential-removal';
-import { buildModelOptions } from './openrouter-model-options';
+import { buildModelOptions } from '../chat/openrouter-model-options';
 import { planOpenRouterCommit } from './openrouter-draft-validation';
 import type { OpenRouterPanelProps } from './OpenRouterPanel';
-import { useOpenRouterCatalog, type OpenRouterCatalog } from './use-openrouter-catalog';
+import { useOpenRouterCatalog, type OpenRouterCatalog } from '../chat/use-openrouter-catalog';
 import { useOpenRouterConnectionTest } from './use-openrouter-connection-test';
 import type { ProviderStatuses } from './use-provider-statuses';
 import type { SettingsFeedback } from './use-settings-feedback';

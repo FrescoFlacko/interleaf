@@ -12,7 +12,7 @@ import { useLibraryStore } from "../stores/use-library-store";
 import { isReaderReady, useReaderStore } from "../stores/use-reader-store";
 import { ChatStoreContext } from "../stores/use-chat-store";
 import { useOwnedChatStore } from "../stores/use-owned-chat-store";
-import { AIProviderSettingsModal, DIALOG_EXIT_MS } from "../features/chat/AIProviderSettingsModal";
+import { AIProviderSettingsModal, DIALOG_EXIT_MS } from "../features/settings/AIProviderSettingsModal";
 import { LibraryModalHost } from "../features/library/components/LibraryModalHost";
 import { OnboardingHost } from "../features/onboarding/OnboardingHost";
 import { useShellInertState } from "./use-shell-inert-state";

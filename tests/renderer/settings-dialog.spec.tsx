@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import { claudeProvider, codexProvider, settingsModalFixture } from '../helpers/settings-modal';
 

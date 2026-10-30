@@ -1,8 +1,8 @@
-import { bridge } from '../app/api-client';
-import { isProviderReady } from './chat-provider-readiness';
-import { documentLoadStillCurrent, type ChatRuntime } from './chat-runtime';
-import { ensureSessionForDocument } from './chat-session-actions';
-import { selectActiveDocument, useReaderStore } from './use-reader-store';
+import { bridge } from '../../app/api-client';
+import { isProviderReady } from './provider-readiness';
+import { documentLoadStillCurrent, type ChatRuntime } from './runtime';
+import { ensureSessionForDocument } from './session-actions';
+import { selectActiveDocument, useReaderStore } from '../use-reader-store';
 
 /**
  * Orders provider probes. Each probe takes a number when it is issued and only

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { AboutUpdatesPanel } from '../../src/renderer/features/chat/AboutUpdatesPanel';
+import { AboutUpdatesPanel } from '../../src/renderer/features/settings/AboutUpdatesPanel';
 import { useUpdateStore } from '../../src/renderer/stores/use-update-store';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import type { UpdatePhase, UpdateState } from '@shared/schemas/updates';

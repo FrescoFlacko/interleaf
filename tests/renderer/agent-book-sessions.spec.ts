@@ -5,9 +5,9 @@ import type { AgentEnvironmentReviewResult } from '@shared/types/agent-environme
 import type { AgentContextPacket, AgentProfile, AgentSessionClaimResult, AgentSessionDetail, AgentWorkingDirectory } from '@shared/types/agent';
 import type { DocumentMetadata } from '@shared/types/document';
 import { useAgentStore } from '../../src/renderer/stores/use-agent-store';
-import { discardOriginOf } from '../../src/renderer/stores/agent-discard-origin';
+import { discardOriginOf } from '../../src/renderer/stores/agent/discard-origin';
 import { useReaderStore } from '../../src/renderer/stores/use-reader-store';
-import { recordAgentFollowUp, setAgentFollowUpDraft, useAgentFollowUp } from '../../src/renderer/stores/agent-follow-up-drafts';
+import { recordAgentFollowUp, setAgentFollowUpDraft, useAgentFollowUp } from '../../src/renderer/stores/agent/follow-up-drafts';
 import { stubBridge } from '../helpers/interleaf-api';
 import { testReaderSession } from '../helpers/reader-session';
 

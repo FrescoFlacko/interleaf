@@ -3,7 +3,7 @@ import type { UpdateState } from '@shared/schemas/updates';
 import { useUpdateStore, type UpdateNotice } from '../../stores/use-update-store';
 import { Button } from '../../components/ui/button';
 import type { SettingsSectionProps } from './PreferenceSettingsSections';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
 import { activeWorkText, canCheck, downloadableVersion, lastCheckedText, updateStatusText } from './update-status-copy';
 
 /**
