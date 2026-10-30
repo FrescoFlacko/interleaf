@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { useOnboardingStore } from '../../stores/use-onboarding-store';
 import { useChatStore } from '../../stores/use-chat-store';
 import { isReaderReady, useReaderStore } from '../../stores/use-reader-store';
-import { actionableProviders } from '../../stores/chat-provider-readiness';
+import { actionableProviders } from '../../stores/chat/provider-readiness';
 
 /**
  * The first-action tip (stage 5).

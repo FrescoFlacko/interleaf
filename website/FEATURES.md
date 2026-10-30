@@ -32,7 +32,7 @@ checks that every path listed here exists.
 | 06 Agent | Auto-Isolated default (worktree or directory copy); review, apply, export patch, discard | `src/shared/constants/agent-modes.ts`, `src/renderer/features/agent/AgentReviewCard.tsx` |
 | 06 Agent | Direct-workspace modes confirmed natively | `src/main/index.ts`, `docs/wiki/ai-agent.md` |
 | 06 Agent | Isolation is not an OS sandbox | `docs/wiki/faq.md` ("Are isolated execution modes a real sandbox?") |
-| Local-first | Data stays local; no account or sync; OpenRouter key in `safeStorage` | `src/renderer/features/chat/PrivacyPolicy.tsx`, `src/main/ai/credential-storage-backend.ts`, `docs/wiki/faq.md` |
+| Local-first | Data stays local; no account or sync; OpenRouter key in `safeStorage` | `src/renderer/features/settings/PrivacyPolicy.tsx`, `src/main/ai/credential-storage-backend.ts`, `docs/wiki/faq.md` |
 | Local-first | Logs bounded and redacted | `src/main/agents/event-redaction.ts`, `docs/wiki/faq.md` |
 | Local-first | macOS app and Linux AppImage check public GitHub releases for a signed update; download only on click; checks can be turned off | `src/main/updates/update-service.ts`, `src/main/updates/update-trust.ts`, `docs/wiki/installation.md` ("Updating and uninstalling") |
 | Local-first | Network traffic outside inference: detection and sign-in, local model listing, web articles, the CLIs themselves | `docs/wiki/faq.md`, `docs/wiki/ai-providers.md`, `src/main/net/web-article-transport.ts` |

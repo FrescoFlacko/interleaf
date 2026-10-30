@@ -65,7 +65,7 @@ describe('search index startup rebuild', () => {
       yield chunk;
     });
 
-    const generation: IndexGeneration = { ...legacyState, status: 'indexing', generationId: 'generation-v17' };
+    const generation: IndexGeneration = { ...legacyState, status: 'indexing', errorMessage: null, generationId: 'generation-v17' };
     const indexed: DocumentIndexState = {
       ...legacyState,
       status: 'ready',

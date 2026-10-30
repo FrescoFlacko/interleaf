@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import axe from 'axe-core';
 import type { AIModelInfo, AIProviderStatus } from '@shared/types/ai';
 import { ChatModelPicker } from '../../src/renderer/features/chat/ChatModelPicker';
-import { isProviderReady } from '../../src/renderer/stores/chat-provider-readiness';
+import { isProviderReady } from '../../src/renderer/stores/chat/provider-readiness';
 import { stubBridge } from '../helpers/interleaf-api';
 
 function model(id: string, name = id): AIModelInfo {

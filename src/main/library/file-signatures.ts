@@ -2,22 +2,13 @@ import { open, type FileHandle } from 'node:fs/promises';
 import { extname } from 'node:path';
 import type { DocumentFormat } from '@shared/types/document';
 import { isParagraphFormat, type ParagraphFormat } from '@shared/document-format-family';
+import { DOCUMENT_EXTENSIONS, documentFormatForExtension } from '@shared/constants/document-formats';
 
 export type SignatureValidationResult =
   | { readonly ok: true; readonly format: DocumentFormat }
   | { readonly ok: false; readonly error: string };
 
-const SUPPORTED_EXTENSIONS: Readonly<Record<string, DocumentFormat>> = {
-  '.pdf': 'pdf',
-  '.epub': 'epub',
-  '.mobi': 'mobi',
-  '.azw': 'mobi',
-  '.azw3': 'mobi',
-  '.docx': 'docx',
-  '.pptx': 'pptx',
-  '.md': 'markdown',
-  '.markdown': 'markdown',
-};
+const SUPPORTED_EXTENSION_LIST = DOCUMENT_EXTENSIONS.map((extension) => `.${extension}`).join(', ');
 
 const MAX_ZIP_CENTRAL_DIRECTORY_BYTES = 2 * 1024 * 1024;
 const MAX_ZIP_ENTRIES = 10_000;
@@ -70,8 +61,8 @@ type ZipCentralDirectory = {
  * Normalizes an extension to a supported DocumentFormat, or null if unsupported.
  */
 export function normalizeExtension(filePath: string): DocumentFormat | null {
-  const ext = extname(filePath).toLowerCase();
-  return SUPPORTED_EXTENSIONS[ext] ?? null;
+  const ext = extname(filePath);
+  return ext.length === 0 ? null : documentFormatForExtension(ext);
 }
 
 /**
@@ -169,7 +160,7 @@ export async function validateFileSignature(filePath: string): Promise<Signature
     const ext = extname(filePath);
     return {
       ok: false,
-      error: `Unsupported file extension: '${ext}'. Supported extensions are .pdf, .epub, .mobi, .azw, .azw3, .docx, .pptx, .md, .markdown.`,
+      error: `Unsupported file extension: '${ext}'. Supported extensions are ${SUPPORTED_EXTENSION_LIST}.`,
     };
   }
 

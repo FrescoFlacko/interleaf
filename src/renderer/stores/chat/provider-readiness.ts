@@ -1,6 +1,6 @@
 import type { AIProviderId, AIProviderStatus, ChatSession, ReasoningEffort } from '@shared/types/ai';
-import { displayProviderName } from '../features/chat/chat-labels';
-import { isEffortStale, staleEffortMessage } from './chat-reasoning';
+import { displayProviderName } from '../../features/chat/chat-labels';
+import { isEffortStale, staleEffortMessage } from './reasoning';
 
 /**
  * How provider discovery stands for the document the chat store is showing.

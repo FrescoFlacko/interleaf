@@ -19,6 +19,7 @@ import type { DebugLogExportResult } from '@shared/schemas/ipc';
 import type { OnboardingLaunchState } from '@shared/types/onboarding';
 import { openExternalFromDocument } from '../app/open-external';
 import { reconcileOnboardingLaunchState } from '../app/onboarding-launch-state';
+import { applySettingsUpdate } from '../app/settings-update';
 import type { SettingsRepository } from '../db/repositories/settings-repository';
 import type { LibraryService } from '../library/library-service';
 import type { AnnotationRepository } from '../db/repositories/annotation-repository';
@@ -198,27 +199,7 @@ function buildHandlers(deps: IpcDispatcherDeps): {
         deps.onboardingLaunchState(),
         deps.settings.get().onboarding
       ),
-    'settings:update': async (next) => {
-      // One persist path, so every accepted update applies its runtime effects.
-      const persist = () => {
-        deps.agent.assertSettingsUpdateAllowed();
-        const saved = deps.settings.update(next);
-        deps.agent.applyProfileSettings(saved.agent.profiles);
-        deps.applyDiagnosticLogging(saved.advanced.debugLogging);
-        deps.updates.setAutomaticChecks(saved.updates.automaticChecks);
-        return saved;
-      };
-      await deps.agent.validateSavedWorkingDirectorySettings(next);
-      const unsafeProfile = Object.entries(next.agent.profiles).find(([, profile]) => profile.permissionMode === 'unsafe-yolo')?.[0];
-      const storedUnsafe = unsafeProfile !== undefined && deps.settings.get().agent.profiles[unsafeProfile]?.permissionMode === 'unsafe-yolo';
-      if (unsafeProfile !== undefined && !storedUnsafe) {
-        return deps.confirmUnsafeProfile(unsafeProfile).then((confirmed) => {
-          if (!confirmed) throw new InterleafError('validation', 'Unsafe profile changes were cancelled.');
-          return persist();
-        });
-      }
-      return persist();
-    },
+    'settings:update': (next) => applySettingsUpdate(next, deps),
 
     // Phase 3 — Library & Folder Management
     'library:import-dropped-files': (req) => deps.library.importFiles(req.filePaths, req.options),

@@ -4,9 +4,9 @@ import type { DocumentLocation, DocumentMetadata, NormalizedTextChunk } from '@s
 import { CHAT_MAX_PAGE_RANGE } from '@shared/constants/ai';
 import { AGENT_MAX_CONTEXT_TEXT_LENGTH } from '@shared/schemas/agent';
 import { fitAgentContextPacketToByteBudget, takeCodePointPrefix } from '@shared/agent-context';
-import type { DocumentAdapter } from '../features/reader/types';
-import { selectActiveDocument, selectAdapter, useReaderStore } from './use-reader-store';
-import { buildFallbackAnchor } from './agent-anchor-location';
+import type { DocumentAdapter } from '../../features/reader/types';
+import { selectActiveDocument, selectAdapter, useReaderStore } from '../use-reader-store';
+import { buildFallbackAnchor } from './anchor-location';
 
 /**
  * Agent context is captured from the open book, sometimes over many pages.
@@ -14,12 +14,19 @@ import { buildFallbackAnchor } from './agent-anchor-location';
  * new revision. A capture holds a claim on the revision it took and on the
  * reader it reads from, and lands only while it still holds both, so a slow
  * extraction can never undo a newer choice or reach another book.
+ *
+ * The revision is owned here and never handed out: other modules can only
+ * take a claim or declare a choice through `supersedeAgentContext`.
  */
 let contextRevision = 0;
 
-export function nextAgentContextRevision(): number {
+/**
+ * Records an explicit context choice made outside a capture — a selection
+ * attached directly, a removal, or leaving the book — so every capture still
+ * in flight loses.
+ */
+export function supersedeAgentContext(): void {
   contextRevision += 1;
-  return contextRevision;
 }
 
 /** One capture's claim: the choice it made, the reader it reads, and who may withdraw it. */
@@ -33,7 +40,8 @@ export type AgentContextClaim = {
 /** Takes the latest revision for a capture of `document`, unless it was withdrawn before it began. */
 export function claimAgentContext(document: DocumentMetadata, signal?: AbortSignal): AgentContextClaim | null {
   if (signal?.aborted === true) return null;
-  return { revision: nextAgentContextRevision(), documentId: document.id, adapter: selectAdapter(useReaderStore.getState()), signal };
+  supersedeAgentContext();
+  return { revision: contextRevision, documentId: document.id, adapter: selectAdapter(useReaderStore.getState()), signal };
 }
 
 /** Whether nothing has superseded or withdrawn this capture, and the same reader is still open. */
@@ -46,7 +54,7 @@ export function holdsAgentContext(claim: AgentContextClaim): boolean {
 /** Withdraws a capture, but only while it is still the latest choice: a newer one is never undone. */
 export function releaseAgentContext(claim: AgentContextClaim): boolean {
   if (claim.revision !== contextRevision) return false;
-  nextAgentContextRevision();
+  supersedeAgentContext();
   return true;
 }
 

@@ -61,6 +61,52 @@ export type LibrarySection =
   | 'recent_read'
   | 'folder';
 
+/**
+ * The one library dialog that owns the screen, with exactly the subject it
+ * acts on. A single slot rather than a flag per dialog, so two dialogs can never
+ * claim the screen at once and an open dialog always has its subject.
+ */
+export type LibraryModal =
+  | { readonly kind: 'new-folder'; readonly parentId: string | null }
+  | { readonly kind: 'rename-folder'; readonly folder: Folder }
+  | { readonly kind: 'delete-folder'; readonly folder: Folder }
+  | { readonly kind: 'move-document'; readonly document: DocumentMetadata }
+  | { readonly kind: 'delete-document'; readonly document: DocumentMetadata }
+  | { readonly kind: 'document-details'; readonly document: DocumentMetadata }
+  | { readonly kind: 'web-import' };
+
+type LibraryModalKind = LibraryModal['kind'];
+
+/** True while any library dialog owns the screen. */
+export function isLibraryModalOpen(state: Pick<LibraryState, 'libraryModal'>): boolean {
+  return state.libraryModal !== null;
+}
+
+/** Each dialog's subject while it is the open one, for the dialogs to subscribe to. */
+export const selectNewFolderModal = (state: Pick<LibraryState, 'libraryModal'>): Extract<LibraryModal, { kind: 'new-folder' }> | null =>
+  state.libraryModal?.kind === 'new-folder' ? state.libraryModal : null;
+export const selectRenameFolderModal = (state: Pick<LibraryState, 'libraryModal'>): Folder | null =>
+  state.libraryModal?.kind === 'rename-folder' ? state.libraryModal.folder : null;
+export const selectDeleteFolderModal = (state: Pick<LibraryState, 'libraryModal'>): Folder | null =>
+  state.libraryModal?.kind === 'delete-folder' ? state.libraryModal.folder : null;
+export const selectMoveDocumentModal = (state: Pick<LibraryState, 'libraryModal'>): DocumentMetadata | null =>
+  state.libraryModal?.kind === 'move-document' ? state.libraryModal.document : null;
+export const selectDeleteDocumentModal = (state: Pick<LibraryState, 'libraryModal'>): DocumentMetadata | null =>
+  state.libraryModal?.kind === 'delete-document' ? state.libraryModal.document : null;
+export const selectDocumentDetailsModal = (state: Pick<LibraryState, 'libraryModal'>): DocumentMetadata | null =>
+  state.libraryModal?.kind === 'document-details' ? state.libraryModal.document : null;
+export const selectWebImportModalOpen = (state: Pick<LibraryState, 'libraryModal'>): boolean =>
+  state.libraryModal?.kind === 'web-import';
+
+/**
+ * Closes `kind` only if it is still the open dialog. A dialog that hands over
+ * to another (Details → Move) closes itself after opening the next one, and
+ * must not close its successor.
+ */
+function closingModal(state: Pick<LibraryState, 'libraryModal'>, kind: LibraryModalKind): Pick<LibraryState, 'libraryModal'> {
+  return { libraryModal: state.libraryModal?.kind === kind ? null : state.libraryModal };
+}
+
 /** Which saved Library defaults a Settings save actually changed. */
 type LibraryDefaultsForce = {
   readonly view: boolean;
@@ -96,16 +142,7 @@ export type LibraryState = {
   isImporting: boolean;
   errorMessage: string | null;
   successMessage: string | null;
-  // Modal states
-  webImportModalOpen: boolean;
-  importModalOpen: boolean;
-  newFolderModalOpen: boolean;
-  newFolderParentId: string | null;
-  renameFolderModal: Folder | null;
-  deleteFolderModal: Folder | null;
-  moveDocumentModal: DocumentMetadata | null;
-  deleteDocumentModal: DocumentMetadata | null;
-  selectedDocumentDetails: DocumentMetadata | null;
+  libraryModal: LibraryModal | null;
 
   // Actions
   loadLibrary: () => Promise<void>;
@@ -146,8 +183,8 @@ export type LibraryState = {
   deleteDocument: (documentId: string) => Promise<boolean>;
   updateReadingPosition: (documentId: string, location: DocumentLocation, progress: number) => Promise<ReadingPosition | null>;
 
-  // Modal controls
-  setImportModalOpen: (open: boolean) => void;
+  // Modal controls: a subject (or `true`) opens that dialog; `null` (or
+  // `false`) closes it only while it is still the open one.
   setNewFolderModalOpen: (open: boolean, parentId?: string | null) => void;
   setRenameFolderModal: (folder: Folder | null) => void;
   setDeleteFolderModal: (folder: Folder | null) => void;
@@ -184,15 +221,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   isImporting: false,
   errorMessage: null,
   successMessage: null,
-  importModalOpen: false,
-  newFolderModalOpen: false,
-  newFolderParentId: null,
-  renameFolderModal: null,
-  deleteFolderModal: null,
-  moveDocumentModal: null,
-  deleteDocumentModal: null,
-  webImportModalOpen: false,
-  selectedDocumentDetails: null,
+  libraryModal: null,
 
   loadLibrary: async () => {
     const api = bridge.library;
@@ -459,11 +488,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const base = result.alreadyInLibrary
       ? `"${result.document.title}" is already in your library.`
       : `Imported "${result.document.title}".`;
-    set({
-      webImportModalOpen: false,
+    set((state) => ({
+      ...closingModal(state, 'web-import'),
       successMessage: `${base}${incompleteImagesNote(result.media)}`,
       errorMessage: null,
-    });
+    }));
     void get().loadLibrary();
     void get().loadSummary();
     return result;
@@ -474,11 +503,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
     try {
       const folder = await api.createFolder(name, parentId ?? null);
-      set({
-        newFolderModalOpen: false,
-        newFolderParentId: null,
+      set((state) => ({
+        ...closingModal(state, 'new-folder'),
         successMessage: `Folder '${folder.name}' created.`,
-      });
+      }));
       void get().loadFolders();
       void get().loadSummary();
       return folder;
@@ -495,10 +523,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
     try {
       const folder = await api.renameFolder(id, name);
-      set({
-        renameFolderModal: null,
+      set((state) => ({
+        ...closingModal(state, 'rename-folder'),
         successMessage: `Folder renamed to '${folder.name}'.`,
-      });
+      }));
       void get().loadFolders();
       return folder;
     } catch (err) {
@@ -518,12 +546,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const selectedFolderId = get().selectedFolderId;
       const selectionWasDeleted =
         selectedFolderId !== null && deletedIds.has(selectedFolderId);
-      set({
-        deleteFolderModal: null,
+      set((state) => ({
+        ...closingModal(state, 'delete-folder'),
         successMessage: 'Folder deleted.',
-        activeSection: selectionWasDeleted ? 'all' : get().activeSection,
-        selectedFolderId: selectionWasDeleted ? null : get().selectedFolderId,
-      });
+        activeSection: selectionWasDeleted ? 'all' : state.activeSection,
+        selectedFolderId: selectionWasDeleted ? null : state.selectedFolderId,
+      }));
       void get().loadFolders();
       void get().loadLibrary();
       void get().loadSummary();
@@ -541,12 +569,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
     try {
       await api.moveDocumentToFolder(documentId, folderId);
-      set({
-        moveDocumentModal: null,
+      set((state) => ({
+        ...closingModal(state, 'move-document'),
         // A move with no destination is a removal from a folder, and saying
         // "moved" there reads as if the book went somewhere.
         successMessage: folderId === null ? 'Document removed from folder.' : 'Document moved.',
-      });
+      }));
       void get().loadLibrary();
       void get().loadFolders();
       return true;
@@ -563,10 +591,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
     try {
       await api.deleteDocument(documentId);
-      set({
-        deleteDocumentModal: null,
+      set((state) => ({
+        ...closingModal(state, 'delete-document'),
         successMessage: 'Document removed from library.',
-      });
+      }));
       void get().loadLibrary();
       void get().loadFolders();
       void get().loadSummary();
@@ -594,29 +622,26 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     }
   },
 
-  setImportModalOpen: (importModalOpen) => {
-    set({ importModalOpen });
+  setWebImportModalOpen: (open) => {
+    set((state) => (open ? { libraryModal: { kind: 'web-import' } } : closingModal(state, 'web-import')));
   },
-  setWebImportModalOpen: (webImportModalOpen) => {
-    set({ webImportModalOpen });
+  setNewFolderModalOpen: (open, parentId = null) => {
+    set((state) => (open ? { libraryModal: { kind: 'new-folder', parentId } } : closingModal(state, 'new-folder')));
   },
-  setNewFolderModalOpen: (newFolderModalOpen, parentId = null) => {
-    set({ newFolderModalOpen, newFolderParentId: parentId });
+  setRenameFolderModal: (folder) => {
+    set((state) => (folder !== null ? { libraryModal: { kind: 'rename-folder', folder } } : closingModal(state, 'rename-folder')));
   },
-  setRenameFolderModal: (renameFolderModal) => {
-    set({ renameFolderModal });
+  setDeleteFolderModal: (folder) => {
+    set((state) => (folder !== null ? { libraryModal: { kind: 'delete-folder', folder } } : closingModal(state, 'delete-folder')));
   },
-  setDeleteFolderModal: (deleteFolderModal) => {
-    set({ deleteFolderModal });
+  setMoveDocumentModal: (document) => {
+    set((state) => (document !== null ? { libraryModal: { kind: 'move-document', document } } : closingModal(state, 'move-document')));
   },
-  setMoveDocumentModal: (moveDocumentModal) => {
-    set({ moveDocumentModal });
+  setDeleteDocumentModal: (document) => {
+    set((state) => (document !== null ? { libraryModal: { kind: 'delete-document', document } } : closingModal(state, 'delete-document')));
   },
-  setDeleteDocumentModal: (deleteDocumentModal) => {
-    set({ deleteDocumentModal });
-  },
-  setSelectedDocumentDetails: (selectedDocumentDetails) => {
-    set({ selectedDocumentDetails });
+  setSelectedDocumentDetails: (document) => {
+    set((state) => (document !== null ? { libraryModal: { kind: 'document-details', document } } : closingModal(state, 'document-details')));
   },
 
   clearError: () => {

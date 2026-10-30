@@ -1,9 +1,9 @@
 import type { ChatMessage, ChatStreamEvent, SendChatMessageResult } from '@shared/types/ai';
-import { bridge } from '../app/api-client';
-import { chatDocumentId, moveTurn, type ChatRuntime } from './chat-runtime';
-import { syncSessionSummary } from './chat-session-summaries';
-import { mergeMessages, withoutEarlyPlaceholders } from './chat-transcript';
-import type { TerminalStreamEvent } from './chat-turns';
+import { bridge } from '../../app/api-client';
+import { chatDocumentId, moveTurn, type ChatRuntime } from './runtime';
+import { syncSessionSummary } from './session-summaries';
+import { mergeMessages, withoutEarlyPlaceholders } from './transcript';
+import type { TerminalStreamEvent } from './turns';
 
 type TokenStreamEvent = Extract<ChatStreamEvent, { type: 'token' }>;
 

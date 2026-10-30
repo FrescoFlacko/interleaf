@@ -123,24 +123,38 @@ function searchLocationOrder(location: DocumentLocation): SearchLocationOrder {
  */
 const TEXT_UNITS_PER_ESTIMATED_TOKEN = 4;
 
-function estimatedTokens(row: IndexStateRow, currentFileHash: string | null): number | null {
-  if (row.status !== 'ready') return null;
+function readyEstimatedTokens(row: IndexStateRow, currentFileHash: string | null): number | null {
   if (currentFileHash === null) return null;
   if (row.document_hash !== currentFileHash || row.published_document_hash !== currentFileHash) return null;
   return Math.ceil(Math.max(0, row.indexed_text_units) / TEXT_UNITS_PER_ESTIMATED_TOKEN);
 }
 
+/** Shown for a failed row that recorded no reason; every current writer records one. */
+const UNRECORDED_INDEX_FAILURE = 'Indexing failed.';
+
+/**
+ * Projects a row onto the status it claims. Every writer keeps the row
+ * consistent; this keeps a legacy or hand-edited row from reaching the
+ * renderer as a state no status allows.
+ */
 function mapState(row: IndexStateRow, currentFileHash: string | null): DocumentIndexState {
-  return {
+  const common = {
     documentId: row.document_id,
     documentHash: row.document_hash,
-    status: row.status,
     totalChunks: row.total_chunks,
     indexedChunks: row.indexed_chunks,
-    estimatedTokens: estimatedTokens(row, currentFileHash),
-    errorMessage: row.error_message,
     updatedAt: row.updated_at,
   };
+  switch (row.status) {
+    case 'ready':
+      return { ...common, status: 'ready', estimatedTokens: readyEstimatedTokens(row, currentFileHash), errorMessage: null };
+    case 'failed':
+      return { ...common, status: 'failed', estimatedTokens: null, errorMessage: row.error_message ?? UNRECORDED_INDEX_FAILURE };
+    case 'not_indexed':
+      return { ...common, status: 'not_indexed', estimatedTokens: null, errorMessage: row.error_message };
+    case 'indexing':
+      return { ...common, status: 'indexing', estimatedTokens: null, errorMessage: null };
+  }
 }
 
 function tokenCount(text: string): number {

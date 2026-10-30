@@ -1,7 +1,16 @@
 import { useRef } from 'react';
 import { ImportWebArticleModal } from './ImportWebArticleModal';
 import { createPortal } from 'react-dom';
-import { useLibraryStore } from '../../../stores/use-library-store';
+import {
+  selectDeleteDocumentModal,
+  selectDeleteFolderModal,
+  selectDocumentDetailsModal,
+  selectMoveDocumentModal,
+  selectNewFolderModal,
+  selectRenameFolderModal,
+  selectWebImportModalOpen,
+  useLibraryStore,
+} from '../../../stores/use-library-store';
 import { useReaderStore } from '../../../stores/use-reader-store';
 import {
   NewFolderModal,
@@ -24,14 +33,13 @@ import {
  */
 export function LibraryModalHost() {
   const folders = useLibraryStore((s) => s.folders);
-  const newFolderModalOpen = useLibraryStore((s) => s.newFolderModalOpen);
-  const newFolderParentId = useLibraryStore((s) => s.newFolderParentId);
-  const renameFolderModal = useLibraryStore((s) => s.renameFolderModal);
-  const deleteFolderModal = useLibraryStore((s) => s.deleteFolderModal);
-  const moveDocumentModal = useLibraryStore((s) => s.moveDocumentModal);
-  const deleteDocumentModal = useLibraryStore((s) => s.deleteDocumentModal);
-  const selectedDocumentDetails = useLibraryStore((s) => s.selectedDocumentDetails);
-  const webImportModalOpen = useLibraryStore((s) => s.webImportModalOpen);
+  const newFolderModal = useLibraryStore(selectNewFolderModal);
+  const renameFolderModal = useLibraryStore(selectRenameFolderModal);
+  const deleteFolderModal = useLibraryStore(selectDeleteFolderModal);
+  const moveDocumentModal = useLibraryStore(selectMoveDocumentModal);
+  const deleteDocumentModal = useLibraryStore(selectDeleteDocumentModal);
+  const selectedDocumentDetails = useLibraryStore(selectDocumentDetailsModal);
+  const webImportModalOpen = useLibraryStore(selectWebImportModalOpen);
   const selectedFolderId = useLibraryStore((s) => s.selectedFolderId);
   const detailsTransitionFocusRef = useRef<HTMLElement | null>(null);
 
@@ -53,8 +61,8 @@ export function LibraryModalHost() {
   return createPortal(
     <>
       <NewFolderModal
-        open={newFolderModalOpen}
-        parentId={newFolderParentId}
+        open={newFolderModal !== null}
+        parentId={newFolderModal === null ? null : newFolderModal.parentId}
         onClose={() => {
           setNewFolderModalOpen(false);
         }}

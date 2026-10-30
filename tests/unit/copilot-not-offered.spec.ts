@@ -9,7 +9,7 @@ import { AgentRegistry } from '@main/agents/agent-adapter';
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@shared/schemas/settings';
 import type { AgentProfileStatus } from '@shared/types/agent';
 import { PROFILE_EDITOR_DEFINITIONS } from '../../src/renderer/features/agent/profile-preferences';
-import { deriveProviderRows } from '../../src/renderer/features/chat/provider-rows';
+import { deriveProviderRows } from '../../src/renderer/features/settings/provider-rows';
 import { deriveOnboardingRows } from '../../src/renderer/features/onboarding/onboarding-rows';
 import {
   agentDefaultOptions,

@@ -1,6 +1,6 @@
 import type { ChatSessionTitleChangedEvent } from '@shared/types/ai';
-import { bridge } from '../app/api-client';
-import { chatDocumentId, type ChatRuntime } from './chat-runtime';
+import { bridge } from '../../app/api-client';
+import { chatDocumentId, type ChatRuntime } from './runtime';
 
 /** The latest summary-refresh number per conversation; newest wins. */
 export class SessionSummaryRefresh {

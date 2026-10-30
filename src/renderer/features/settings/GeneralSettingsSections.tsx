@@ -6,7 +6,7 @@ import { Select } from '../../components/ui/select';
 import type { SelectOption } from '../../components/ui/select-model';
 import { PrivacyPolicy } from './PrivacyPolicy';
 import type { SettingsSectionProps } from './PreferenceSettingsSections';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
 
 /** Reader-facing names for the sort orders the library already supports. */
 const DEFAULT_VIEW_OPTIONS: readonly SelectOption<AppSettings['library']['defaultView']>[] = [

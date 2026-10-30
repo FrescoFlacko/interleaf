@@ -13,7 +13,7 @@ import { AgentTaskSummary } from './AgentTaskSummary';
 import { normalizeAgentEvents, type NormalizedAgentActivity } from './agent-activity';
 import { agentFailureSummary } from './agent-failure-summary';
 import { markReportShownAbove } from './agent-follow-ups';
-import { environmentActionsReady, isSessionActive } from '../../stores/agent-discard-origin';
+import { environmentActionsReady, isSessionActive } from '../../stores/agent/discard-origin';
 import { useActivityFilter } from './use-activity-filter';
 import { usePinnedScroll } from './use-pinned-scroll';
 

@@ -1,15 +1,15 @@
 import { reportRejection } from '@shared/models/caught-error';
 import type { ChatMessage, SendChatMessageResult } from '@shared/types/ai';
 import type { DocumentLocation, DocumentMetadata } from '@shared/types/document';
-import { bridge } from '../app/api-client';
-import { ATTACH_FAILED_ERROR, attachNearbyContext, readingLocation } from './chat-context-attachments';
-import type { PreSendOwner } from './chat-pre-send-drafts';
-import { CLEANING_SESSION_MESSAGE, evaluateSendGate, sessionProviderBlockMessage } from './chat-provider-readiness';
-import { chatDocumentId, errorMessage, moveTurn, sameDocumentLoad, type ChatRuntime } from './chat-runtime';
-import { settleEarlyTerminal, type AcknowledgedTurn } from './chat-stream-events';
-import { transcriptWithCompletedTurn } from './chat-transcript';
-import { selectActiveDocument, useReaderStore } from './use-reader-store';
-import type { ChatState } from './use-chat-store';
+import { bridge } from '../../app/api-client';
+import { ATTACH_FAILED_ERROR, attachNearbyContext, readingLocation } from './context-attachments';
+import type { PreSendOwner } from './pre-send-drafts';
+import { CLEANING_SESSION_MESSAGE, evaluateSendGate, sessionProviderBlockMessage } from './provider-readiness';
+import { chatDocumentId, errorMessage, moveTurn, sameDocumentLoad, type ChatRuntime } from './runtime';
+import { settleEarlyTerminal, type AcknowledgedTurn } from './stream-events';
+import { transcriptWithCompletedTurn } from './transcript';
+import { selectActiveDocument, useReaderStore } from '../use-reader-store';
+import type { ChatState } from '../use-chat-store';
 
 const IDENTITY_MISMATCH_ERROR =
   'The reader is showing a different document than this conversation, so the message was not sent. Reopen this document and try again.';

@@ -2,6 +2,7 @@ import { describe, expect, it, vi, type Mock } from 'vitest';
 import { IPC_EVENTS } from '@shared/constants/ipc';
 import type { CloneableValue } from '@shared/models/portable';
 import type { ActiveWorkSummary } from '@shared/schemas/updates';
+import { closeHandshakePayloadSchema } from '@shared/schemas/app-lifecycle';
 import type { Logger } from '@main/logging/logger';
 import { createActiveWork, hasActiveWork, type ActiveWork } from '@main/app/active-work';
 import { ShutdownBarrier, type BarrierWindow } from '@main/app/shutdown-barrier';
@@ -275,6 +276,29 @@ describe('ShutdownBarrier update restart', () => {
       installFallbackQuitMs: 5,
     });
   }
+
+  it('finishes the handshake only on an exact, schema-valid reply to the pending request', async () => {
+    const order: string[] = [];
+    const window = fakeWindow();
+    const shutdown = barrier(window, order);
+    expect(shutdown.requestQuitForUpdate(() => { order.push('install'); }, () => undefined)).toBe(true);
+    const { requestId } = closeHandshakePayloadSchema.parse(window.sent[0]?.payload);
+    const malformed: CloneableValue[] = [
+      null,
+      requestId,
+      { requestId: 42 },
+      { requestId, extra: 'x' },
+      { requestId: '550e8400-e29b-41d4-a716-446655440000' },
+      { requestId: 'not-a-uuid' },
+    ];
+    for (const reply of malformed) shutdown.handleCloseReady(window.webContents, reply);
+    await flush();
+    expect(order).toEqual([]);
+    expect(window.closed).toBe(false);
+    shutdown.handleCloseReady(window.webContents, { requestId });
+    await flush();
+    expect(order).toEqual(['drain', 'install']);
+  });
 
   it('installs only after the renderer flushed and services drained, with a fallback quit', async () => {
     const order: string[] = [];

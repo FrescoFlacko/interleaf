@@ -9,7 +9,7 @@ import type { DocumentMetadata } from '@shared/types/document';
 import { ChatComposer } from '../../src/renderer/features/chat/ChatComposer';
 import { AgentTaskCard } from '../../src/renderer/features/agent/AgentTaskCard';
 import { AgentResumeComposer } from '../../src/renderer/features/agent/AgentResumeComposer';
-import { resetAgentFollowUps, setAgentFollowUpDraft } from '../../src/renderer/stores/agent-follow-up-drafts';
+import { resetAgentFollowUps, setAgentFollowUpDraft } from '../../src/renderer/stores/agent/follow-up-drafts';
 import { useAgentStore } from '../../src/renderer/stores/use-agent-store';
 import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 import { createChatStore, type ChatStore } from '../../src/renderer/stores/use-chat-store';

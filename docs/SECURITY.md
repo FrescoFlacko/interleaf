@@ -342,7 +342,7 @@ encryption is unavailable *or* Linux selected the plaintext-equivalent `basic_te
 backend; only removal still works without it. Settings then disables the key field
 and explains the remedy (install and unlock `gnome-keyring`) instead of offering a
 save that main will reject — see `credentialStorageNotice` in
-`src/renderer/features/chat/credential-storage-ux.tsx`.
+`src/renderer/features/settings/credential-storage-ux.tsx`.
 
 Settings needs to show *which* key is saved, so `credentials:get-status` returns
 a masked projection alongside `configured`: `{ prefix: 'sk-or-v1', lastFour }`,
@@ -365,7 +365,7 @@ typing it into the password field, and is discarded once the save completes.
 Because derivation fails closed, `{ configured: true, keyPreview: null }` means
 a credential is stored but could not be read. Settings reports that state
 truthfully — `openRouterCredentialState` in
-`src/renderer/features/chat/provider-rows.ts` maps it to `stored-unreadable`, so
+`src/renderer/features/settings/provider-rows.ts` maps it to `stored-unreadable`, so
 the row reads "Saved key unreadable", the key chip reads "Unreadable" rather
 than "Saved", and the connection test is disabled because the credential cannot
 serve a call.

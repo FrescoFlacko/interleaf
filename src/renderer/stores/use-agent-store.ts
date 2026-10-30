@@ -11,12 +11,12 @@ import { AGENT_MAX_CONTEXT_TEXT_LENGTH, AGENT_MAX_SURROUNDING_TEXT_LENGTH } from
 import { fitAgentContextPacketToByteBudget, takeCodePointPrefix } from '@shared/agent-context';
 import type { ReaderSelection } from '../features/reader/types';
 import { selectActiveDocument, useReaderStore } from './use-reader-store';
-import { anchorToLocation } from './agent-anchor-location';
-import { nextAgentContextRevision } from './agent-context-attach';
-import { recordAgentFollowUp } from './agent-follow-up-drafts';
-import { beginRunAttempt, runAttemptOf, withDiscarded } from './agent-run-attempts';
-import { discardOriginHolds, type AgentDiscardOrigin } from './agent-discard-origin';
-import { createContextActions, type AgentContextActions, type AgentPendingContext } from './agent-context-actions';
+import { anchorToLocation } from './agent/anchor-location';
+import { supersedeAgentContext } from './agent/context-attach';
+import { recordAgentFollowUp } from './agent/follow-up-drafts';
+import { beginRunAttempt, runAttemptOf, withDiscarded } from './agent/run-attempts';
+import { discardOriginHolds, type AgentDiscardOrigin } from './agent/discard-origin';
+import { createContextActions, type AgentContextActions, type AgentPendingContext } from './agent/context-actions';
 import { bridge, flushPendingSettingsWrites } from '../app/api-client';
 let agentEventUnsubscribe: (() => void) | null = null;
 let hydrateGeneration = 0;
@@ -85,8 +85,6 @@ type AgentState = AgentContextActions & {
   syncWorkingDirectorySettings(settings: AppSettings): Promise<void>;
   setSelection(document: DocumentMetadata, anchor: DocumentAnchor, selectedText: string, location?: DocumentLocation, surroundingText?: string | null): void;
   attachSelection(document: DocumentMetadata, selection: ReaderSelection): void;
-  clearSelection(): void;
-  clearContextPacket(): void;
   start(profileId: string, executionMode: AgentExecutionMode, prompt: string): Promise<boolean>;
   resume(prompt: string): Promise<boolean>;
   stop(): Promise<void>;
@@ -209,7 +207,7 @@ export const useAgentStore = create<AgentState>((set, get) => {
    */
   const leaveDocument = (previousDocId: string | null, nextDocId: string | null): { contextPacket?: null; pendingContext?: null } => {
     if (nextDocId === previousDocId) return {};
-    nextAgentContextRevision();
+    supersedeAgentContext();
     ++sessionFocusRevision;
     const packet = get().contextPacket;
     return { pendingContext: null, ...(packet !== null && packet.document.id !== nextDocId ? { contextPacket: null } : {}) };
@@ -570,7 +568,7 @@ export const useAgentStore = create<AgentState>((set, get) => {
         truncated,
       },
     };
-    nextAgentContextRevision();
+    supersedeAgentContext();
     try {
       set({
         contextPacket: fitAgentContextPacketToByteBudget(packet, truncated),
@@ -590,8 +588,6 @@ export const useAgentStore = create<AgentState>((set, get) => {
 
   ...createContextActions(set, get),
 
-  clearSelection: () => { nextAgentContextRevision(); set({ contextPacket: null, pendingContext: null }); },
-  clearContextPacket: () => { nextAgentContextRevision(); set({ contextPacket: null, pendingContext: null }); },
   setSelectedProfile: (id) => {
     const api = bridge.agent;
     const generation = ++modeAvailabilityGeneration;

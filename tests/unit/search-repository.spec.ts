@@ -377,6 +377,31 @@ describe('SearchRepository', () => {
       .toMatchObject({ count: 0 });
   });
 
+  it('reports each index status with only the fields that status allows', () => {
+    publish(search, 'doc-pdf', 'hash-v1', [pdfChunk(0, 'Leader based replication.')]);
+    const setRow = (status: string, errorMessage: string | null): void => {
+      db.raw.prepare("UPDATE document_index_state SET status = ?, error_message = ? WHERE document_id = 'doc-pdf'")
+        .run(status, errorMessage);
+    };
+    // Rows no current writer produces still reach the renderer as a real state.
+    setRow('ready', 'stale reason');
+    expect(search.getState('doc-pdf')).toMatchObject({ status: 'ready', errorMessage: null });
+    expect(search.getState('doc-pdf')?.estimatedTokens).toBeGreaterThan(0);
+    setRow('failed', null);
+    expect(search.getState('doc-pdf')).toMatchObject({ status: 'failed', errorMessage: 'Indexing failed.', estimatedTokens: null });
+    setRow('indexing', 'stale reason');
+    expect(search.getState('doc-pdf')).toMatchObject({ status: 'indexing', errorMessage: null, estimatedTokens: null });
+    // The format-upgrade migration's reason is a real not_indexed state and survives.
+    setRow('not_indexed', 'Search index format upgrade requires a rebuild.');
+    expect(search.getState('doc-pdf')).toMatchObject({
+      status: 'not_indexed',
+      errorMessage: 'Search index format upgrade requires a rebuild.',
+      estimatedTokens: null,
+    });
+    setRow('failed', 'Extraction failed.');
+    expect(search.getState('doc-pdf')).toMatchObject({ status: 'failed', errorMessage: 'Extraction failed.' });
+  });
+
   it('rebuilds and integrity-checks the external-content FTS index', () => {
     const generation = search.begin('doc-pdf', 'hash-v1');
     search.append('doc-pdf', 'hash-v1', generation.generationId, [pdfChunk(0, 'rebuild target')]);

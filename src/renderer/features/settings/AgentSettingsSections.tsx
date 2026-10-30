@@ -6,7 +6,7 @@ import { AgentWorkingDirectoriesSettings } from '../agent/AgentWorkingDirectorie
 import { directoryProfiles } from '../agent/working-directory-options';
 import type { SettingsSectionProps } from './PreferenceSettingsSections';
 import { Select } from '../../components/ui/select';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
 
 const DEFAULT_MODE_OPTIONS = AGENT_SELECTABLE_DEFAULT_EXECUTION_MODES.map((mode) => ({ value: mode, label: AGENT_EXECUTION_MODE_INFO[mode].label }));
 
