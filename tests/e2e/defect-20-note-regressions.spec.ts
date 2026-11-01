@@ -7,6 +7,7 @@ import type { DocumentMetadata } from '@shared/types/document';
 import { launchInterleaf, returnToLibrary, stubOpenDialog, type AppHandle } from './helpers';
 import { makeDocxFixture, makeEpubFixture, makeMarkdownFixture, makeMobiFixture, makePdfFixture } from '../fixtures/document-fixtures';
 import { chooseListboxValue } from './listbox';
+import { withPdfSelectionDiagnostics } from './pdf-native-selection-diagnostics';
 
 /**
  * Defect 20 regressions in a real BrowserWindow: note activation, pointer
@@ -101,9 +102,10 @@ async function selectInEbook(page: Page, needle: string): Promise<void> {
   }, needle);
 }
 
-async function saveNote(page: Page, body: string): Promise<void> {
+/** `guard` wraps only the toolbar's appearance, e.g. with failure-only diagnostics. */
+async function saveNote(page: Page, body: string, guard: (step: () => Promise<void>) => Promise<void> = (step) => step()): Promise<void> {
   const toolbar = page.getByTestId('annotation-selection-toolbar');
-  await expect(toolbar).toBeVisible();
+  await guard(() => expect(toolbar).toBeVisible());
   await toolbar.getByRole('button', { name: /note/i }).click();
   await page.locator('#selection-note').fill(body);
   await toolbar.getByRole('button', { name: /^Done/u }).click();
@@ -735,7 +737,9 @@ test.describe('Defect 20 note regressions (real BrowserWindow)', () => {
     await app.window.mouse.down();
     await app.window.mouse.move(point.endX, point.y, { steps: 6 });
     await app.window.mouse.up();
-    await saveNote(app.window, NOTE_BODY);
+    // If the toolbar never appears, the results carry what the page held then.
+    const page = app.window;
+    await saveNote(page, NOTE_BODY, (step) => withPdfSelectionDiagnostics(page, test.info(), point, step));
 
     // Collapse the drag's live selection on non-noted content.
     await app.window.mouse.click(point.startX, point.y + 80);

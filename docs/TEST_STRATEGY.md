@@ -17,7 +17,7 @@ of which 167 ran and 32 were capture specs gated off by default (167 passed, 32
 skipped at `--workers=1 --retries=0`).
 
 *Current structure (measured on version 0.12.5 by collection and `npm run test`):*
-`npm run test` has 376 files with 5475 passing and 5 skipped tests. Playwright
+`npm run test` has 378 files with 5504 passing and 5 skipped tests. Playwright
 collects 238 entries across all projects: 2 `platform-preflight` setup entries,
 233 `shared` source cases, 1 `linux-native` case and 2 `macos-native` cases. A
 Linux host collects 236 (no `macos-native`). On a Mac the 2 `macos-native`

@@ -41,7 +41,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: '26'
           cache: npm
 
       # Managed-runner prerequisites for the declared capabilities: an X11
@@ -52,6 +52,21 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Tests that hand a file or a reveal to the running app start a second
+      # Electron directly, sandboxed (Playwright's own launches turn the
+      # sandbox off on Linux). This runner restricts unprivileged user
+      # namespaces, so Chromium uses its setuid helper, which must be owned by
+      # root with mode 4755 or Electron aborts. Only that one file, on this
+      # disposable runner; the sandbox stays on.
+      - name: Set up Electron's setuid sandbox helper
+        run: |
+          if [ ! -f "node_modules/electron/dist/chrome-sandbox" ] || [ -L "node_modules/electron/dist/chrome-sandbox" ]; then
+            echo "::error::node_modules/electron/dist/chrome-sandbox is not a regular, non-symlink file; leaving it unchanged"
+            exit 1
+          fi
+          sudo chown root:root "node_modules/electron/dist/chrome-sandbox"
+          sudo chmod 4755 "node_modules/electron/dist/chrome-sandbox"
 
       - name: Build
         run: npm run build

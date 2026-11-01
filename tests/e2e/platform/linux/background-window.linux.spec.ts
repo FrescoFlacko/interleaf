@@ -54,7 +54,8 @@ function launchSecondInstance(userDataDir: string): void {
   try {
     execFileSync(ELECTRON_BINARY, [...ISOLATED_ELECTRON_SWITCHES, 'out/main/index.js'], {
       env: { ...isolatedLaunchEnvironment({ isolatedHome: home }), NODE_ENV: 'test', INTERLEAF_USER_DATA: userDataDir },
-      stdio: 'ignore',
+      // stderr is kept so a failed launch says why (a sandbox abort, say) in the error.
+      stdio: ['ignore', 'ignore', 'pipe'],
       timeout: 30_000,
     });
   } finally {

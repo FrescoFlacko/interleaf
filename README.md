@@ -270,8 +270,9 @@ is shown as unavailable when its binary is absent.
 
 ## Prerequisites and setup
 
-Use a current Node.js release compatible with the lockfile and npm. Optional
-tools are detected at runtime:
+Development, builds and tests require Node.js 26.x (pinned in `.nvmrc`; CI uses
+the same major) with its bundled npm. This is the toolchain Node; the app itself
+runs on the Node.js embedded in Electron. Optional tools are detected at runtime:
 
 ```text
 codex, claude, agy, opencode, pi, omp

@@ -71,9 +71,9 @@ If you are installing a Windows `.exe`, you need none of the following — skip 
 [Install from a Windows `.exe`](#install-from-a-windows-exe). These are the
 requirements for running or building from source.
 
-1. **Node.js and npm.** Use a current Node.js release that works with the
-   repository's `package-lock.json`. The project does not pin a version for you,
-   so if `npm install` fails on an old runtime, upgrade Node and try again.
+1. **Node.js and npm.** Use Node.js 26.x with the npm it ships with. The
+   repository pins this major in `.nvmrc` (so `nvm use` picks it), and if
+   `npm install` fails, check `node --version` first.
 2. **Git**, to obtain the source (and required later if you want the agent's
    *Isolated Worktree* execution mode).
 3. **Disk space** for `node_modules`, plus room for your document library.

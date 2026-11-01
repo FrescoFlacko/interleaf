@@ -177,4 +177,40 @@ describe('E2E CI routing', () => {
     expect(linux).toContain('tests/e2e/run-with-linux-keyring.sh npx playwright test --project=shared --project=linux-native --retries=0');
     expect(linux).not.toContain('macos-native');
   });
+
+  it("keeps second launches sandboxed by setting up exactly Electron's setuid helper after install", () => {
+    const linux = job('linux');
+    const helper = 'node_modules/electron/dist/chrome-sandbox';
+    const install = linux.indexOf('run: npm ci');
+    const setup = linux.indexOf(`sudo chown root:root "${helper}"`);
+    expect(install).toBeGreaterThan(-1);
+    expect(setup).toBeGreaterThan(install);
+    expect(linux).toContain(`sudo chmod 4755 "${helper}"`);
+    // Only that one regular file: no recursion, no sandbox opt-out, no user-namespace policy change.
+    expect(linux).not.toMatch(/(chown|chmod)\s+-[a-zA-Z]*R/u);
+    expect(workflow).not.toMatch(/no-sandbox|ELECTRON_DISABLE_SANDBOX|disable-setuid-sandbox|unprivileged_userns|apparmor/u);
+  });
+});
+
+describe('development Node.js version', () => {
+  const WORKFLOWS = join(ROOT, '.github', 'workflows');
+  const workflows = readdirSync(WORKFLOWS).filter((name) => /\.ya?ml$/u.test(name));
+
+  it('pins the project to Node.js 26 locally', () => {
+    expect(readFileSync(join(ROOT, '.nvmrc'), 'utf8')).toBe('26\n');
+  });
+
+  it('sets up Node.js 26, and only 26, in every job of every project workflow that sets up Node', () => {
+    expect(workflows.length).toBeGreaterThan(0);
+    let setups = 0;
+    for (const name of workflows) {
+      const source = readFileSync(join(WORKFLOWS, name), 'utf8');
+      const setupCount = source.match(/uses: actions\/setup-node@/gu)?.length ?? 0;
+      const versions = [...source.matchAll(/node-version:\s*(\S+)/gu)].map((match) => match[1]);
+      expect(versions, name).toEqual(Array<string>(setupCount).fill("'26'"));
+      setups += setupCount;
+    }
+    // e2e (Linux) plus linux-package (package and AppImage update smoke).
+    expect(setups).toBe(3);
+  });
 });
