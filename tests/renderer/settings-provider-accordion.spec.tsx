@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
-import { deriveProviderRows, loadingProviderRows, openRouterCredentialState, sanitizeProviderVersion } from '../../src/renderer/features/chat/provider-rows';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
+import { deriveProviderRows, loadingProviderRows, openRouterCredentialState, sanitizeProviderVersion } from '../../src/renderer/features/settings/provider-rows';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import type { AIProviderStatus } from '@shared/types/ai';
 import type { AppSettings } from '@shared/schemas/settings';

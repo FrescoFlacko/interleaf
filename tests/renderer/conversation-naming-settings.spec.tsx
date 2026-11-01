@@ -10,7 +10,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import axe from 'axe-core';
-import { ConversationNamingSection } from '../../src/renderer/features/chat/ConversationNamingSection';
+import { ConversationNamingSection } from '../../src/renderer/features/settings/ConversationNamingSection';
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@shared/schemas/settings';
 import type { AIProviderStatus } from '@shared/types/ai';
 import { stubBridge } from '../helpers/interleaf-api';

@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react';
 import { AGENT_EXECUTION_MODE_INFO } from '@shared/constants/agent-modes';
 import type { AgentSessionDetail } from '@shared/types/agent';
 import { useAgentStore } from '../../stores/use-agent-store';
-import { setAgentFollowUpDraft, useAgentFollowUp } from '../../stores/agent-follow-up-drafts';
+import { setAgentFollowUpDraft, useAgentFollowUp } from '../../stores/agent/follow-up-drafts';
 import { usePromptHistory } from '../../hooks/use-prompt-history';
 import { Button } from '../../components/ui/button';
 import { ComposerShell } from '../../components/companion/ComposerShell';

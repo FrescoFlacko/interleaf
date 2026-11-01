@@ -2,6 +2,7 @@ import { open } from 'node:fs/promises';
 import { extname } from 'node:path';
 import type { DocumentFormat } from '@shared/types/document';
 import { extractZipMetadataInWorker } from '../workers/zip-metadata-worker';
+import { documentFormatForExtension } from '@shared/constants/document-formats';
 
 export type ExtractedMetadata = {
   readonly title: string;
@@ -25,7 +26,7 @@ export function deriveTitleFromFilename(filePath: string): string {
     .trim();
   if (
     cleaned.length === 0 ||
-    ['pdf', 'epub', 'mobi', 'azw', 'azw3', 'docx', 'pptx', 'md', 'markdown'].includes(cleaned.toLowerCase())
+    documentFormatForExtension(cleaned) !== null
   ) {
     return 'Untitled Document';
   }

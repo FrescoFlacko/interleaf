@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launchInterleaf, selectFakeAgentForTest, stubOpenDialog, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
+import { finishProfileThenClose, pageWorkerCounts, startAgentBookProfile, type AgentBookProfile } from './agent-book-profile';
 
 /**
  * Agent work inside a book, end to end through the deterministic fake agent:
@@ -14,6 +15,8 @@ import { makePdfFixture } from '../fixtures/document-fixtures';
 test.describe('Agent work within a book', () => {
   let app: AppHandle;
   let workspace: string;
+  /** The opt-in whole-book timing record, if this case started one. */
+  let profile: AgentBookProfile | null = null;
 
   test.beforeEach(async () => {
     app = await launchInterleaf({ testSeam: true });
@@ -21,8 +24,15 @@ test.describe('Agent work within a book', () => {
   });
 
   test.afterEach(async () => {
-    await app.close();
-    rmSync(workspace, { recursive: true, force: true });
+    const finishing = profile;
+    profile = null;
+    try {
+      await finishProfileThenClose(finishing, () => app.close(), (message) => {
+        test.info().annotations.push({ type: 'agent-book-profile', description: message });
+      });
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
   });
 
   /** Screenshots go to an evidence directory when one is supplied. */
@@ -228,8 +238,11 @@ test.describe('Agent work within a book', () => {
     const wholeBook = app.window.getByTestId('agent-attach-entire-doc');
     const pending = app.window.getByTestId('agent-context-pending');
     const cancel = app.window.getByRole('button', { name: 'Cancel attaching Entire document' });
+    profile = await startAgentBookProfile({ open: () => pageWorkerCounts(app) });
+    await profile.phase('capture-1');
     await wholeBook.click();
     await cancel.click({ timeout: 5_000 });
+    await profile.phase('capture-1-cancelled');
     await expect(pending).toHaveCount(0);
     await expect(app.window.getByTestId('agent-no-context-notice')).toBeVisible();
     await expectFocused(wholeBook);
@@ -240,6 +253,7 @@ test.describe('Agent work within a book', () => {
 
     // While the book is read, the panel says what is being attached and Start
     // waits for it rather than running without it.
+    await profile.phase('capture-2');
     await wholeBook.click();
     await expect(pending.getByRole('status')).toHaveText('Attaching Entire document…');
     await expect(app.window.getByTestId('agent-start-button')).toBeDisabled();
@@ -257,6 +271,7 @@ test.describe('Agent work within a book', () => {
       && element.getAnimations({ subtree: false }).length === 0)).toBe(true);
     const zoomedWholeBook = drawer.getByTestId('agent-attach-entire-doc');
     await zoomedWholeBook.scrollIntoViewIfNeeded();
+    await profile.phase('capture-3-zoomed');
     await zoomedWholeBook.click();
     await expect(drawer.getByRole('button', { name: 'Cancel attaching Entire document' })).toBeInViewport();
     await captureWindow('agent-context-pending-zoom-200.png');
@@ -267,6 +282,7 @@ test.describe('Agent work within a book', () => {
     await app.window.keyboard.press('Escape');
     await app.electronApp.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0]!.webContents.setZoomFactor(1.0); });
     await expect(drawer).toHaveCount(0);
+    await profile.phase('start');
     await app.window.getByTestId('agent-start-button').click();
     await expect(app.window.getByTestId('agent-session-status')).toHaveText('Session completed.', { timeout: 15_000 });
     const [run] = await app.window.evaluate((documentId) => window.interleafAPI.agent.listSessions(documentId), book.id);

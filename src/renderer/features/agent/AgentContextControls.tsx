@@ -4,7 +4,7 @@ import { takeCodePointPrefix } from '@shared/agent-context';
 import type { AgentContextPacket } from '@shared/types/agent';
 import type { DocumentLocation, DocumentMetadata } from '@shared/types/document';
 import { useAgentStore } from '../../stores/use-agent-store';
-import type { AgentPendingContext } from '../../stores/agent-context-actions';
+import type { AgentPendingContext } from '../../stores/agent/context-actions';
 import { useReaderStore } from '../../stores/use-reader-store';
 import { useAnnotationStore } from '../../stores/use-annotation-store';
 import { Button } from '../../components/ui/button';

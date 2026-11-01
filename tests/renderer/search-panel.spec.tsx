@@ -71,7 +71,9 @@ describe('SearchPanel', () => {
     fireEvent.change(screen.getByLabelText('Search indexed text'), { target: { value: 'quorum' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     await waitFor(() => { expect(searchDocument).toHaveBeenCalledWith('doc-1', 'quorum', 50); });
-    expect(screen.getByTestId('search-result-excerpt').textContent).toBe('A quorum overlaps another quorum.');
+    // The call is only the request: the result is shown once its answer has
+    // been stored and rendered, so wait for the excerpt itself.
+    expect((await screen.findByTestId('search-result-excerpt')).textContent).toBe('A quorum overlaps another quorum.');
     fireEvent.change(screen.getByLabelText('Search indexed text'), { target: { value: 'edited without submit' } });
     fireEvent.click(screen.getByRole('button', { name: 'Jump to Rendered page 2 in Consensus Notes' }));
     await waitFor(() => {

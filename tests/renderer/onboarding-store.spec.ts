@@ -161,7 +161,9 @@ describe('onboarding store', () => {
     // The documented contract, and the reason `not-started` describes only the
     // window before the wizard opens: the auto-open is itself an opening, so a
     // reload after it resumes the flow rather than auto-opening a second time.
+    // OnboardingHost initializes only once settings have hydrated.
     const harness = installApi({ launch: launchState({ shouldAutoOpen: true }) });
+    useUiStore.setState({ loadedSettings: structuredClone(DEFAULT_APP_SETTINGS) });
     await useOnboardingStore.getState().initialize();
     await drain();
 
@@ -170,6 +172,24 @@ describe('onboarding store', () => {
     expect(
       harness.settingsWrites.every((written) => written.onboarding.status !== 'not-started')
     ).toBe(true);
+  });
+
+  it('never writes a settings document built on defaults before settings hydrate', async () => {
+    // settings:update replaces the whole stored document, so a write built on
+    // DEFAULT_APP_SETTINGS would erase every saved preference.
+    const harness = installApi();
+    useOnboardingStore.getState().openWizard();
+    await drain();
+    expect(useOnboardingStore.getState().saveError).toBe('Your progress could not be saved.');
+    expect(useOnboardingStore.getState().status).toBe('not-started');
+    useOnboardingStore.getState().closeWizard('dismissed');
+    await drain();
+    await useOnboardingStore.getState().setChatDefault('openrouter', 'openrouter/auto');
+    useOnboardingStore.getState().setDefaultsDraft({ chat: { id: 'openrouter', modelId: null } });
+    await useOnboardingStore.getState().commitDefaults();
+    await drain();
+    expect(harness.settingsWrites).toHaveLength(0);
+    expect(useOnboardingStore.getState().saveError).toBe('Your progress could not be saved.');
   });
 
   it('resumes at the stage the launch state named', async () => {

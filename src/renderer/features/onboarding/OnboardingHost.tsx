@@ -1,5 +1,5 @@
 import { useEffect, type ReactElement } from 'react';
-import { useLibraryStore } from '../../stores/use-library-store';
+import { selectWebImportModalOpen, useLibraryStore } from '../../stores/use-library-store';
 import { selectSettingsHydrated, useUiStore } from '../../stores/use-ui-store';
 import { useOnboardingStore } from '../../stores/use-onboarding-store';
 import { OnboardingWizard } from './OnboardingWizard';
@@ -22,7 +22,7 @@ import { OnboardingEntryBanner } from './OnboardingEntryBanner';
 export function OnboardingHost(): ReactElement | null {
   const hydrated = useUiStore(selectSettingsHydrated);
   const settingsOpen = useUiStore((state) => state.settingsOpen);
-  const webImportOpen = useLibraryStore((state) => state.webImportModalOpen);
+  const webImportOpen = useLibraryStore(selectWebImportModalOpen);
   const initialize = useOnboardingStore((state) => state.initialize);
   const initialized = useOnboardingStore((state) => state.launchState !== null);
 
@@ -46,6 +46,6 @@ export function OnboardingHost(): ReactElement | null {
 export function useOnboardingOwnsScreen(): boolean {
   const open = useOnboardingStore((state) => state.open);
   const settingsOpen = useUiStore((state) => state.settingsOpen);
-  const webImportOpen = useLibraryStore((state) => state.webImportModalOpen);
+  const webImportOpen = useLibraryStore(selectWebImportModalOpen);
   return open && !settingsOpen && !webImportOpen;
 }

@@ -6,7 +6,7 @@ import type { AIModelInfo, AIProviderStatus, ReasoningEffort } from '@shared/typ
 import { ChatModelPicker } from '../../src/renderer/features/chat/ChatModelPicker';
 import { ChatReasoningFlyout } from '../../src/renderer/features/chat/ChatReasoningMenu';
 import type { PickerRow } from '../../src/renderer/features/chat/model-picker-options';
-import { isProviderReady } from '../../src/renderer/stores/chat-provider-readiness';
+import { isProviderReady } from '../../src/renderer/stores/chat/provider-readiness';
 
 /**
  * The model picker's reasoning levels: a menu beside the row that only ever

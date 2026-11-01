@@ -5,7 +5,7 @@ import { Select, type SelectOption } from '../../components/ui/select';
 import { AppIcon } from '../../components/AppIcon';
 import { cn } from '../../components/ui/cn';
 import { useUiStore } from '../../stores/use-ui-store';
-import { SettingsSectionHeader } from '../chat/SettingsSectionHeader';
+import { SettingsSectionHeader } from '../../components/ui/settings-section-header';
 import { ThemePreview } from './ThemePreview';
 import { ThemeSwatch } from './ThemeSwatch';
 import { withPalette } from './theme-choice';

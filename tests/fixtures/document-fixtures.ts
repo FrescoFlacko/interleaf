@@ -739,17 +739,21 @@ export function makePdfFixture(options?: {
   }
 
   const xrefEntries = ['0000000000 65535 f '];
-  let body = '%PDF-1.4\n';
+  // The byte offset of each object is counted as the body grows, so each part
+  // is measured once rather than the whole body again for every object.
+  const header = '%PDF-1.4\n';
+  const parts = [header];
+  let offset = Buffer.byteLength(header);
 
   for (const obj of objects) {
     const objStr = `${obj}\n`;
-    const objOffset = Buffer.byteLength(body);
-    const padded = String(objOffset).padStart(10, '0');
-    xrefEntries.push(`${padded} 00000 n `);
-    body += objStr;
+    xrefEntries.push(`${String(offset).padStart(10, '0')} 00000 n `);
+    parts.push(objStr);
+    offset += Buffer.byteLength(objStr);
   }
 
-  const xrefOffset = Buffer.byteLength(body);
+  const body = parts.join('');
+  const xrefOffset = offset;
   const xref = `xref\n0 ${String(objects.length + 1)}\n${xrefEntries.join('\n')}\n`;
   const trailer = `trailer\n<< /Size ${String(
     objects.length + 1

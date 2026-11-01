@@ -122,11 +122,19 @@ describe('reveal routes', () => {
     expect(calls).toEqual([BELOW_ORDINARY, 'maximize', 'showInactive']);
   });
 
-  it('reveals a new background window without activating it or changing its level off macOS', () => {
-    for (const platform of ['linux', 'win32'] as const) {
-      const calls: string[] = [];
-      revealNewWindow(record(calls), 'background', platform);
-      expect(calls).toEqual(['maximize', 'showInactive']);
-    }
+  it('orders a new background window in on Linux before maximizing it, never changing its level', () => {
+    // Maximizing a still-hidden X11 window shows it activated: Electron sets
+    // the X input focus to it and emits browser-window-focus, as show() does.
+    // Ordered in first, the window stays inactive and is then maximized.
+    const calls: string[] = [];
+    revealNewWindow(record(calls), 'background', 'linux');
+    expect(calls).toEqual(['showInactive', 'maximize']);
+  });
+
+  it('keeps the maximize-then-showInactive background reveal on Windows, never changing its level', () => {
+    // Unverified on Windows: no Windows runner exercises the background reveal.
+    const calls: string[] = [];
+    revealNewWindow(record(calls), 'background', 'win32');
+    expect(calls).toEqual(['maximize', 'showInactive']);
   });
 });

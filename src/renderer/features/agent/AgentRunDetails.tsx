@@ -3,7 +3,7 @@ import type { AgentSessionDetail } from '@shared/types/agent';
 import { useAgentStore } from '../../stores/use-agent-store';
 import { useUiStore } from '../../stores/use-ui-store';
 import { Badge } from '../../components/ui/badge';
-import { writeClipboardText } from '../../app/api-client';
+import { bridge } from '../../app/api-client';
 import { Button } from '../../components/ui/button';
 import { CardLabel } from '../../components/ui/card';
 import { Collapsible } from '../../components/ui/collapsible';
@@ -36,7 +36,7 @@ export function AgentRunDetails({ session }: AgentRunDetailsProps): ReactElement
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const copyPrompt = async (): Promise<void> => {
     try {
-      await writeClipboardText(session.userPrompt);
+      await bridge.clipboard.writeText(session.userPrompt);
       setCopyStatus('Prompt copied.');
     } catch {
       setCopyStatus('Could not copy prompt.');

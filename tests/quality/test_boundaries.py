@@ -70,7 +70,7 @@ class BoundaryBanTests(unittest.TestCase):
                  + [("src/main/agents/process-runner.ts", text, False) for text in PROCESS_FORMS]
                  + [("src/main/agents/process-runner.ts", PATH_FORMS[0], True)]
                  + [("src/renderer/app/api-client.ts", text, False) for text in BRIDGE_FORMS]
-                 + [("src/renderer/stores/chat-pre-send-drafts.ts", text, True) for text in BRIDGE_FORMS]
+                 + [("src/renderer/stores/chat/pre-send-drafts.ts", text, True) for text in BRIDGE_FORMS]
                  + [(MAIN, "import type { ChildProcess } from 'node:child_process'; export type C = ChildProcess;", False)]
                  # No file outside a sanctioned home is exempt.
                  + [("src/main/agents/agent-adapter.ts", PROCESS_FORMS[0], True),

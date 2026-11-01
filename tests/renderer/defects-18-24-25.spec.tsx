@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import { useReaderStore } from '../../src/renderer/stores/use-reader-store';
 import { ReaderHeaderToolbar } from '../../src/renderer/features/reader/components/ReaderHeaderToolbar';
 import type { DocumentMetadata } from '@shared/types/document';

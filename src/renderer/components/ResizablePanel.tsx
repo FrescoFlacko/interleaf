@@ -17,14 +17,14 @@ import {
   SLIDE_COMPLETION_GRACE_MS,
   prefersReducedMotion,
 } from "./slide-presence";
+import {
+  PANEL_EXIT_CEILING_MS,
+  afterPreparedFrame,
+  watchPanelFade,
+} from "./panel-exit";
 
 export type PanelSide = "left" | "right";
 
-/**
- * The content's fade-out on close, matching `--dur-exit`: the width is
- * committed to 0 only after it, so the band is never seen empty.
- */
-const PANEL_EXIT_MS = 100;
 /** Matches `--dur-base`, the content's entry animation. */
 const PANEL_ENTER_MS = 200;
 /** The divider border on the panel's inner edge (`border-r` / `border-l`). */
@@ -85,12 +85,16 @@ function persistLayout(side: PanelSide, width: number): void {
   persistSettings(next);
 }
 
-type PanelPresence = "open" | "closing" | "closed";
+type PanelPresence = "open" | "preparing" | "closing" | "closed";
 
 /**
  * The panel's open/close phases. Presence mirrors the toggle but keeps closing
- * content mounted long enough for the content slide to run (Defect 22):
- * 'open' → 'closing' → 'closed'. Reduced motion skips straight to 'closed'.
+ * content mounted long enough for its fade to be seen (Defect 22):
+ * 'open' → 'preparing' → 'closing' → 'closed'. From the close the panel is
+ * inert and hidden from assistive technology; while 'preparing' its content
+ * stays fully visible, prepared for the fade, until the page has rendered that
+ * state; 'closing' runs the unchanged 100ms fade. Reduced motion skips
+ * straight to 'closed'.
  */
 function usePanelPresence(
   open: boolean,
@@ -114,7 +118,7 @@ function usePanelPresence(
     if (!open) setEntering(false);
     setPresence((current) => {
       if (open) return current === "open" ? current : "open";
-      if (!prefersReducedMotion() && current === "open") return "closing";
+      if (!prefersReducedMotion() && current === "open") return "preparing";
       return current === "closed" ? current : "closed";
     });
   }, [open]);
@@ -136,26 +140,37 @@ function usePanelPresence(
     };
   }, [entering, contentRef]);
 
+  // The fade starts only once the prepared, still fully visible content has
+  // been rendered, so a host that stalls while preparing delays the fade
+  // instead of running it unseen.
+  useEffect(() => {
+    if (presence !== "preparing") return;
+    return afterPreparedFrame(() => {
+      setPresence((current) => (current === "preparing" ? "closing" : current));
+    });
+  }, [presence]);
+
   // The width is released the moment the content's fade actually ends, so the
   // reader takes the band back in the frame after the exit rather than waiting
-  // out the grace with an empty band on screen. The timer is only a backstop
-  // for a fade that never reports its end (jsdom, an interrupted transition).
+  // out the grace with an empty band on screen. A fade that is late to start
+  // or slow to progress keeps the width held rather than being cut short.
   useEffect(() => {
     if (presence !== "closing") return;
-    const finish = (): void => {
+    return watchPanelFade(contentRef.current, () => {
       setPresence((current) => (current === "closing" ? "closed" : current));
-    };
-    const content = contentRef.current;
-    const onTransitionEnd = (event: TransitionEvent): void => {
-      if (event.target === content && event.propertyName === "opacity") finish();
-    };
-    content?.addEventListener("transitionend", onTransitionEnd);
-    const timer = window.setTimeout(finish, PANEL_EXIT_MS + SLIDE_COMPLETION_GRACE_MS);
-    return () => {
-      content?.removeEventListener("transitionend", onTransitionEnd);
-      window.clearTimeout(timer);
-    };
+    });
   }, [presence, contentRef]);
+
+  // One safety ceiling per close, from the close itself: a close that never
+  // gets its frames, or whose fade never ends, still releases the width.
+  const closingAway = presence === "preparing" || presence === "closing";
+  useEffect(() => {
+    if (!closingAway) return;
+    const ceiling = window.setTimeout(() => {
+      setPresence((current) => (current === "preparing" || current === "closing" ? "closed" : current));
+    }, PANEL_EXIT_CEILING_MS);
+    return () => { window.clearTimeout(ceiling); };
+  }, [closingAway]);
 
   return { presence, entering };
 }
@@ -167,6 +182,27 @@ function usePanelPresence(
  * a short 20px from the panel's outer edge, and on close it fades out before
  * the width is released, so the band it occupies is never seen empty.
  */
+/**
+ * The content's opacity, transition and compositing hint in each phase.
+ *
+ * The entry eases out with the plain `ease-out` curve: `--ease-out` covers 90%
+ * of the 20px within about 70ms, so the slide would read as a jump. Entering
+ * keeps the open transition declared, with the entry animation's duration and
+ * curve; the animation is what moves the content, as no transition starts on a
+ * property an animation is driving. The width is held until the exit fade
+ * ends, so that fade must stay visible until its last frame: ease-out and
+ * ease-in-out flatten out near transparent and leave the column looking empty
+ * for several frames, while ease-in reaches 0 steeply, in the frame the width
+ * is released. Only a closing panel is hinted, so an open one holds no layer of
+ * its own; resting closed, the content resets without a transition.
+ */
+const CONTENT_PHASE: Readonly<Record<PanelPresence, CSSProperties>> = {
+  open: { opacity: 1, transition: "opacity var(--dur-base) ease-out, transform var(--dur-base) ease-out" },
+  preparing: { opacity: 1, transition: "opacity var(--dur-exit) ease-in", willChange: "opacity" },
+  closing: { opacity: 0, transition: "opacity var(--dur-exit) ease-in", willChange: "opacity" },
+  closed: { opacity: 0, transition: "none" },
+};
+
 function panelFrame(
   side: PanelSide,
   presence: PanelPresence,
@@ -178,21 +214,7 @@ function panelFrame(
   readonly contentStyle: CSSProperties;
 } {
   const closed = presence === "closed";
-  const hidden = presence !== "open";
   const hiddenOffset = side === "left" ? "-20px" : "20px";
-  // The entry eases out with the plain `ease-out` curve: `--ease-out` covers
-  // 90% of the 20px within about 70ms, so the slide would read as a jump.
-  let transition = "opacity var(--dur-base) ease-out, transform var(--dur-base) ease-out";
-  // Resting closed, the content resets without a transition. Entering keeps
-  // the open transition declared, with the entry animation's duration and
-  // curve; the animation is what moves the content, as no transition starts
-  // on a property an animation is driving.
-  if (closed) transition = "none";
-  // The width is held until this fade ends, so the fade must stay visible
-  // until its last frame. Ease-out and ease-in-out both flatten out near
-  // transparent and leave the column looking empty for several frames;
-  // ease-in reaches 0 steeply, in the frame the width is released.
-  else if (presence === "closing") transition = "opacity var(--dur-exit) ease-in";
   return {
     hiddenAttributes: presence === "open" ? {} : { inert: true, "aria-hidden": true },
     panelStyle: closed ? { width: "0px", visibility: "hidden" } : { width: `${String(width)}px` },
@@ -201,12 +223,11 @@ function panelFrame(
       // The box's 1px border is inside its width; the content fills the rest,
       // so it never overhangs the box and can never be scrolled sideways.
       width: `${String(width - PANEL_BORDER_PX)}px`,
-      opacity: hidden ? 0 : 1,
+      ...CONTENT_PHASE[presence],
       // At rest there is no transform at all: any transform, even an identity
       // one, would make this the containing block of every fixed popover in
       // the panel and clip them to its edges.
       transform: closed ? `translateX(${hiddenOffset})` : "none",
-      transition,
       // The entry animation starts from the 20px offset, transparent, on the
       // same frame the width commits; it has no fill, so at rest nothing of it
       // remains.

@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { AppIcon } from '../../components/AppIcon';
-import { writeClipboardText } from '../../app/api-client';
+import { bridge } from '../../app/api-client';
 import type { ChatToastTone } from './use-chat-toast';
 
 export type PromptDetailToken = {
@@ -55,7 +55,7 @@ export function ChatPromptDetails({ prompt, tokens, reuseAvailable, onReuse, onN
 function PromptDetailsBody({ prompt, tokens, reuseAvailable, onReuse, onNotice }: ChatPromptDetailsProps) {
   const copy = async (text: string): Promise<void> => {
     try {
-      await writeClipboardText(text);
+      await bridge.clipboard.writeText(text);
       onNotice('success', 'Prompt copied');
     } catch {
       onNotice('error', 'Could not copy prompt');

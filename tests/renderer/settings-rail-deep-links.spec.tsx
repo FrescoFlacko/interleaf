@@ -2,13 +2,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import {
   SETTINGS_RAIL,
   isSettingsRailEntryActive,
   settingsRailEntry,
   settingsRailProviderId,
-} from '../../src/renderer/features/chat/settings-rail';
+} from '../../src/renderer/features/settings/settings-rail';
 import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import type { DebugLogExportResult } from '@shared/schemas/ipc';

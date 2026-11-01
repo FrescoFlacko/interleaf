@@ -376,6 +376,24 @@ body {
   top: 0;
 }
 
+/* App-owned, not part of the upstream port: every PDF mark (selection, the
+ * note-selection mark, saved highlights and notes, search) is a translucent
+ * background painted on the text layer, above the page canvas. Composited
+ * normally it lightens the canvas glyphs under it, and at smaller fit-width
+ * scales, where antialiased edges are most of each letter, marked text turns
+ * grey. Multiplied with the always-white page instead, the tint reads exactly
+ * as before on paper and the glyphs stay black. Forced colors keep normal
+ * compositing for their own Highlight/HighlightText pair. */
+.pdf-page-wrapper .textLayer {
+  mix-blend-mode: multiply;
+}
+
+@media (forced-colors: active) {
+  .pdf-page-wrapper .textLayer {
+    mix-blend-mode: normal;
+  }
+}
+
 /* Flattened port of the `.annotationLayer` link styles in pdfjs-dist 6.2.108
  * `web/pdf_viewer.css`. Container is transparent and inert to pointer events so
  * non-link clicks and selections fall through to `.textLayer`. Individual link

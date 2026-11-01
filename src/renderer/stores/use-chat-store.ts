@@ -4,30 +4,30 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { AIProviderId, AIProviderStatus, ChatContextItem, ChatMessage, ChatSession, ReasoningEffort } from '@shared/types/ai';
 import type { ChatSelectionDescriptor, DocumentLocation, DocumentMetadata } from '@shared/types/document';
 import { bridge } from '../app/api-client';
-import { cleanContext, CleaningSessions } from './chat-clean-context';
+import { cleanContext, CleaningSessions } from './chat/clean-context';
 import {
   addEntireDocument,
   addPageRange,
   addSelectionContext,
   removeContext,
-} from './chat-context-attachments';
-import { ChatLifecycle } from './chat-lifecycle';
-import { PreSendDrafts } from './chat-pre-send-drafts';
-import { ProviderDiscovery, refreshProviders } from './chat-provider-discovery';
-import type { ProviderDiscoveryState, SessionBindingIntents } from './chat-provider-readiness';
-import { supersedeTurn, type ChatRuntime } from './chat-runtime';
-import { cancel, sendMessage } from './chat-send';
+} from './chat/context-attachments';
+import { ChatLifecycle } from './chat/lifecycle';
+import { PreSendDrafts } from './chat/pre-send-drafts';
+import { ProviderDiscovery, refreshProviders } from './chat/provider-discovery';
+import type { ProviderDiscoveryState, SessionBindingIntents } from './chat/provider-readiness';
+import { supersedeTurn, type ChatRuntime } from './chat/runtime';
+import { cancel, sendMessage } from './chat/send';
 import {
   createSession,
   deleteSession,
   initializeDocument,
   renameSession,
   switchSession,
-} from './chat-session-actions';
-import { changeSessionProvider, SessionBindingRevisions } from './chat-session-binding';
-import { SessionSummaryRefresh, syncSessionTitle } from './chat-session-summaries';
-import { handleStreamEvent } from './chat-stream-events';
-import { ChatTurns } from './chat-turns';
+} from './chat/session-actions';
+import { changeSessionProvider, SessionBindingRevisions } from './chat/session-binding';
+import { SessionSummaryRefresh, syncSessionTitle } from './chat/session-summaries';
+import { handleStreamEvent } from './chat/stream-events';
+import { ChatTurns } from './chat/turns';
 
 // Readiness lives with the discovery state it depends on; the store re-exports
 // it so views keep importing one module for chat state and its meaning.
@@ -36,7 +36,7 @@ export {
   isProviderActionable,
   isProviderReady,
   type ProviderDiscoveryState,
-} from './chat-provider-readiness';
+} from './chat/provider-readiness';
 
 /** Everything a chat view renders. */
 type ChatData = {

@@ -40,19 +40,23 @@ function makeDocument(id: string, overrides: Partial<DocumentMetadata> = {}): Do
   };
 }
 
-function indexState(overrides: Partial<DocumentIndexState> = {}): DocumentIndexState {
-  return {
-    documentId: 'doc-a',
-    documentHash: 'hash-doc-a',
-    status: 'ready',
-    totalChunks: 12,
-    indexedChunks: 12,
-    estimatedTokens: 128_450,
-    errorMessage: null,
-    updatedAt: '2026-09-05T00:00:00.000Z',
-    ...overrides,
-  };
+const INDEX_COMMON = {
+  documentId: 'doc-a',
+  documentHash: 'hash-doc-a',
+  totalChunks: 12,
+  indexedChunks: 12,
+  updatedAt: '2026-09-05T00:00:00.000Z',
+};
+
+/** A ready index; the other statuses carry no estimate, so they are constants. */
+function indexState(
+  overrides: Partial<Pick<DocumentIndexState, 'documentId' | 'documentHash'>> & { readonly estimatedTokens?: number | null } = {}
+): DocumentIndexState {
+  return { ...INDEX_COMMON, status: 'ready', estimatedTokens: 128_450, errorMessage: null, ...overrides };
 }
+
+const INDEXING_STATE: DocumentIndexState = { ...INDEX_COMMON, status: 'indexing', estimatedTokens: null, errorMessage: null };
+const FAILED_STATE: DocumentIndexState = { ...INDEX_COMMON, status: 'failed', estimatedTokens: null, errorMessage: 'Extraction failed.' };
 
 function deferred<T>(): {
   readonly promise: Promise<T>;
@@ -323,10 +327,10 @@ describe('Document details estimated token count', () => {
   });
 
   it.each([
-    ['indexing', indexState({ status: 'indexing', estimatedTokens: null }), /indexing/iu],
-    ['failed', indexState({ status: 'failed', estimatedTokens: null, errorMessage: 'Extraction failed.' }), /failed/iu],
+    ['indexing', INDEXING_STATE, /indexing/iu],
+    ['failed', FAILED_STATE, /failed/iu],
     ['not indexed', null, /not indexed/iu],
-    ['ready but unavailable', indexState({ status: 'ready', estimatedTokens: null }), /unavailable/iu],
+    ['ready but unavailable', indexState({ estimatedTokens: null }), /unavailable/iu],
   ])('reports a truthful %s state instead of a number', async (_label, state, pattern) => {
     getIndexState.mockResolvedValue(state);
     renderModal();

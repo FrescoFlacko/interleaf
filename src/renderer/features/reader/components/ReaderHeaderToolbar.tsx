@@ -12,12 +12,12 @@ import { createThenUpdateNote, type NewNoteTarget } from '../../../hooks/note-pe
 import type { NoteAutosaveOptions } from '../../../hooks/note-autosave';
 import { newNoteDraftKey, type NoteDraft } from '../../../hooks/note-drafts';
 import { useRetainedNoteDraft } from '../../../hooks/use-note-autosave';
+import type { DocumentFormat } from '@shared/types/document';
+import { REFLOWABLE_DOCUMENT_FORMATS } from '@shared/constants/document-formats';
 
 
-const REFLOWABLE_FORMATS: ReadonlySet<string> = new Set(['epub', 'mobi', 'docx', 'pptx', 'markdown']);
-
-function isReflowableFormat(format: string | undefined): boolean {
-  return format !== undefined && REFLOWABLE_FORMATS.has(format);
+function isReflowableFormat(format: DocumentFormat | undefined): boolean {
+  return format !== undefined && REFLOWABLE_DOCUMENT_FORMATS.has(format);
 }
 
 /**
@@ -157,9 +157,19 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
   const displaySettingsButtonRef = useRef<HTMLButtonElement>(null);
   const displaySettingsPanelRef = useRef<HTMLDivElement>(null);
 
+  // A page number the reader has typed and not yet committed. Location updates
+  // keep arriving while an earlier jump is still scrolling; they must not
+  // replace it, or Enter would go to wherever the scroll happened to be.
+  const pageDraftEditedRef = useRef(false);
   useEffect(() => {
-    setPageInput(String(currentPage));
+    if (!pageDraftEditedRef.current) setPageInput(String(currentPage));
   }, [currentPage]);
+  // Another document starts from its own page; a draft never carries over.
+  const activeDocumentId = activeDocument?.id;
+  useEffect(() => {
+    pageDraftEditedRef.current = false;
+    setPageInput(String(useReaderStore.getState().currentPage));
+  }, [activeDocumentId]);
 
   useLocationNoteDocument(activeDocument, locationNoteOpen, locationNote, setLocationNoteOpen, setLocationNote);
 
@@ -196,6 +206,7 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
     e.preventDefault();
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isNaN(parsed)) void goToPage(Math.max(1, Math.min(pageCount || 1, parsed)));
+    pageDraftEditedRef.current = false;
     setPageInput(String(currentPage));
   };
 
@@ -348,6 +359,7 @@ export function ReaderHeaderToolbar({ hidden }: { readonly hidden: boolean }) {
               aria-label="Page number"
               value={pageInput}
               onChange={(e) => {
+                pageDraftEditedRef.current = true;
                 setPageInput(e.target.value);
               }}
               onBlur={handlePageSubmit}

@@ -153,7 +153,7 @@ export function SearchPanel() {
       : indexState?.status === 'ready' && indexState.documentHash === activeDocument.fileHash
         ? `${String(indexState.totalChunks)} passages indexed.`
         : indexState?.status === 'failed'
-          ? indexState.errorMessage ?? 'Indexing failed.'
+          ? indexState.errorMessage
           : 'Waiting to index this document.';
 
   return (

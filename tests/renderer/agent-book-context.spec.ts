@@ -106,6 +106,21 @@ describe('Agent book context: stale captures', () => {
     expect(useAgentStore.getState().contextPacket).toBeNull();
   });
 
+  it('treats clearing the selection as the same explicit choice as Remove', async () => {
+    const book = pdf('book-clear-selection', 3);
+    const held = gate();
+    gatedPdf(book, 'Text', held.promise);
+
+    const attaching = useAgentStore.getState().attachPageRange(book, 1, 2);
+    expect(useAgentStore.getState().pendingContext).not.toBeNull();
+    useAgentStore.getState().clearSelection();
+    expect(useAgentStore.getState().pendingContext).toBeNull();
+    held.open();
+
+    await expect(attaching).resolves.toBe(false);
+    expect(useAgentStore.getState().contextPacket).toBeNull();
+  });
+
   it('lets a newer selection win over an older page capture that settles later', async () => {
     const book = pdf('book-newer', 3);
     const held = gate();
@@ -270,6 +285,89 @@ describe('Agent book context: bounded extraction', () => {
     expect(useAgentStore.getState().contextPacket?.selection.exactQuote).toBe('Page 2\n\nPage 3');
     expect(useAgentStore.getState().contextPacket?.provenance.truncated).toBe(false);
     expect(pulled).toBeLessThanOrEqual(4);
+  });
+
+  /**
+   * A long book whose reading can be watched: how many pages were pulled,
+   * whether the reading was closed, and a hook run as each page is pulled.
+   */
+  function watchedPdf(book: DocumentMetadata, onPage: (index: number) => void = () => undefined) {
+    const reading = { pulled: 0, closed: false };
+    const adapter = testDocumentAdapter('pdf', {
+      extractText: async function* () {
+        try {
+          for (let index = 0; index < (book.pageCount ?? 0); index += 1) {
+            await Promise.resolve();
+            reading.pulled += 1;
+            onPage(index);
+            yield pageChunk(book.id, index, `Page ${String(index + 1)}`);
+          }
+        } finally {
+          reading.closed = true;
+        }
+      },
+    });
+    useReaderStore.setState({ session: testReaderSession(book, { adapter }) });
+    return reading;
+  }
+
+  it('stops reading the book once its whole-book capture is cancelled', async () => {
+    const book = pdf('book-cancel-reading', 1_000);
+    const prior = packetFor(book, 'Prior');
+    useAgentStore.setState({ contextPacket: prior });
+    const reading = watchedPdf(book, (index) => {
+      if (index === 4) useAgentStore.getState().cancelContextCapture();
+    });
+
+    await expect(useAgentStore.getState().attachEntireDocument(book, { format: 'pdf', pageIndex: 0 })).resolves.toBe(false);
+
+    expect(reading.pulled).toBeLessThanOrEqual(6);
+    expect(reading.closed).toBe(true);
+    expect(useAgentStore.getState().contextPacket).toBe(prior);
+    expect(useAgentStore.getState().pendingContext).toBeNull();
+    expect(useAgentStore.getState().error).toBeNull();
+  });
+
+  it('stops reading once Remove supersedes the capture, and once its own signal aborts', async () => {
+    const book = pdf('book-remove-reading', 1_000);
+    const removed = watchedPdf(book, (index) => {
+      if (index === 2) useAgentStore.getState().clearContextPacket();
+    });
+    await expect(useAgentStore.getState().attachEntireDocument(book, { format: 'pdf', pageIndex: 0 })).resolves.toBe(false);
+    expect(removed.pulled).toBeLessThanOrEqual(4);
+    expect(removed.closed).toBe(true);
+    expect(useAgentStore.getState().contextPacket).toBeNull();
+
+    const controller = new AbortController();
+    const aborted = watchedPdf(book, (index) => {
+      if (index === 2) controller.abort();
+    });
+    await expect(useAgentStore.getState().attachPageRange(book, 1, 200, undefined, { signal: controller.signal })).resolves.toBe(false);
+    expect(aborted.pulled).toBeLessThanOrEqual(4);
+    expect(aborted.closed).toBe(true);
+    expect(useAgentStore.getState().contextPacket).toBeNull();
+    expect(useAgentStore.getState().error).toBeNull();
+  });
+
+  it('a newer capture stops the older one and still reads the whole book, in order', async () => {
+    const book = pdf('book-newer-reading', 50);
+    let newer: Promise<boolean> | null = null;
+    const older = watchedPdf(book, (index) => {
+      if (index === 3 && newer === null) newer = useAgentStore.getState().attachEntireDocument(book, { format: 'pdf', pageIndex: 0 });
+    });
+    const first = useAgentStore.getState().attachEntireDocument(book, { format: 'pdf', pageIndex: 0 });
+
+    await expect(first).resolves.toBe(false);
+    expect(newer).not.toBeNull();
+    await expect(newer).resolves.toBe(true);
+    // Two readings shared one counter: the older stopped after its fourth page,
+    // the newer read all fifty.
+    expect(older.pulled).toBeLessThanOrEqual(4 + 1 + 50);
+    const packet = useAgentStore.getState().contextPacket;
+    expect(packet?.selection.exactQuote).toBe(Array.from({ length: 50 }, (_unused, index) => `Page ${String(index + 1)}`).join('\n\n'));
+    expect(packet?.provenance.truncated).toBe(false);
+    expect(packet?.scopeLabel).toBe('Entire document');
+    expect(packet?.document.id).toBe(book.id);
   });
 });
 

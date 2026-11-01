@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { IPC_EVENTS } from '@shared/constants/ipc';
 import type { CloneableValue } from '@shared/models/portable';
+import { closeHandshakePayloadSchema } from '@shared/schemas/app-lifecycle';
 import type { Logger } from '../logging/logger';
 
 /**
@@ -96,15 +97,9 @@ export class ShutdownBarrier<TWindow extends BarrierWindow> {
   handleCloseReady(sender: object, payload: CloneableValue): void {
     const activeWindow = this.deps.mainWindow();
     if (activeWindow === null) return;
-    if (
-      sender !== activeWindow.webContents ||
-      typeof payload !== 'object' ||
-      payload === null ||
-      !('requestId' in payload) ||
-      payload.requestId !== this.pendingCloseRequestId
-    ) {
-      return;
-    }
+    if (sender !== activeWindow.webContents) return;
+    const reply = closeHandshakePayloadSchema.safeParse(payload);
+    if (!reply.success || reply.data.requestId !== this.pendingCloseRequestId) return;
     this.finishCloseHandshake(activeWindow);
   }
 

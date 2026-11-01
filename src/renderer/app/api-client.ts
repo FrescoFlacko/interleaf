@@ -1,6 +1,5 @@
 import type { AppSettings } from "@shared/schemas/settings";
 import type { InterleafAPI } from "@shared/types/api";
-import type { CitationTarget } from "@shared/types/ai";
 import { describeError, reportRejection } from "@shared/models/caught-error";
 
 /**
@@ -35,7 +34,7 @@ export async function loadInitialSettings(): Promise<AppSettings | null> {
   } catch (error) {
     if (!settingsLoadWarned) {
       settingsLoadWarned = true;
-      console.warn(`Interleaf settings load failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.warn(`Interleaf settings load failed: ${describeError(error instanceof Error ? error : null).message}`);
     }
     return null;
   }
@@ -97,19 +96,6 @@ export async function flushPendingSettingsWrites(): Promise<void> {
       break;
     }
   }
-}
-
-/** Writes plain text through main's clipboard channel. Rejects with the call's error. */
-export async function writeClipboardText(text: string): Promise<void> {
-  await bridge.clipboard.writeText(text);
-}
-
-/**
- * Resolves one chat citation to a reader location, or `null` when main cannot
- * resolve the source.
- */
-export function resolveChatCitation(sessionId: string, messageId: string, sourceId: string): Promise<CitationTarget | null> {
-  return bridge.chat.resolveCitation(sessionId, messageId, sourceId);
 }
 
 /** Resets the settings write queue state for tests. */

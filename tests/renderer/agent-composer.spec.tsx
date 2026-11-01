@@ -11,6 +11,7 @@ import { useReaderStore } from '../../src/renderer/stores/use-reader-store';
 import type { DocumentMetadata } from '@shared/types/document';
 import type { InterleafAPI } from '@shared/types/api';
 import { stubBridge } from '../helpers/interleaf-api';
+import { flushPendingSettingsWrites, resetSettingsWriteQueueForTests } from '../../src/renderer/app/api-client';
 import { testReaderSession } from '../helpers/reader-session';
 import { chooseValue } from '../helpers/listbox-select';
 
@@ -111,6 +112,7 @@ describe('AgentComposer profile execution defaults, Copy Result, and Resume', ()
   });
 
   afterEach(() => {
+    resetSettingsWriteQueueForTests();
     cleanup();
     useReaderStore.setState({ session: null });
     useAgentStore.setState({
@@ -151,6 +153,44 @@ describe('AgentComposer profile execution defaults, Copy Result, and Resume', ()
     await waitFor(() => {
       expect(modeSelect).toHaveAttribute('data-value', 'auto-isolated');
       expect(screen.getByText(/Git repositories resolve to Isolated Worktree/i)).toBeTruthy();
+    });
+  });
+
+  it('writes nothing for an execution-mode choice made before settings have loaded', async () => {
+    const update = vi.fn((next: AppSettings) => Promise.resolve(next));
+    installApi({ listProfiles: vi.fn(() => Promise.resolve([autoProfile])) });
+    stubBridge({ settings: { update } });
+    render(<AgentComposer />);
+
+    const modeSelect = await screen.findByTestId('composer-execution-mode-select');
+    chooseValue(modeSelect, 'isolated-copy');
+    await waitFor(() => { expect(modeSelect).toHaveAttribute('data-value', 'isolated-copy'); });
+
+    // settings:update replaces the saved document, so a write built on defaults
+    // here would erase every other preference the user had saved.
+    await flushPendingSettingsWrites();
+    expect(update).not.toHaveBeenCalled();
+    expect(useUiStore.getState().loadedSettings).toBeNull();
+  });
+
+  it('saves an execution-mode default on top of the loaded settings, keeping the rest', async () => {
+    const saved: AppSettings = {
+      ...DEFAULT_APP_SETTINGS,
+      advanced: { ...DEFAULT_APP_SETTINGS.advanced, debugLogging: !DEFAULT_APP_SETTINGS.advanced.debugLogging },
+    };
+    const update = vi.fn((next: AppSettings) => Promise.resolve(next));
+    installApi({ listProfiles: vi.fn(() => Promise.resolve([autoProfile])) }, saved);
+    stubBridge({ settings: { update } });
+    useUiStore.getState().hydrate(saved);
+    render(<AgentComposer />);
+
+    const modeSelect = await screen.findByTestId('composer-execution-mode-select');
+    chooseValue(modeSelect, 'isolated-copy');
+
+    await waitFor(() => { expect(update).toHaveBeenCalledTimes(1); });
+    expect(update).toHaveBeenCalledWith({
+      ...saved,
+      agent: { ...saved.agent, defaultExecutionMode: 'isolated-copy' },
     });
   });
 

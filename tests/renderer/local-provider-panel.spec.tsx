@@ -9,8 +9,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import axe from 'axe-core';
-import { LocalProviderPanel } from '../../src/renderer/features/chat/LocalProviderPanel';
-import { deriveProviderRows } from '../../src/renderer/features/chat/provider-rows';
+import { LocalProviderPanel } from '../../src/renderer/features/settings/LocalProviderPanel';
+import { deriveProviderRows } from '../../src/renderer/features/settings/provider-rows';
 import { PROFILE_EDITOR_DEFINITIONS } from '../../src/renderer/features/agent/profile-preferences';
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@shared/schemas/settings';
 import { DEFAULT_LOCAL_ENDPOINT } from '@shared/schemas/local-endpoint';

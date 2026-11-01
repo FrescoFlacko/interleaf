@@ -12,7 +12,7 @@ import { mergeDefaultModelOptions } from '../../src/renderer/features/agent/mode
 import { useAgentStore, reconcileSelectedModel } from '../../src/renderer/stores/use-agent-store';
 import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 import { useReaderStore } from '../../src/renderer/stores/use-reader-store';
-import { persistSettings, resetSettingsWriteQueueForTests } from '../../src/renderer/app/api-client';
+import { flushPendingSettingsWrites, persistSettings, resetSettingsWriteQueueForTests } from '../../src/renderer/app/api-client';
 import type { DocumentMetadata } from '@shared/types/document';
 import { stubBridge, testInterleafApi } from '../helpers/interleaf-api';
 import { testReaderSession } from '../helpers/reader-session';
@@ -236,6 +236,9 @@ describe('AgentComposer model control', () => {
       settings: { get: vi.fn(() => Promise.resolve(DEFAULT_APP_SETTINGS)), update },
     });
     stubBridge(api);
+    // The shell hydrates settings from main before anyone edits a preference;
+    // a composer write builds on that document (see the unhydrated case below).
+    useUiStore.getState().setLoadedSettings(DEFAULT_APP_SETTINGS);
     return api;
   }
 
@@ -399,6 +402,27 @@ describe('AgentComposer model control', () => {
         }),
       }));
     });
+  });
+
+  it('keeps a model choice local and writes nothing until settings have loaded', async () => {
+    const update = vi.fn((next: AppSettings) => Promise.resolve(next));
+    mountApi([codexProfile], update);
+    // Main's settings have not reached the renderer (still loading, or the load
+    // failed). A write now would replace every saved preference with defaults.
+    useUiStore.setState({ loadedSettings: null });
+    useAgentStore.setState({
+      documentId: fixtureDocument.id, profiles: [codexProfile],
+      selectedProfileId: 'codex', selectedModel: 'gpt-5-codex', hydrated: true,
+    });
+
+    render(<AgentComposer />);
+    const modelSelect = await screen.findByTestId('agent-model-select');
+    chooseValue(modelSelect, 'gpt-5.1-codex');
+
+    expect(useAgentStore.getState().selectedModel).toBe('gpt-5.1-codex');
+    await flushPendingSettingsWrites();
+    expect(update).not.toHaveBeenCalled();
+    expect(useUiStore.getState().loadedSettings).toBeNull();
   });
 
   it('reconciles the model control when the profile changes', async () => {

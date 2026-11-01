@@ -4,7 +4,7 @@ import type { AppSettings } from '@shared/schemas/settings';
 import { LoadingShimmerText } from '../../components/LoadingShimmer';
 import { useAnnotationStore } from '../../stores/use-annotation-store';
 import { useChatStore, actionableProviders, isProviderActionable } from '../../stores/use-chat-store';
-import type { SessionBindingIntents } from '../../stores/chat-provider-readiness';
+import type { SessionBindingIntents } from '../../stores/chat/provider-readiness';
 import { selectActiveDocument, selectAdapter, useReaderStore } from '../../stores/use-reader-store';
 import { useUiStore } from '../../stores/use-ui-store';
 import { locationToAnchor } from '../reader/annotations/dom-anchors';

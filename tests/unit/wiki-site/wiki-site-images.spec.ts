@@ -35,6 +35,19 @@ afterEach(async () => {
   if (base !== '') await rm(base, { recursive: true, force: true });
 });
 
+/**
+ * Asserts two files hold identical bytes. `Buffer.equals` compares natively;
+ * a deep `toEqual` walks every byte as an iterable, which for the real
+ * screenshots costs seconds on a loaded CI runner. A mismatch reports its
+ * first differing offset.
+ */
+function expectSameBytes(actual: Buffer, expected: Buffer, name: string): void {
+  expect(actual.length, `${name} length`).toBe(expected.length);
+  if (actual.equals(expected)) return;
+  const offset = actual.findIndex((byte, index) => byte !== expected[index]);
+  expect.fail(`${name} differs from its source at byte ${String(offset)}`);
+}
+
 /** A project root with only the screenshot directory, holding `files`. */
 async function screenshotRoot(files: Readonly<Record<string, Buffer>>): Promise<string> {
   const root = join(base, 'project');
@@ -164,6 +177,15 @@ describe('reading screenshots', () => {
 });
 
 describe('building with screenshots', () => {
+  it('compares copied screenshots byte for byte, not by length alone', () => {
+    const source = Buffer.concat([WEBP, Buffer.from([1, 2, 3, 4])]);
+    expect(() => { expectSameBytes(Buffer.from(source), source, SHOT); }).not.toThrow();
+    const changed = Buffer.from(source);
+    changed[changed.length - 2] = 0xff;
+    expect(() => { expectSameBytes(changed, source, SHOT); }).toThrow(`${SHOT} differs from its source at byte ${String(source.length - 2)}`);
+    expect(() => { expectSameBytes(source.subarray(1), source, SHOT); }).toThrow(/length/u);
+  });
+
   it('copies exactly the screenshots pages use and records them for cleanup', async () => {
     const outDir = join(base, 'site');
     const result = await buildSite({ projectRoot, outDir, bundleClient: false });
@@ -171,8 +193,11 @@ describe('building with screenshots', () => {
     expect(used.length).toBeGreaterThan(0);
     expect((await readdir(join(outDir, 'assets', 'screens'))).sort()).toEqual(used);
     for (const name of used) {
-      expect(await readFile(join(outDir, 'assets', 'screens', name)))
-        .toEqual(await readFile(join(projectRoot, ...IMAGE_SOURCE_DIR.split('/'), name)));
+      expectSameBytes(
+        await readFile(join(outDir, 'assets', 'screens', name)),
+        await readFile(join(projectRoot, ...IMAGE_SOURCE_DIR.split('/'), name)),
+        name,
+      );
     }
     const marker = parsePortableJson(await readFile(join(outDir, OUTPUT_MARKER), 'utf8')) as { files: string[] };
     for (const name of used) expect(marker.files).toContain(`assets/screens/${name}`);

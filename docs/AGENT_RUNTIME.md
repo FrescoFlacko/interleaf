@@ -222,7 +222,13 @@ and entire-document captures each take a claim of the reader identity (active
 document ID and adapter) plus a capture revision and abort signal. A capture
 commits atomically only if that claim still holds when it lands, on success
 and on failure alike; a newer choice, a document or adapter change, or a cancel
-discards it. While a capture is pending the task card shows
+discards it. Once a newer choice (Cancel, Remove, another capture) or its own abort
+signal means the capture can never land, a page-range or entire-document
+capture stops reading: it asks for no further chunk, and the PDF reader checks
+the same condition before every page request, so it stops at the next page
+even inside pages with no text. A pdf.js page or text request already in flight
+is awaited, not interrupted. Readers without per-page reads (Markdown, DOCX,
+ebooks) stop at their next yielded chunk. While a capture is pending the task card shows
 `Attaching <scope>…` with a Cancel control, and Start is disabled so a pending
 attachment is never silently omitted. Closing the page-range dialog (Cancel,
 Escape, outside click, unmount) withdraws only that dialog's own capture. The

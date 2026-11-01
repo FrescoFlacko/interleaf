@@ -2,25 +2,47 @@ import type { z } from 'zod';
 import type { searchIndexChunkSchema } from '../schemas/search';
 import type { DocumentLocation } from './document';
 
-type DocumentIndexStatus = 'not_indexed' | 'indexing' | 'ready' | 'failed';
-
-export type DocumentIndexState = {
+type IndexStateCommon = {
   readonly documentId: string;
   readonly documentHash: string;
-  readonly status: DocumentIndexStatus;
   readonly totalChunks: number;
   readonly indexedChunks: number;
-  /**
-   * Rough token estimate for the whole document, derived by the main-owned
-   * search repository from the indexed extracted text (UTF-16 units / 4) —
-   * never from file size, and never carrying document text itself. `null`
-   * whenever there is no trustworthy estimate: while indexing, after a
-   * failure, or when the published index describes a superseded revision.
-   */
-  readonly estimatedTokens: number | null;
-  readonly errorMessage: string | null;
   readonly updatedAt: string;
 };
+
+/**
+ * A document's index state. Each status carries only the fields that are true
+ * of it: a failure always says why, a reason may accompany `not_indexed` (a
+ * format upgrade that invalidated the published index records one), nothing
+ * else carries a message, and only a ready index has a token estimate.
+ *
+ * `estimatedTokens` is a rough token estimate for the whole document, derived
+ * by the main-owned search repository from the indexed extracted text (UTF-16
+ * units / 4) — never from file size, and never carrying document text itself.
+ * A ready index still reports `null` when the published index describes a
+ * superseded revision, because there is then no trustworthy estimate.
+ */
+export type DocumentIndexState =
+  | (IndexStateCommon & {
+      readonly status: 'not_indexed';
+      readonly estimatedTokens: null;
+      readonly errorMessage: string | null;
+    })
+  | (IndexStateCommon & {
+      readonly status: 'indexing';
+      readonly estimatedTokens: null;
+      readonly errorMessage: null;
+    })
+  | (IndexStateCommon & {
+      readonly status: 'ready';
+      readonly estimatedTokens: number | null;
+      readonly errorMessage: null;
+    })
+  | (IndexStateCommon & {
+      readonly status: 'failed';
+      readonly estimatedTokens: null;
+      readonly errorMessage: string;
+    });
 
 export type IndexGeneration = DocumentIndexState & {
   readonly generationId: string;

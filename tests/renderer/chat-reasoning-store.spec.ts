@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChatStore, type ChatStore } from '../../src/renderer/stores/use-chat-store';
-import { isEffortStale, publishedReasoning, staleEffortMessage } from '../../src/renderer/stores/chat-reasoning';
+import { isEffortStale, publishedReasoning, staleEffortMessage } from '../../src/renderer/stores/chat/reasoning';
 import type { AIModelInfo, AIProviderStatus, ChatSession, ReasoningEffort } from '@shared/types/ai';
 import type { DocumentMetadata } from '@shared/types/document';
 import { stubBridge } from '../helpers/interleaf-api';

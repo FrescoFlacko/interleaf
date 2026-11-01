@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useUiStore } from '../stores/use-ui-store';
-import { useLibraryStore } from '../stores/use-library-store';
+import { isLibraryModalOpen, useLibraryStore } from '../stores/use-library-store';
 import { isReaderReady, useReaderStore } from '../stores/use-reader-store';
 import { useAnnotationStore } from '../stores/use-annotation-store';
 import { runFileShortcut } from '../stores/use-open-file-store';
@@ -36,16 +36,8 @@ const isReaderNavigationTarget = (target: EventTarget | null, key: string): bool
  * after the current key event bubbles to window. Inspect the mounted layer as
  * well as Zustand state so Escape cannot close Focus Mode in the same event
  * that dismisses a selection toolbar, note popover, or modal. */
-function isLibraryModalOpen(): boolean {
-  const lib = useLibraryStore.getState();
-  return (
-    lib.newFolderModalOpen ||
-    lib.renameFolderModal !== null ||
-    lib.deleteFolderModal !== null ||
-    lib.moveDocumentModal !== null ||
-    lib.deleteDocumentModal !== null ||
-    lib.selectedDocumentDetails !== null
-  );
+function libraryModalOwnsKeys(): boolean {
+  return isLibraryModalOpen(useLibraryStore.getState());
 }
 
 /** Inspect the mounted top layer as well as Zustand state so Escape and F11
@@ -101,7 +93,7 @@ export function useShortcuts(): void {
           return;
         }
         // 2. Nested Library modals or DOM popovers/menus
-        if (isLibraryModalOpen() || hasOpenTopLayer()) {
+        if (libraryModalOwnsKeys() || hasOpenTopLayer()) {
           event.preventDefault();
           return;
         }
@@ -126,7 +118,7 @@ export function useShortcuts(): void {
         store.shortcutsOpen ||
         store.settingsOpen ||
         store.compactActivePanel !== null ||
-        isLibraryModalOpen() ||
+        libraryModalOwnsKeys() ||
         hasOpenTopLayer()
       ) {
         return;

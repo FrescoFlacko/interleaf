@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type RefObject } from 'react';
 import type { DocumentMetadata } from '@shared/types/document';
 import { useAgentStore } from '../../stores/use-agent-store';
-import { pageRangeProblem } from '../../stores/agent-context-attach';
+import { pageRangeProblem } from '../../stores/agent/context-attach';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../components/ui/cn';
 import { phaseAttributes, usePopoverPresence } from '../../components/ui/popover-presence';

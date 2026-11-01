@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { OPENABLE_EXTENSIONS } from '../../src/main/open-files/open-file-requests';
+import { DOCUMENT_EXTENSIONS } from '../../src/shared/constants/document-formats';
 
 /**
  * The document types the packaged application registers with the operating
@@ -44,7 +44,7 @@ describe('electron-builder file associations', () => {
 
   it('registers exactly the extensions main accepts from the operating system', () => {
     const extensions = declared.flatMap((entry) => entry.exts).map((ext) => `.${ext}`).sort();
-    expect(extensions).toEqual([...OPENABLE_EXTENSIONS].sort());
+    expect(extensions).toEqual(DOCUMENT_EXTENSIONS.map((ext) => `.${ext}`).sort());
   });
 
   it('registers every type as a named, non-preferred viewer with a MIME type', () => {

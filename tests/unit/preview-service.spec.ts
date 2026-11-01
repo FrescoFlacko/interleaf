@@ -348,6 +348,37 @@ Algorithms are step-by-step procedures for calculations and data processing.
     expect(preview.snippet).toBe('Chunk content at ordinal 1850 with deep research notes.');
   });
 
+  it.each([
+    ['pdf', { format: 'pdf', pageIndex: 3 }, { format: 'pdf', pageIndex: 3 }, 'iv'],
+    ['pdf', { format: 'pdf', pageIndex: 3, pageLabel: 'Front' }, { format: 'pdf', pageIndex: 3 }, 'Front'],
+    ['markdown', { format: 'markdown', blockIndex: 2, headingId: 'intro' }, { format: 'markdown', blockIndex: 9, headingId: 'intro' }, '# intro'],
+    ['markdown', { format: 'markdown', blockIndex: 2 }, { format: 'markdown', blockIndex: 2 }, 'Section 3'],
+    ['docx', { format: 'docx', paragraphIndex: 4 }, { format: 'docx', paragraphIndex: 4 }, 'Para 5'],
+    ['pptx', { format: 'pptx', paragraphIndex: 1, renderedPageIndex: 2 }, { format: 'pptx', paragraphIndex: 1 }, 'Slide 3'],
+    ['epub', { format: 'epub', cfi: 'epubcfi(/6/4)', spineHref: 'ch2.xhtml' }, { format: 'epub', cfi: 'epubcfi(/6/4)', spineHref: 'ch2.xhtml' }, 'Section ch2.xhtml'],
+  ] as const)('reads a %s preview from the indexed chunk at the requested location', async (format, requested, indexed, label) => {
+    const record = insertDoc({ id: `doc-indexed-${format}-${label}`, title: 'Indexed', format, filePath: join(tmpDir, 'missing.bin') });
+    db.raw.prepare(`
+      INSERT INTO document_text_chunks (id, document_id, ordinal, text, token_count, location_json, heading, page_label)
+      VALUES ('other', ?, 0, 'Somewhere else entirely.', 3, ?, NULL, NULL), ('match', ?, 1, 'The indexed passage.', 3, ?, NULL, 'iv')
+    `).run(record.id, JSON.stringify({ format: 'pdf', pageIndex: 999 }), record.id, JSON.stringify(indexed));
+
+    const preview = await service.getDocumentPreview(record.id, requested);
+    expect(preview).toMatchObject({ locationLabel: label, snippet: 'The indexed passage.', fallback: false });
+  });
+
+  it('reads the first indexed chunk with the format default label when no location is known', async () => {
+    const record = insertDoc({ id: 'doc-indexed-first', title: 'Deck', format: 'pptx', filePath: join(tmpDir, 'missing.pptx') });
+    db.raw.prepare(`
+      INSERT INTO document_text_chunks (id, document_id, ordinal, text, token_count, location_json)
+      VALUES ('second', ?, 1, 'Second slide.', 2, '{"format":"pptx","paragraphIndex":1}'),
+             ('first', ?, 0, 'Title slide.', 2, '{"format":"pptx","paragraphIndex":0}')
+    `).run(record.id, record.id);
+
+    const preview = await service.getDocumentPreview(record.id);
+    expect(preview).toMatchObject({ locationLabel: 'Slide 1', snippet: 'Title slide.', isLastRead: false, fallback: false });
+  });
+
   it('provides honest fallback and redaction when file is missing on disk', async () => {
     const record = insertDoc({
       id: 'doc-missing',

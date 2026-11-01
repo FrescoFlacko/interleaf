@@ -270,8 +270,9 @@ is shown as unavailable when its binary is absent.
 
 ## Prerequisites and setup
 
-Use a current Node.js release compatible with the lockfile and npm. Optional
-tools are detected at runtime:
+Development, builds and tests require Node.js 26.x (pinned in `.nvmrc`; CI uses
+the same major) with its bundled npm. This is the toolchain Node; the app itself
+runs on the Node.js embedded in Electron. Optional tools are detected at runtime:
 
 ```text
 codex, claude, agy, opencode, pi, omp
@@ -307,6 +308,25 @@ npm run package:mac
 npm run package:win
 npm run package:linux
 ```
+
+The Electron suite is split into platform projects: `shared` (behaviour that
+is the same on macOS and Linux) plus each OS's native project, all behind a
+platform preflight that fails the run when the host lacks what it needs. Run
+the projects for your OS after `npm run build`:
+
+- macOS: `npx playwright test --project=shared --project=macos-native`. There
+  is no macOS CI, so the macOS-native cases are deferred and skip by default;
+  `INTERLEAF_E2E_MACOS_NATIVE=1` opts in, unverified
+- Linux (X11, e.g. a private `Xvfb :99` with `DISPLAY=:99`), inside a
+  disposable unlocked keyring so credential workflows reach a real Secret
+  Service rather than failing closed:
+  `tests/e2e/run-with-linux-keyring.sh npx playwright test --project=shared --project=linux-native`
+  (requires `dbus-run-session`, `gnome-keyring-daemon`, `xdpyinfo`, and
+  `python3` with libX11).
+
+Plain `npx playwright test` runs the same projects for the current host.
+Windows is not a supported E2E host. See
+[docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md) ("Platform projects").
 
 Platform signing/notarization and native toolchains are required for
 distribution artifacts. Do not treat an unsigned local package as a release.

@@ -1,8 +1,8 @@
 import { aiProviderDisplayName } from '@shared/constants/ai';
 import type { AIProviderId, AIProviderStatus } from '@shared/types/ai';
 import type { AgentProfileStatus } from '@shared/types/agent';
-import { isProviderReady } from '../../stores/chat-provider-readiness';
-import { sanitizeProviderVersion, type OpenRouterCredentialState, type ProviderRowTone } from '../chat/provider-rows';
+import { isProviderReady } from '../../stores/chat/provider-readiness';
+import { sanitizeProviderVersion, type OpenRouterCredentialState, type ProviderRowTone } from '../settings/provider-rows';
 import { PROFILE_EDITOR_DEFINITIONS } from '../agent/profile-preferences';
 
 /**

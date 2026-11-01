@@ -34,6 +34,7 @@ import type {
   AgentEvent,
 } from '@shared/types/agent';
 import { mermaidRenderResultSchema } from '@shared/schemas/mermaid';
+import { closeHandshakePayloadSchema } from '@shared/schemas/app-lifecycle';
 import type { CloneableValue } from '@shared/models/portable';
 
 /**
@@ -108,10 +109,6 @@ function ipcProviderId(providerId: AIProviderId): z.output<typeof aiProviderIdSc
   return parsed.data;
 }
 
-function isUuidV4(value: string): boolean {
-  return /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(value);
-}
-
 export function createInterleafApi(
   ipc: PreloadIpc = ipcRenderer,
   utils: PreloadWebUtils = webUtils
@@ -166,23 +163,12 @@ export function createInterleafApi(
     },
     onBeforeClose: (callback) => {
       const handleCloseRequest = async (payload: CloneableValue): Promise<void> => {
-        if (
-          !isPlainRecord(payload) ||
-          !hasOnlyKeys(payload, ['requestId']) ||
-          typeof payload.requestId !== 'string' ||
-          !isUuidV4(payload.requestId)
-        ) {
-          return;
-        }
-        try {
-          if (JSON.stringify(payload).length > 256) return;
-        } catch {
-          return;
-        }
+        const request = closeHandshakePayloadSchema.safeParse(payload);
+        if (!request.success) return;
         try {
           await callback();
         } finally {
-          ipc.send(IPC_EVENTS.appCloseReady, { requestId: payload.requestId });
+          ipc.send(IPC_EVENTS.appCloseReady, { requestId: request.data.requestId });
         }
       };
       const listener = (_event: Electron.IpcRendererEvent, payload: CloneableValue): void => {

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test, type Locator } from '@playwright/test';
 import { launchInterleaf, stubOpenDialog, type AppHandle, openCompanionPanel } from './helpers';
+import { installIntentRecorder, type IntentRecording, type IntentSpec } from './drawer-intent-recorder';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 
 /**
@@ -20,6 +21,8 @@ import { makePdfFixture } from '../fixtures/document-fixtures';
  */
 
 const SETTLE_MS = 650;
+/** How long a recorder waits for the action it was armed for. */
+const ARM_DEADLINE_MS = 5_000;
 const MIN_CORE_SPAN_MS = 60;
 /** Product-fixed durations each sampled transition must match (~±40ms). */
 const EXPECTED_PANEL_MS = 200;
@@ -48,6 +51,68 @@ type PhaseResult = {
   /** Distinct panel widths seen strictly between the two resting widths. */
   readonly intermediateWidths: number;
 };
+
+/**
+ * Times, inside the renderer, a real click on `toggleTestId` until
+ * `panelTestId` is hidden in Playwright's own sense of `toBeHidden()`: an empty
+ * bounding box, or a computed `visibility` other than `visible`. Measuring in
+ * the page keeps the test driver's CDP round-trips and `toBeHidden()` polling
+ * gaps out of the duration, so a loaded machine cannot make a fast close look
+ * slow. Arm it, click with Playwright, wait for `toBeHidden()`, then read it.
+ *
+ * The start is a capture-phase window listener for that click, so it runs
+ * before React's root handler. The end is checked on every attribute or style
+ * mutation in the panel and on every animation frame; the first check that
+ * sees it hidden stops both, and a 5 s backstop stops them if it never hides.
+ */
+async function armHideTimer(app: AppHandle, toggleTestId: string, panelTestId: string): Promise<() => Promise<number>> {
+  const timing = await app.window.evaluateHandle(({ toggleId, panelId }) => {
+    const panel = document.querySelector<HTMLElement>(`[data-testid="${panelId}"]`);
+    if (panel === null) throw new Error(`No ${panelId} to time.`);
+    const state = { clickedAt: null as number | null, hiddenAt: null as number | null, stopped: false };
+    let frame = 0;
+    const isHidden = (): boolean => {
+      const box = panel.getBoundingClientRect();
+      return box.width === 0 || box.height === 0 || getComputedStyle(panel).visibility !== 'visible';
+    };
+    const stop = (): void => {
+      state.stopped = true;
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      window.clearTimeout(backstop);
+      window.removeEventListener('click', onClick, true);
+    };
+    const check = (): void => {
+      if (state.clickedAt === null || state.stopped) return;
+      if (isHidden()) {
+        state.hiddenAt = performance.now();
+        stop();
+      }
+    };
+    const onFrame = (): void => {
+      check();
+      if (!state.stopped) frame = requestAnimationFrame(onFrame);
+    };
+    const onClick = (event: MouseEvent): void => {
+      if (state.clickedAt !== null) return;
+      if (!(event.target instanceof Element) || event.target.closest(`[data-testid="${toggleId}"]`) === null) return;
+      state.clickedAt = performance.now();
+      frame = requestAnimationFrame(onFrame);
+    };
+    const observer = new MutationObserver(check);
+    observer.observe(panel, { attributes: true, subtree: true });
+    window.addEventListener('click', onClick, true);
+    const backstop = window.setTimeout(stop, 5_000);
+    return state;
+  }, { toggleId: toggleTestId, panelId: panelTestId });
+  return async () => {
+    const { clickedAt, hiddenAt, stopped } = await timing.evaluate((state) => ({ ...state }));
+    await timing.dispose();
+    expect(stopped, 'the hide timer stopped observing').toBe(true);
+    if (clickedAt === null || hiddenAt === null) throw new Error('The hide timer saw no click, or the panel never hid.');
+    return hiddenAt - clickedAt;
+  };
+}
 
 async function withApp(run: (app: AppHandle) => Promise<void>): Promise<void> {
   const app = await launchInterleaf();
@@ -78,33 +143,63 @@ async function drawerOffset(drawer: Locator): Promise<number> {
   });
 }
 
-/** Samples discrete reads (~16ms apart) spanning the whole settle window; overflow must stay clean. */
-async function sampleFrames(app: AppHandle, selector: string): Promise<readonly Frame[]> {
-  const collected: Frame[] = [];
-  const startedAt = Date.now();
-  while (Date.now() - startedAt <= SETTLE_MS) {
-    const frame = await app.window.evaluate((sel) => {
-      const node = document.querySelector<HTMLElement>(sel);
-      const content = document.querySelector<HTMLElement>(`${sel} > [data-testid$="-content"]`);
-      if (node === null || content === null) return null;
-      const cs = getComputedStyle(content);
-      return {
-        t: Math.round(performance.now()),
-        w: Math.round(node.getBoundingClientRect().width * 100) / 100,
-        tx: cs.transform === 'none' ? 0 : Math.round(Math.abs(new DOMMatrixReadOnly(cs.transform).m41) * 100) / 100,
-        op: Math.round(Number.parseFloat(cs.opacity) * 1000) / 1000,
-        trProp: cs.transitionProperty,
-        trDur: cs.transitionDuration,
-        overflowX: document.body.scrollWidth - document.body.clientWidth,
-      };
-    }, selector);
-    if (frame !== null) {
-      collected.push(frame);
-      expect(frame.overflowX).toBeLessThanOrEqual(1);
+/**
+ * Records a panel toggle: one baseline sample of the resting panel, then every
+ * frame and state change for SETTLE_MS from the action itself (the trusted
+ * click on the toggle, or the shortcut chord), so the time the driver spends
+ * delivering the action is not taken out of the window. Nothing seen after the
+ * window counts, and overflow must stay clean on every sample.
+ */
+async function recordToggle(
+  app: AppHandle,
+  selector: string,
+  intent: IntentSpec,
+  act: () => Promise<void>,
+): Promise<{ readonly frames: readonly Frame[]; readonly recording: IntentRecording }> {
+  const recorder = await app.window.evaluateHandle(installIntentRecorder, { selector, intent, windowMs: SETTLE_MS, armDeadlineMs: ARM_DEADLINE_MS });
+  try {
+    await act();
+    await expect
+      .poll(async () => recorder.evaluate((state) => state.status), { message: 'the action arrived and its window ended' })
+      .toBe('done');
+    const recording = await recorder.evaluate((state): IntentRecording => ({
+      status: state.status,
+      baseline: state.baseline,
+      intentAt: state.intentAt,
+      frames: state.frames,
+      fadeEndAt: state.fadeEndAt,
+      lateCallbacks: state.lateCallbacks,
+    }));
+    // Kept with the test's output, so a failing check can be read against every sample.
+    writeFileSync(test.info().outputPath(`recording-${String(Math.round(recording.intentAt ?? 0))}.json`), JSON.stringify(recording, null, 1));
+    const frames: Frame[] = [];
+    for (const sample of [recording.baseline, ...recording.frames]) {
+      if (sample === null) continue;
+      expect(sample.overflowX).toBeLessThanOrEqual(1);
+      frames.push({ t: sample.t, w: sample.w, tx: sample.tx, op: sample.op, trProp: sample.trProp, trDur: sample.trDur, overflowX: sample.overflowX });
     }
-    await app.window.waitForTimeout(16);
+    return { frames, recording };
+  } finally {
+    await recorder.evaluate((state) => { state.dispose(); });
+    await recorder.dispose();
   }
-  return collected;
+}
+
+/**
+ * When, from the action, the close showed its first partly faded frame, ended
+ * its fade and released the width. The fade must start early enough to run its
+ * 100ms inside the window, must really end (its opacity transition reports
+ * it) before the width goes, and the width must be gone inside the window.
+ */
+function expectCloseLatency(recording: IntentRecording): void {
+  const intentAt = recording.intentAt ?? Number.NaN;
+  const firstFade = recording.frames.find((frame) => frame.op > 0.02 && frame.op < 0.98);
+  const collapsed = recording.frames.find((frame) => frame.w <= 2);
+  expect(firstFade, 'a partly faded frame was seen').toBeDefined();
+  expect((firstFade?.t ?? Number.POSITIVE_INFINITY) - intentAt, 'the fade starts in time to finish').toBeLessThanOrEqual(SETTLE_MS - EXPECTED_PANEL_EXIT_MS);
+  expect(collapsed, 'the width is released inside the window').toBeDefined();
+  expect(recording.fadeEndAt, 'the fade reported its end inside the window').not.toBeNull();
+  expect(recording.fadeEndAt ?? Number.POSITIVE_INFINITY, 'the fade ends before the width is released').toBeLessThanOrEqual((collapsed?.t ?? Number.NEGATIVE_INFINITY) - intentAt);
 }
 
 function parseFirstDurationMs(value: string | null): number | null {
@@ -192,9 +287,10 @@ test.describe('Defect 22 drawer transitions (frame-sampled)', () => {
         await expect(toggle).toBeEnabled({ timeout: 15_000 });
 
         const restingWidth = await panelWidth(app, selector);
-        const closeSampling = sampleFrames(app, selector);
-        await toggle.click();
-        expectExitFade(await closeSampling, restingWidth);
+        const intent = { kind: 'click', testId: `toggle-${side}-panel` } as const;
+        const closing = await recordToggle(app, selector, intent, () => toggle.click());
+        expectExitFade(closing.frames, restingWidth);
+        expectCloseLatency(closing.recording);
         await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
         // The identical mounted node rests hidden, inert, aria-hidden, without
@@ -217,9 +313,7 @@ test.describe('Defect 22 drawer transitions (frame-sampled)', () => {
           hitTestMissesPanel: true,
         });
 
-        const openSampling = sampleFrames(app, selector);
-        await toggle.click();
-        const openFrames = await openSampling;
+        const { frames: openFrames } = await recordToggle(app, selector, intent, () => toggle.click());
         expectGlide(analyzePhase(openFrames, false, await panelWidth(app, selector)));
         // It fades in as it slides: some frame is partly visible, and it ends opaque.
         expect(openFrames.some((frame) => frame.op > 0.02 && frame.op < 0.98)).toBe(true);
@@ -349,11 +443,11 @@ test.describe('Defect 22 drawer transitions (frame-sampled)', () => {
       const panel = app.window.getByTestId('resizable-panel-left');
       await expect(toggle).toBeEnabled({ timeout: 15_000 });
 
-      // Baseline: measured normal close wall-clock (click -> fully hidden).
-      const normalStartedAt = Date.now();
+      // Baseline: measured normal close (click -> fully hidden), in the renderer.
+      const normalHide = await armHideTimer(app, 'toggle-left-panel', 'resizable-panel-left');
       await toggle.click();
       await expect(panel).toBeHidden({ timeout: 1_500 });
-      const normalHideMs = Date.now() - normalStartedAt;
+      const normalHideMs = await normalHide();
       expect(normalHideMs).toBeGreaterThan(MIN_CORE_SPAN_MS);
 
       await toggle.click();
@@ -361,10 +455,10 @@ test.describe('Defect 22 drawer transitions (frame-sampled)', () => {
 
       // Reduced motion run on the same session/window.
       await app.window.emulateMedia({ reducedMotion: 'reduce' });
-      const reduceStartedAt = Date.now();
+      const reduceHide = await armHideTimer(app, 'toggle-left-panel', 'resizable-panel-left');
       await toggle.click();
       await expect(panel).toBeHidden({ timeout: 800 });
-      const reduceHideMs = Date.now() - reduceStartedAt;
+      const reduceHideMs = await reduceHide();
       expect(reduceHideMs).toBeLessThanOrEqual(120);
       expect(reduceHideMs).toBeLessThan(normalHideMs * 0.5);
       await expect(panel).toHaveAttribute('data-panel-state', 'closed');

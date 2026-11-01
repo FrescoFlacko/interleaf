@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 import { installTestBridge } from './helpers/interleaf-api';
 import { installFramePlatform, installRendererPlatform } from './helpers/renderer-platform';
-import { resetAgentFollowUps } from '../src/renderer/stores/agent-follow-up-drafts';
+import { resetAgentFollowUps } from '../src/renderer/stores/agent/follow-up-drafts';
 import { resetNoteDrafts } from '../src/renderer/hooks/note-drafts';
 
 // Production always runs with the preload bridge, so every test does too.

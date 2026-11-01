@@ -1,6 +1,7 @@
 import { lstat, open, realpath, stat, type FileHandle } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import type { InterleafDatabase } from '../db/database';
+import { SearchPreviewChunks } from '../db/repositories/search-preview-chunks';
 import type { DocumentRepository } from '../db/repositories/document-repository';
 import type { ReadingPositionRepository } from '../db/repositories/reading-position-repository';
 import type { Logger } from '../logging/logger';
@@ -58,8 +59,17 @@ function paragraphLocationLabel(location: Extract<DocumentLocation, { readonly f
     : `Para ${String(location.paragraphIndex + 1)}`;
 }
 
+/** The label for a preview read from an indexed chunk at `location`; only locations a chunk query can match reach here. */
+function indexedLocationLabel(location: DocumentLocation, chunkPageLabel: string | null): string {
+  if (location.format === 'pdf') return location.pageLabel ?? chunkPageLabel ?? `Page ${String(location.pageIndex + 1)}`;
+  if (location.format === 'markdown') return location.headingId ? `# ${location.headingId}` : `Section ${String(location.blockIndex + 1)}`;
+  if (hasParagraphFormat(location)) return paragraphLocationLabel(location);
+  return location.format === 'epub' && location.spineHref ? `Section ${location.spineHref}` : '';
+}
+
 export class PreviewService {
-  private readonly db: InterleafDatabase;
+  /** Committed chunk text, read through the search index's own preview query. */
+  private readonly indexedChunks: SearchPreviewChunks;
   private readonly documents: DocumentRepository;
   private readonly readingPositions: ReadingPositionRepository;
   private readonly log: Logger;
@@ -68,7 +78,7 @@ export class PreviewService {
   private readonly currentScopeId: () => string;
 
   constructor(deps: PreviewServiceDeps) {
-    this.db = deps.db;
+    this.indexedChunks = new SearchPreviewChunks(deps.db);
     this.documents = deps.documents;
     this.readingPositions = deps.readingPositions;
     this.log = deps.log;
@@ -322,120 +332,21 @@ export class PreviewService {
   ): { readonly snippet: string; readonly locationLabel: string; readonly isLastRead: boolean } | null {
     try {
       if (!location) {
-        // No location requested -> fetch first chunk by ordinal with LIMIT 1
-        const row = this.db.raw
-          .prepare(
-            'SELECT text, location_json, heading, page_label FROM document_text_chunks WHERE document_id = ? ORDER BY ordinal ASC LIMIT 1'
-          )
-          .get(documentId) as { text: string; location_json: string; heading: string | null; page_label: string | null } | undefined;
-
-        if (!row) return null;
+        const first = this.indexedChunks.first(documentId);
+        if (!first) return null;
         return {
-          snippet: this.cleanSnippet(row.text, 240),
+          snippet: this.cleanSnippet(first.text, 240),
           locationLabel: this.resolveDefaultLocationLabel(format),
           isLastRead: false,
         };
       }
-
-      // Format-specific parameterized SQL using json_extract with LIMIT 1
-      let row: { text: string; location_json: string; heading: string | null; page_label: string | null } | undefined;
-
-      if (location.format === 'pdf') {
-        row = this.db.raw
-          .prepare(
-            `SELECT text, location_json, heading, page_label
-             FROM document_text_chunks
-             WHERE document_id = ?
-               AND json_extract(location_json, '$.format') = 'pdf'
-               AND json_extract(location_json, '$.pageIndex') = ?
-             LIMIT 1`
-          )
-          .get(documentId, location.pageIndex) as typeof row;
-
-        if (!row) return null;
-        const label = location.pageLabel ?? row.page_label ?? `Page ${String(location.pageIndex + 1)}`;
-        return {
-          snippet: this.cleanSnippet(row.text, 240),
-          locationLabel: label,
-          isLastRead: isRequestedLastRead,
-        };
-      }
-
-      if (location.format === 'markdown') {
-        if (location.headingId) {
-          row = this.db.raw
-            .prepare(
-              `SELECT text, location_json, heading, page_label
-               FROM document_text_chunks
-               WHERE document_id = ?
-                 AND json_extract(location_json, '$.format') = 'markdown'
-                 AND (json_extract(location_json, '$.headingId') = ? OR json_extract(location_json, '$.blockIndex') = ?)
-               LIMIT 1`
-            )
-            .get(documentId, location.headingId, location.blockIndex) as typeof row;
-        } else {
-          row = this.db.raw
-            .prepare(
-              `SELECT text, location_json, heading, page_label
-               FROM document_text_chunks
-               WHERE document_id = ?
-                 AND json_extract(location_json, '$.format') = 'markdown'
-                 AND json_extract(location_json, '$.blockIndex') = ?
-               LIMIT 1`
-            )
-            .get(documentId, location.blockIndex) as typeof row;
-        }
-
-        if (!row) return null;
-        const label = location.headingId ? `# ${location.headingId}` : `Section ${String(location.blockIndex + 1)}`;
-        return {
-          snippet: this.cleanSnippet(row.text, 240),
-          locationLabel: label,
-          isLastRead: isRequestedLastRead,
-        };
-      }
-
-      if (hasParagraphFormat(location)) {
-        row = this.db.raw
-          .prepare(
-            `SELECT text, location_json, heading, page_label
-             FROM document_text_chunks
-             WHERE document_id = ?
-               AND json_extract(location_json, '$.format') = ?
-               AND json_extract(location_json, '$.paragraphIndex') = ?
-             LIMIT 1`
-          )
-          .get(documentId, location.format, location.paragraphIndex) as typeof row;
-
-        if (!row) return null;
-        return {
-          snippet: this.cleanSnippet(row.text, 240),
-          locationLabel: paragraphLocationLabel(location),
-          isLastRead: isRequestedLastRead,
-        };
-      }
-
-      if (location.format === 'epub' && location.spineHref) {
-        row = this.db.raw
-          .prepare(
-            `SELECT text, location_json, heading, page_label
-             FROM document_text_chunks
-             WHERE document_id = ?
-               AND json_extract(location_json, '$.format') = 'epub'
-               AND json_extract(location_json, '$.spineHref') = ?
-             LIMIT 1`
-          )
-          .get(documentId, location.spineHref) as typeof row;
-
-        if (!row) return null;
-        return {
-          snippet: this.cleanSnippet(row.text, 240),
-          locationLabel: `Section ${location.spineHref}`,
-          isLastRead: isRequestedLastRead,
-        };
-      }
-
-      return null;
+      const chunk = this.indexedChunks.at(documentId, location);
+      if (!chunk) return null;
+      return {
+        snippet: this.cleanSnippet(chunk.text, 240),
+        locationLabel: indexedLocationLabel(location, chunk.pageLabel),
+        isLastRead: isRequestedLastRead,
+      };
     } catch {
       return null;
     }

@@ -153,6 +153,12 @@ export type DocumentAdapterCapabilities = {
   readonly externalLinks: ExternalLinkCapability | null;
 };
 
+/** How a caller may end a text extraction early. */
+export type TextExtractionOptions = {
+  /** Whether the caller no longer wants the text; checked before each page is requested. */
+  readonly shouldStop?: () => boolean;
+};
+
 export type DocumentAdapter = {
   readonly format: DocumentFormat;
 
@@ -183,8 +189,13 @@ export type DocumentAdapter = {
   /** Remove only the transient search highlight; persisted annotation ranges remain. */
   clearSearchHighlight(): void;
 
-  /** Stream normalized text chunks across the document for indexing. */
-  extractText(): AsyncIterable<NormalizedTextChunk>;
+  /**
+   * Stream normalized text chunks across the document for indexing. A reader
+   * that reads page by page checks `shouldStop` before each page it asks for,
+   * so a caller that no longer wants the text stops it at the next page even
+   * through pages that yield nothing; one without pages stops at its next chunk.
+   */
+  extractText(options?: TextExtractionOptions): AsyncIterable<NormalizedTextChunk>;
 
   /** Extract text content for a specific location. */
   extractLocationText(location: DocumentLocation): Promise<readonly NormalizedTextChunk[]>;

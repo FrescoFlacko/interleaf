@@ -4,7 +4,7 @@ import type { AgentSessionDetail } from '@shared/types/agent';
 import type { AgentSessionEnvironment } from '@shared/types/agent-environment';
 import { AGENT_EXECUTION_MODE_INFO } from '@shared/constants/agent-modes';
 import { useAgentStore } from '../../stores/use-agent-store';
-import { discardOriginHolds, discardOriginOf, discardRunShown, type AgentDiscardOrigin } from '../../stores/agent-discard-origin';
+import { discardOriginHolds, discardOriginOf, discardRunShown, type AgentDiscardOrigin } from '../../stores/agent/discard-origin';
 import { Button } from '../../components/ui/button';
 import { truncateForDisplay } from './agent-format';
 

@@ -1,0 +1,89 @@
+name: Electron E2E
+
+# Runs the real Electron suite on Linux with the projects Linux owns
+# (docs/TEST_STRATEGY.md, "Platform projects"): shared + linux-native, on a
+# private X11 display (Xvfb) inside a disposable D-Bus session with an unlocked
+# gnome-keyring. There is no macOS job: by owner decision macOS-native cases
+# are deferred (skipped by default) until macOS CI exists.
+# The job declares its platform and required capabilities, so the platform
+# preflight (including a real credential-store round trip) fails the job
+# instead of passing it when something is missing.
+# Retries are off: a pass is a pass on the first attempt. Every provider is a
+# fake or a loopback seam, so no paid call is made, and nothing is published.
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: E2E (Linux X11, shared + linux-native)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      INTERLEAF_E2E_PLATFORM: linux
+      INTERLEAF_E2E_REQUIRE_CREDENTIAL_STORE: '1'
+      DISPLAY: ':99'
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '26'
+          cache: npm
+
+      # Managed-runner prerequisites for the declared capabilities: an X11
+      # server, xdpyinfo, libX11 for the X input-focus reads, and a disposable
+      # secret service.
+      - name: Install display and keyring prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb x11-utils libx11-6 python3 dbus dbus-x11 gnome-keyring
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Tests that hand a file or a reveal to the running app start a second
+      # Electron directly, sandboxed (Playwright's own launches turn the
+      # sandbox off on Linux). This runner restricts unprivileged user
+      # namespaces, so Chromium uses its setuid helper, which must be owned by
+      # root with mode 4755 or Electron aborts. Only that one file, on this
+      # disposable runner; the sandbox stays on.
+      - name: Set up Electron's setuid sandbox helper
+        run: |
+          if [ ! -f "node_modules/electron/dist/chrome-sandbox" ] || [ -L "node_modules/electron/dist/chrome-sandbox" ]; then
+            echo "::error::node_modules/electron/dist/chrome-sandbox is not a regular, non-symlink file; leaving it unchanged"
+            exit 1
+          fi
+          sudo chown root:root "node_modules/electron/dist/chrome-sandbox"
+          sudo chmod 4755 "node_modules/electron/dist/chrome-sandbox"
+
+      - name: Build
+        run: npm run build
+
+      - name: Start a private X11 display
+        run: |
+          Xvfb :99 -ac -nolisten tcp -screen 0 1920x1080x24 &
+          for _ in $(seq 1 50); do xdpyinfo -display :99 >/dev/null 2>&1 && exit 0; sleep 0.2; done
+          echo "::error::Xvfb :99 did not start"; exit 1
+
+      - name: Run shared and linux-native projects
+        run: tests/e2e/run-with-linux-keyring.sh npx playwright test --project=shared --project=linux-native --retries=0
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-linux-results
+          path: test-results/
+          if-no-files-found: ignore

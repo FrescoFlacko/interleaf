@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { platformProjects } from './tests/e2e/platform/projects';
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -13,4 +14,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
+  // shared (macOS and Linux), plus this host's native project, all behind the
+  // platform preflight. See tests/e2e/platform/projects.ts and
+  // docs/TEST_STRATEGY.md ("Platform projects").
+  projects: platformProjects(process.platform, process.env),
 });

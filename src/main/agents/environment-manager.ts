@@ -20,12 +20,11 @@ import {
 } from 'node:fs/promises';
 import { type BigIntStats, constants as fsConstants, createReadStream } from 'node:fs';
 import { basename, dirname, join, normalize, resolve, sep } from 'node:path';
-import { resolveAgentRiskLevel, type AgentRiskLevel, type ResolvedAgentExecutionMode } from '@shared/constants/agent-modes';
+import { resolveAgentRiskLevel, type ResolvedAgentExecutionMode } from '@shared/constants/agent-modes';
 import type {
   AgentEnvironmentReview,
   AgentEnvironmentReviewResult,
   AgentPatchExportResult,
-  EnvironmentChangeKind,
   EnvironmentFileChange,
   EnvironmentTestResult,
 } from '@shared/types/agent-environment';
@@ -44,6 +43,7 @@ import {
   type SnapshotWorkerOptions,
   type SnapshotWorkerRequest,
 } from './snapshot-worker';
+import { applyRefusalReason, assertNoSymlinkChanges, buildChangePlan, MAX_CHANGE_ENTRIES, type SnapshotEntry } from './environment-change-plan';
 import { ProtectedRootPolicy } from './protected-roots';
 import { assertSafeRelativePath, isSafeRelativePath, toManifestRelativePath } from './relative-path';
 import { buildMinimalChildEnvironment, execFileBounded } from './process-runner';
@@ -80,7 +80,6 @@ const MAX_FILE_BYTES = 64 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
 const MAX_TREE_ENTRIES = 100_000;
 const MAX_PATCH_BYTES = MAX_DIFF_BYTES;
-const MAX_CHANGE_ENTRIES = 10_000;
 const ABANDONED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1_000;
 const MAX_RECOVERY_JOURNAL_BYTES = 8 * 1024 * 1024;
 const MAX_METADATA_BYTES = 128 * 1024;
@@ -117,35 +116,11 @@ const GENERATED_NAMES = new Set([
   '.next', '.turbo', 'coverage', '.cache', 'tmp', 'temp', '__pycache__',
 ]);
 
-/**
- * Item L: `symlink` is a metadata-only entry type. `hash` is the SHA-256 of the
- * link's own target *string* read with `readlink`, and `size` is that string's
- * byte length — the link is never opened, so nothing outside the tree is read.
- */
-type SnapshotEntry = {
-  readonly path: string;
-  readonly type: 'file' | 'directory' | 'symlink';
-  readonly mode: number;
-  readonly size: number;
-  readonly hash: string | null;
-};
-
 type Manifest = {
   readonly version: 1;
   readonly rootKind: 'git' | 'copy' | 'active';
   readonly entries: readonly SnapshotEntry[];
   readonly createdAt: string;
-};
-
-type ChangePlan = {
-  readonly files: readonly EnvironmentFileChange[];
-  /** Item L: changes where either side is a symbolic link. These are reported
-   * so the user can see them, and are never applied, staged, or diffed. */
-  readonly symlinkChanges: readonly EnvironmentFileChange[];
-  readonly createdDirectories: readonly string[];
-  readonly deletedDirectories: readonly string[];
-  readonly before: readonly SnapshotEntry[];
-  readonly after: readonly SnapshotEntry[];
 };
 
 /**
@@ -1178,7 +1153,9 @@ export class AgentEnvironmentManager {
     const applyDisabledReason = applyRefusalReason(state, plan);
     return {
       mode: state.mode,
-      riskLevel: riskForMode(state.mode, state.dangerousProfile),
+      // Item N: the persisted level the renderer renders comes from the same
+      // predicate the confirmation used.
+      riskLevel: resolveAgentRiskLevel({ mode: state.mode, dangerousProfile: state.dangerousProfile }),
       workspaceLabel: state.mode === 'active-env' || state.mode === 'native-restricted' ? 'Selected working directory' : 'Interleaf isolated workspace',
       primaryWasDirty: state.primaryWasDirty,
       applyAllowed: applyDisabledReason === null && !state.applied,
@@ -1851,77 +1828,8 @@ async function hashFile(path: string): Promise<string> {
  * worktree makes "what changed" unanswerable, and a link change (item L) can
  * only be reported, never carried across.
  */
-/**
- * Item L: defence in depth behind the review's own refusal. Apply owns the
- * mutation, so it re-states the invariant itself rather than trusting a review
- * computed before it. Throws; it never returns for a changed link.
- */
-function assertNoSymlinkChanges(plan: ChangePlan): void {
-  if (plan.symlinkChanges.length > 0) {
-    throw new InterleafError('security-violation', 'Apply was blocked because a symbolic link was created, removed, or repointed in the workspace.');
-  }
-}
-
-function applyRefusalReason(state: EnvironmentState, plan: ChangePlan): string | null {
-  if (state.mode === 'active-env' || state.mode === 'native-restricted') return 'Direct workspace modes have no sandbox to apply.';
-  if (state.primaryWasDirty) return 'Apply is disabled because the primary Git worktree contained uncommitted changes at session start.';
-  if (plan.symlinkChanges.length > 0) return 'Apply is disabled because a symbolic link was created, removed, or repointed in the workspace.';
-  return null;
-}
-
 function isGeneratedName(name: string): boolean {
   return GENERATED_NAMES.has(name) || isAgentStageDirectoryName(name);
-}
-
-function buildChangePlan(before: readonly SnapshotEntry[], after: readonly SnapshotEntry[]): ChangePlan {
-  const left = new Map(before.map((entry) => [entry.path, entry]));
-  const right = new Map(after.map((entry) => [entry.path, entry]));
-  const changes: EnvironmentFileChange[] = [];
-  const symlinkChanges: EnvironmentFileChange[] = [];
-  const createdDirectories: string[] = [];
-  const deletedDirectories: string[] = [];
-  const replacedByFile: string[] = [];
-  const paths = [...new Set([...left.keys(), ...right.keys()])].sort();
-  for (const path of paths) {
-    const a = left.get(path);
-    const b = right.get(path);
-    let kind: EnvironmentChangeKind | null = null;
-    if (a === undefined && b !== undefined) kind = 'created';
-    else if (a !== undefined && b === undefined) kind = 'deleted';
-    else if (a !== undefined && b !== undefined && (a.type !== b.type || a.hash !== b.hash || a.mode !== b.mode)) kind = 'modified';
-    if (kind === null) continue;
-    // Item L: a link is only ever supported unchanged. A created, deleted, or
-    // repointed link leaves the supported set entirely, so it is diverted here
-    // and fails Apply closed instead of being staged or diffed.
-    if (a?.type === 'symlink' || b?.type === 'symlink') {
-      symlinkChanges.push({ path, kind, additions: 0, deletions: 0, bytes: 0 });
-      continue;
-    }
-    if (a?.type === 'directory' && b?.type === 'directory') {
-      if (a.mode !== b.mode) changes.push({ path, kind: 'modified', additions: 0, deletions: 0, bytes: 0 });
-      continue;
-    }
-    if (a?.type === 'directory' && b?.type === 'file') replacedByFile.push(path);
-    if (a === undefined && b?.type === 'directory') { createdDirectories.push(path); continue; }
-    if (a?.type === 'directory' && b === undefined) { deletedDirectories.push(path); continue; }
-    const bytes = b?.size ?? a?.size ?? 0;
-    const additions = kind === 'deleted' ? 0 : Math.max(1, Math.ceil(bytes / 80));
-    const deletions = kind === 'created' ? 0 : Math.max(1, Math.ceil((a?.size ?? 0) / 80));
-    changes.push({ path, kind, additions, deletions, bytes });
-  }
-  const filteredChanges = changes.filter((change) => !replacedByFile.some((root) => change.path.startsWith(`${root}/`)));
-  const filteredDeletedDirectories = deletedDirectories.filter((path) => !replacedByFile.some((root) => path.startsWith(`${root}/`)));
-  if (filteredChanges.length + symlinkChanges.length + createdDirectories.length + filteredDeletedDirectories.length > MAX_CHANGE_ENTRIES) {
-    throw new InterleafError('validation', `The environment change set exceeds the bounded limit of ${String(MAX_CHANGE_ENTRIES)} entries.`);
-  }
-  return {
-    files: filteredChanges,
-    symlinkChanges,
-    createdDirectories,
-    deletedDirectories: filteredDeletedDirectories,
-    before,
-    after,
-  };
 }
 
 function findEntry(entries: readonly SnapshotEntry[], path: string): SnapshotEntry | undefined {
@@ -2120,12 +2028,6 @@ async function assertNoSymlinkAncestors(root: string, candidate: string): Promis
 
 
 function isAbsolutePath(path: string): boolean { return path.startsWith(sep) || /^[A-Za-z]:[\\/]/u.test(path); }
-
-function riskForMode(mode: ResolvedAgentExecutionMode, dangerous = false): AgentRiskLevel {
-  // Item N: the persisted level the renderer renders comes from the same
-  // predicate the confirmation used.
-  return resolveAgentRiskLevel({ mode, dangerousProfile: dangerous });
-}
 
 /**
  * Fail-closed proof that the journaled target is still the same directory.

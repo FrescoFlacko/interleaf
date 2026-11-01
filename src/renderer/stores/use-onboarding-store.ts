@@ -9,7 +9,6 @@ import type {
 } from '@shared/types/agent';
 import type { InterleafAPI } from '@shared/types/api';
 import type { AppSettings } from '@shared/schemas/settings';
-import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import {
   ONBOARDING_STAGES,
   resolveResumeStage,
@@ -20,7 +19,7 @@ import type { OnboardingLaunchState } from '@shared/types/onboarding';
 import { bridge, enqueueSettingsWrite } from '../app/api-client';
 import { useUiStore } from './use-ui-store';
 import { publishProviderStatus } from './provider-status-freshness';
-import { openRouterCredentialState, type OpenRouterCredentialState } from '../features/chat/provider-rows';
+import { openRouterCredentialState, type OpenRouterCredentialState } from '../features/settings/provider-rows';
 import {
   deriveOnboardingRows,
   ONBOARDING_CHAT_PROVIDER_IDS,
@@ -139,8 +138,20 @@ export type OnboardingState = {
   rerunFromSettings: (openerId?: string) => void;
 };
 
-function baseSettings(): AppSettings {
-  return useUiStore.getState().loadedSettings ?? DEFAULT_APP_SETTINGS;
+const UNSAVED_PROGRESS = 'Your progress could not be saved.';
+
+/**
+ * The hydrated settings document every onboarding write builds on.
+ *
+ * `settings:update` replaces main's whole stored document, so a write built on
+ * anything else would overwrite every saved preference. Before hydration there
+ * is nothing true to build on, and the write fails as an unsaved change rather
+ * than fabricating a document from the defaults.
+ */
+function hydratedSettings(): AppSettings {
+  const settings = useUiStore.getState().loadedSettings;
+  if (settings === null) throw new Error(UNSAVED_PROGRESS);
+  return settings;
 }
 
 /**
@@ -149,11 +160,11 @@ function baseSettings(): AppSettings {
  */
 async function writeSettings(build: (current: AppSettings) => AppSettings): Promise<string | null> {
   try {
-    const saved = await enqueueSettingsWrite(() => build(baseSettings()));
+    const saved = await enqueueSettingsWrite(() => build(hydratedSettings()));
     useUiStore.getState().setLoadedSettings(saved);
     return null;
   } catch (error) {
-    return error instanceof Error ? error.message : 'Your progress could not be saved.';
+    return error instanceof Error ? error.message : UNSAVED_PROGRESS;
   }
 }
 
@@ -534,7 +545,11 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
    * written and any previously stored default is left exactly as it was.
    */
   commitDefaults: async () => {
-    const settings = baseSettings();
+    const settings = useUiStore.getState().loadedSettings;
+    if (settings === null) {
+      set({ saveError: UNSAVED_PROGRESS });
+      return;
+    }
     const rows = selectOnboardingRows(get());
     const draft = get().defaultsDraft;
     const chat = resolveDefaultChoice(chatDefaultOptions(rows), persistedChatChoice(settings), draft.chat);

@@ -76,3 +76,18 @@ export function restoreReflowAnchor(scroller: HTMLElement, anchor: ReflowAnchor 
   const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
   scroller.scrollTop = Math.max(0, Math.min(maxScrollTop, scroller.scrollTop + delta));
 }
+
+/**
+ * The page whose box a viewport probe is in, among pages holding `content`.
+ * Content can overflow its page and still measure at the probe while the next
+ * page paints over it, so when a page box is under the probe, the reading
+ * position is looked for only inside that page. Anywhere else — between pages,
+ * past the last, or inside content overflowing every page box — `fallback`.
+ */
+export function pageAtProbe(pages: Iterable<HTMLElement>, probe: number, content: string, fallback: ParentNode): ParentNode {
+  for (const page of pages) {
+    const rect = page.getBoundingClientRect();
+    if (rect.top <= probe && probe <= rect.bottom && page.querySelector(content)) return page;
+  }
+  return fallback;
+}

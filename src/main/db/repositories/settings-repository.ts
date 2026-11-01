@@ -3,6 +3,7 @@ import { appSettingsSchema, BUILT_IN_AGENT_PROFILE_IDS, DEFAULT_APP_SETTINGS, ty
 import type { Logger } from '../../logging/logger';
 import { replaceUnknownPalettes } from './settings-palette-fallback';
 import { InterleafError } from '@shared/errors/interleaf-error';
+import { describeError } from '@shared/models/caught-error';
 import { isAgentModelIdentifier } from '@shared/constants/agent-models';
 import { type PortableRecord, type PortableRecordDraft, type PortableValue, parsePortableJson } from '@shared/models/portable';
 
@@ -83,7 +84,7 @@ export class SettingsRepository {
       parsed = parsePortableJson(row.value_json);
     } catch (error) {
       this.log.warn('stored settings are not valid JSON; using defaults', {
-        reason: error instanceof Error ? error.message : String(error),
+        reason: describeError(error instanceof Error ? error : null).message,
       });
       return cloneDefaults();
     }
@@ -100,7 +101,7 @@ export class SettingsRepository {
       return result.data;
     } catch (error) {
       this.log.warn('stored agent profile settings failed main-owned validation; using defaults', {
-        reason: error instanceof Error ? error.message : String(error),
+        reason: describeError(error instanceof Error ? error : null).message,
       });
       return cloneDefaults();
     }

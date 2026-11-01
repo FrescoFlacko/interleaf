@@ -93,9 +93,15 @@ describe('main window launch geometry', () => {
 
     electron.once.get('ready-to-show')?.();
 
-    // On macOS the window drops below ordinary windows before anything orders it in.
-    const lowered = process.platform === 'darwin' ? [BELOW_ORDINARY] : [];
-    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual([...lowered, 'maximize', 'showInactive']);
+    // On macOS the window drops below ordinary windows before anything orders it
+    // in. On Linux it is ordered in before it is maximized: maximizing a hidden
+    // X11 window shows it activated.
+    const reveal = new Map<string, readonly string[]>([
+      ['darwin', [BELOW_ORDINARY, 'maximize', 'showInactive']],
+      ['linux', ['showInactive', 'maximize']],
+      ['win32', ['maximize', 'showInactive']],
+    ]);
+    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual(reveal.get(process.platform));
     expect(electron.calls).not.toContain('setFullScreen');
     // Geometry and security are the foreground window's.
     expect(electron.constructed[0]).toMatchObject({ width: 1400, height: 900, minWidth: 960, minHeight: 600 });

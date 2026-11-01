@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import { testAgentProfile } from '../helpers/agent-profile';
 import { stubBridge } from '../helpers/interleaf-api';

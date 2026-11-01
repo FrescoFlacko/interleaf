@@ -5,7 +5,7 @@ import axe from 'axe-core';
 import { APP_NAME, APP_TAGLINE } from '@shared/constants/brand';
 import { DEFAULT_APP_SETTINGS } from '@shared/schemas/settings';
 import { AppHeader } from '../../src/renderer/components/AppHeader';
-import { AIProviderSettingsModal } from '../../src/renderer/features/chat/AIProviderSettingsModal';
+import { AIProviderSettingsModal } from '../../src/renderer/features/settings/AIProviderSettingsModal';
 import { useUiStore } from '../../src/renderer/stores/use-ui-store';
 import type { AppSettings } from '@shared/schemas/settings';
 import { stubBridge } from '../helpers/interleaf-api';

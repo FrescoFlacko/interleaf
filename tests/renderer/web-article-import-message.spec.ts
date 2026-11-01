@@ -83,7 +83,7 @@ describe('web article import message', () => {
     expect(message).toContain("7 images couldn't be saved");
     expect(message).toContain('captions were kept');
     expect(useLibraryStore.getState().errorMessage).toBeNull();
-    expect(useLibraryStore.getState().webImportModalOpen).toBe(false);
+    expect(useLibraryStore.getState().libraryModal).toBeNull();
   });
 
   it('reads naturally when exactly one picture is missing', async () => {

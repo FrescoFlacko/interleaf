@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { launchInterleaf, selectFakeAgentForTest, stubMessageBox, stubOpenDialog, getRecordedMessageBoxCalls, resetRecordedMessageBoxCalls, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 import { chooseListboxValue, choosePalette } from './listbox';
@@ -360,6 +360,10 @@ test.describe('renderer shell behaviors', () => {
       );
       if (secondSession === undefined) throw new Error('Workflow H second session was not persisted.');
       expect(secondSession.executionMode).toBe('isolated-worktree');
+      // "Session completed." can show before this run's review lands. A
+      // confirmation opened on that empty review is withdrawn when the real one
+      // arrives, so confirm the review the reader sees first.
+      await expect(app.window.getByTestId('agent-environment-review')).toContainText('1 changed file', { timeout: 5_000 });
       await app.window.getByRole('button', { name: 'Review', exact: true }).click();
       // Cancelling the confirmation keeps the sandbox; only confirming removes it.
       await app.window.getByRole('button', { name: 'Discard Sandbox' }).click();
@@ -463,7 +467,12 @@ test.describe('renderer shell behaviors', () => {
       win.webContents.setZoomFactor(2.0);
     });
 
-    await app.window.waitForTimeout(500);
+    // The resize and zoom reach the renderer asynchronously (about 650ms on a
+    // WM-less Linux display): wait for the 480 CSS px viewport they produce and
+    // for the shell to commit its compact presentation, whose header toggle
+    // then controls the compact drawer.
+    await expect.poll(() => app.window.evaluate(() => window.innerWidth)).toBe(480);
+    await expect(app.window.getByTestId('toggle-left-panel')).toHaveAttribute('aria-controls', 'compact-drawer-left');
 
     // Verify horizontal overflow invariant: scrollWidth <= clientWidth across all shell containers
     const overflowCheck = await app.window.evaluate(() => {
@@ -760,6 +769,7 @@ test.describe('custom Expert Shell persistence workflow', () => {
 
     const userDataDir = mkdtempSync(join(tmpdir(), 'interleaf-expert-shell-user-data-'));
     const workingDirectory = mkdtempSync(join(tmpdir(), 'interleaf-expert-shell-workspace-'));
+    const linkDirectory = mkdtempSync(join(tmpdir(), 'interleaf-expert-shell-link-'));
     const profileName = 'E2E Expert Shell';
     const outputMarker = 'interleaf-expert-shell-ok';
     let app: AppHandle | null = null;
@@ -783,11 +793,22 @@ test.describe('custom Expert Shell persistence workflow', () => {
       await profilesSection.click();
       await expect(settings.getByRole('heading', { name: 'Your custom profiles' })).toBeVisible();
 
-      // The only native boundary stub is the executable picker. The renderer
-      // receives the typed public projection ("sh"), never the selected path.
-      await stubOpenDialog(app, ['/bin/sh']);
+      // The only native boundary stub is the executable picker. Main refuses a
+      // symlinked selection outright — Debian and Ubuntu ship /bin/sh as one —
+      // so a link to the system shell is rejected and the canonical file is
+      // chosen. The renderer receives the typed public projection (the
+      // canonical basename, "sh" on macOS and "dash" on Ubuntu), never the
+      // selected path.
+      const shellPath = realpathSync('/bin/sh');
+      const shellLink = join(linkDirectory, 'linked-sh');
+      symlinkSync(shellPath, shellLink);
+      await stubOpenDialog(app, [shellLink]);
       await settings.getByRole('button', { name: 'Choose executable…' }).click();
-      await expect(settings.getByText('sh', { exact: true })).toBeVisible();
+      await expect(settings.getByRole('status').filter({ hasText: 'Symlinked executables are not allowed.' })).toBeVisible();
+      await expect(settings.getByText('linked-sh', { exact: true })).toHaveCount(0);
+      await stubOpenDialog(app, [shellPath]);
+      await settings.getByRole('button', { name: 'Choose executable…' }).click();
+      await expect(settings.getByText(basename(shellPath), { exact: true })).toBeVisible();
       await settings.getByRole('radio', { name: /Expert Shell \(Dangerous/ }).check();
       await settings.getByLabel('Custom profile name').fill(profileName);
       await settings.getByLabel('Static shell command').fill(`printf '${outputMarker}\\n'`);
@@ -862,6 +883,7 @@ test.describe('custom Expert Shell persistence workflow', () => {
       } finally {
         rmSync(userDataDir, { recursive: true, force: true });
         rmSync(workingDirectory, { recursive: true, force: true });
+        rmSync(linkDirectory, { recursive: true, force: true });
       }
     }
   });

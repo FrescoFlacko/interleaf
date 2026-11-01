@@ -301,7 +301,70 @@ All documents remain on local storage and render with high typography fidelity.`
     const toolbar = app.window.getByTestId('annotation-selection-toolbar');
     await expect(toolbar).toBeVisible();
 
+    // A render commits by replacing a page's layers, which drops any selection
+    // made on the retired ones. Before a reselection the test therefore marks
+    // the layers present now as retired and waits until both pages show
+    // surfaces committed at the new size (see `committedSurfaces`).
+    const retireCurrentPdfLayers = (): Promise<void> => app.window.evaluate(() => {
+      const retired = new WeakSet<Element>();
+      for (const page of [1, 2]) {
+        const layer = document.querySelector(`[data-testid="pdf-textlayer-p${String(page)}"]`);
+        if (layer) retired.add(layer);
+      }
+      (window as Window & { __pdfRetiredLayers?: WeakSet<Element> }).__pdfRetiredLayers = retired;
+    });
+    const committedSurfaces = (): Promise<string | null> => app.window.evaluate(async () => {
+      type Surface = { readonly wrapper: HTMLElement; readonly layer: HTMLElement; readonly canvas: HTMLCanvasElement };
+      const state = window as Window & { __pdfRetiredLayers?: WeakSet<Element>; __pdfLayerIds?: WeakMap<Element, number>; __pdfNextLayerId?: number };
+      const ids = state.__pdfLayerIds ??= new WeakMap<Element, number>();
+      const idOf = (element: Element): number => {
+        const known = ids.get(element);
+        if (known !== undefined) return known;
+        state.__pdfNextLayerId = (state.__pdfNextLayerId ?? 0) + 1;
+        ids.set(element, state.__pdfNextLayerId);
+        return state.__pdfNextLayerId;
+      };
+      const elementsOf = (page: number): Surface | null => {
+        const wrapper = document.querySelector<HTMLElement>(`[data-page-number="${String(page)}"]`);
+        const layer = document.querySelector<HTMLElement>(`[data-testid="pdf-textlayer-p${String(page)}"]`);
+        const canvas = document.querySelector<HTMLCanvasElement>(`[data-testid="pdf-canvas-p${String(page)}"]`);
+        return wrapper && layer && canvas ? { wrapper, layer, canvas } : null;
+      };
+      // A layer that replaced the retired one, still in its page, holding that page's text.
+      const isReplacementLayer = ({ wrapper, layer, canvas }: Surface, page: number): boolean =>
+        layer.isConnected && state.__pdfRetiredLayers?.has(layer) === false
+        && layer.parentElement === wrapper && canvas.parentElement === wrapper
+        && layer.textContent.includes(page === 1 ? 'Distributed Systems' : 'Cross-page');
+      // The canvas backing store matches its CSS size at this device pixel ratio.
+      const backingMatches = (canvas: HTMLCanvasElement): boolean =>
+        Math.abs(canvas.width - Number.parseFloat(canvas.style.width) * window.devicePixelRatio) <= 1
+        && Math.abs(canvas.height - Number.parseFloat(canvas.style.height) * window.devicePixelRatio) <= 1;
+      // Rendered at the current size: no zoom preview, canvas sized to its wrapper, text layer over it.
+      const isCommitted = ({ wrapper, layer, canvas }: Surface): boolean =>
+        canvas.style.transform === '' && layer.style.getPropertyValue('--preview-scale') === ''
+        && canvas.style.width === wrapper.style.width && canvas.style.height === wrapper.style.height
+        && backingMatches(canvas)
+        && Math.abs(layer.getBoundingClientRect().width - canvas.getBoundingClientRect().width) <= 2;
+      const surface = (page: number): string | null => {
+        const elements = elementsOf(page);
+        if (elements === null || !isReplacementLayer(elements, page) || !isCommitted(elements)) return null;
+        return `${String(page)}#${String(idOf(elements.layer))}:${String(elements.canvas.width)}x${String(elements.canvas.height)}`;
+      };
+      const read = (): string | null => {
+        const pages = [surface(1), surface(2)];
+        return pages.every((value) => value !== null) ? pages.join('|') : null;
+      };
+      const frame = (): Promise<void> => new Promise((resolve) => { requestAnimationFrame(() => { resolve(); }); });
+      const first = read();
+      await frame();
+      const second = read();
+      await frame();
+      return first !== null && first === second && second === read() ? first : null;
+    });
+
     // 4. Constrained 200% zoom factor in a 960x608 BrowserWindow
+    // The zoom re-renders pages 1 and 2; the reselection below waits for that commit.
+    await retireCurrentPdfLayers();
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0];
       if (win) {
@@ -322,6 +385,10 @@ All documents remain on local storage and render with high typography fidelity.`
       }
     });
     await app.window.waitForTimeout(400);
+
+    await expect.poll(committedSurfaces).not.toBeNull();
+    const zoomedSurfaces = await committedSurfaces();
+    expect(zoomedSurfaces).not.toBeNull();
 
     // Re-dispatch selection to update toolbar geometry under 200% zoom
     const zoomedNativeSelectedText = await triggerPdfSelection();
@@ -366,6 +433,8 @@ All documents remain on local storage and render with high typography fidelity.`
         pages,
       };
     });
+    // Nothing re-rendered the selected pages between selecting and reading.
+    expect(await committedSurfaces()).toBe(zoomedSurfaces);
     expect(zoomedSelectionGeometry.selectedText).toBe(expectedPdfText);
     expect(zoomedSelectionGeometry.startOffset).toBe(0);
     expect(zoomedSelectionGeometry.endOffset).toBe(zoomedSelectionGeometry.endLength);
@@ -401,6 +470,14 @@ All documents remain on local storage and render with high typography fidelity.`
     expect(containment!.fitsVertically).toBe(true);
     expect(containment!.noBodyOverflow).toBe(true);
 
+    // The reset re-renders pages 1 and 2. A render commits by replacing the
+    // page's layers, which drops any selection made on the retired ones, so the
+    // reselection waits until both pages show surfaces committed at the reset
+    // size: layers that replaced the ones present now, canvases sized to their
+    // wrapper at this device pixel ratio, no zoom preview, and the same for two
+    // consecutive frames.
+    await retireCurrentPdfLayers();
+
     // Reset zoom factor back to 1.0
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0];
@@ -412,9 +489,16 @@ All documents remain on local storage and render with high typography fidelity.`
     await app.window.setViewportSize({ width: 1280, height: 800 });
     await app.window.waitForTimeout(300);
 
+    await expect.poll(committedSurfaces).not.toBeNull();
+    const resetSurfaces = await committedSurfaces();
+    expect(resetSurfaces).not.toBeNull();
+
     // Re-establish selection at 1.0 zoom
-    await triggerPdfSelection();
+    const resetSelectedText = await triggerPdfSelection();
+    expect(resetSelectedText).toBe(expectedPdfText);
     await expect(toolbar).toBeVisible();
+    // Nothing re-rendered the selected pages between selecting and saving.
+    expect(await committedSurfaces()).toBe(resetSurfaces);
 
     // 5. Create cross-page Blue highlight
     await toolbar.getByRole('button', { name: 'Blue highlight' }).click();
@@ -675,6 +759,11 @@ All documents remain on local storage and render with high typography fidelity.`
 
     await app.window.getByTestId(`read-doc-${epubDoc!.id}`).click();
     await expect(app.window.locator('iframe[title="Ebook Content"]')).toBeVisible();
+    // The frame is visible before its section document has finished loading
+    // (srcdoc `readyState` "loading", no paragraphs yet); select once it has.
+    await expect.poll(() => app.window.evaluate(() =>
+      document.querySelector<HTMLIFrameElement>('iframe[title="Ebook Content"]')?.contentDocument?.readyState ?? 'none'
+    )).toBe('complete');
 
     // Select across paragraph 0 and paragraph 1 inside the iframe
     const nativeSelectedText = await app.window.evaluate(() => {
@@ -724,12 +813,18 @@ All documents remain on local storage and render with high typography fidelity.`
     expect(savedAnnotation.color).toBe('pink');
     expect(savedAnnotation.status).toBe('anchored');
 
-    // Assert highlight is registered in iframe CSS.highlights
-    const highlightStats = await app.window.evaluate(() => {
+    // Assert highlight is registered in iframe CSS.highlights. Painting follows
+    // the save: the reader re-resolves the stored anchor asynchronously before
+    // it registers the range, so the registry can still be empty in the turn
+    // the saved annotation is first listed. Once painted it must hold exactly
+    // one range, and keep holding it a frame later.
+    const highlightStats = (): Promise<number> => app.window.evaluate(async () => {
+      await new Promise<void>((resolve) => { requestAnimationFrame(() => { resolve(); }); });
       const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="Ebook Content"]');
       const win = iframe?.contentWindow as (Window & { CSS?: { highlights?: Map<string, { size: number }> } }) | null;
       return win?.CSS?.highlights?.get('interleaf-pink')?.size ?? 0;
     });
-    expect(highlightStats).toBe(1);
+    await expect.poll(highlightStats).toBe(1);
+    expect(await highlightStats()).toBe(1);
   });
 });
