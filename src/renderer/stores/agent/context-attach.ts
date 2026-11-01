@@ -51,6 +51,15 @@ export function holdsAgentContext(claim: AgentContextClaim): boolean {
   return selectActiveDocument(reader)?.id === claim.documentId && selectAdapter(reader) === claim.adapter;
 }
 
+/**
+ * Whether this capture can never land: a newer choice took the revision, or
+ * its own signal aborted. Neither can be undone, unlike the reader check in
+ * `holdsAgentContext`, so reading may stop at once.
+ */
+function lostAgentContext(claim: AgentContextClaim): boolean {
+  return claim.revision !== contextRevision || claim.signal?.aborted === true;
+}
+
 /** Withdraws a capture, but only while it is still the latest choice: a newer one is never undone. */
 export function releaseAgentContext(claim: AgentContextClaim): boolean {
   if (claim.revision !== contextRevision) return false;
@@ -68,18 +77,40 @@ export type AgentContextCapture =
 const READER_NOT_READY = 'The document reader is not ready. Try again once the book has opened.';
 
 /**
+ * The book's chunks until `lost` says the capture can never land. Loss is
+ * checked before each next chunk is asked for and again when it arrives; the
+ * reader checks it before each page too (`shouldStop`), so a PDF stops at the
+ * next page even inside pages with no text. Leaving closes the reading.
+ */
+async function* untilLost(adapter: DocumentAdapter, lost: () => boolean): AsyncIterable<NormalizedTextChunk> {
+  const chunks = adapter.extractText({ shouldStop: lost })[Symbol.asyncIterator]();
+  try {
+    while (!lost()) {
+      const next = await chunks.next();
+      if (next.done === true || lost()) return;
+      yield next.value;
+    }
+  } finally {
+    await chunks.return?.();
+  }
+}
+
+/**
  * Reads the book's text up to the Agent context limit. Reading stops as soon
  * as the limit is reached or `isPastEnd` says no later chunk can match, so a
- * small range near the start of a long book does not walk the whole book.
+ * small range near the start of a long book does not walk the whole book. It
+ * also stops once `lost` says the capture can never land (a cancel, Remove,
+ * or a newer capture); what was read by then is discarded at the commit.
  */
 async function accumulateText(
   adapter: DocumentAdapter,
+  lost: () => boolean,
   matches: (chunk: NormalizedTextChunk) => boolean = () => true,
   isPastEnd: (chunk: NormalizedTextChunk) => boolean = () => false,
 ): Promise<ExtractedContext> {
   const chunks: string[] = [];
   let length = 0;
-  for await (const chunk of adapter.extractText()) {
+  for await (const chunk of untilLost(adapter, lost)) {
     if (isPastEnd(chunk)) break;
     if (!matches(chunk) || chunk.text.length === 0) continue;
     const separator = chunks.length > 0 ? 2 : 0;
@@ -124,7 +155,8 @@ type CaptureRequest = {
   readonly document: DocumentMetadata;
   /** Text the caller already holds; when absent the open book is read. */
   readonly explicit?: ExtractedContext;
-  readonly extract: (adapter: DocumentAdapter) => Promise<ExtractedContext>;
+  /** Reads the open book; `lost` says when the capture can never land. */
+  readonly extract: (adapter: DocumentAdapter, lost: () => boolean) => Promise<ExtractedContext>;
   readonly emptyMessage: string;
   readonly fallbackError: string;
   readonly packet: (exactQuote: string, extracted: ExtractedContext) => AgentContextPacket;
@@ -140,7 +172,7 @@ async function capture(request: CaptureRequest, claim: AgentContextClaim): Promi
     return { kind: 'failed', message: READER_NOT_READY };
   }
   try {
-    const extracted = request.explicit ?? await request.extract(adapter);
+    const extracted = request.explicit ?? await request.extract(adapter, () => lostAgentContext(claim));
     if (extracted.text.trim().length === 0) return { kind: 'failed', message: request.emptyMessage };
     return { kind: 'attached', packet: fitAgentContextPacketToByteBudget(request.packet(extracted.text, extracted), extracted.truncated) };
   } catch (error) {
@@ -184,7 +216,7 @@ export async function capturePageRange(
     document,
     ...(explicitText !== undefined ? { explicit: boundExplicitText(explicitText) } : {}),
     // PDF text is yielded in page order, so nothing after the last page can match.
-    extract: (adapter) => accumulateText(adapter, inRange, (chunk) => chunk.location.format === 'pdf' && chunk.location.pageIndex > pageEnd - 1),
+    extract: (adapter, lost) => accumulateText(adapter, lost, inRange, (chunk) => chunk.location.format === 'pdf' && chunk.location.pageIndex > pageEnd - 1),
     emptyMessage: `${label} ${pageStart === pageEnd ? 'has' : 'have'} no readable text to attach to Agent context.`,
     fallbackError: 'Could not attach the page range to Agent context.',
     packet: (exactQuote, { truncated }) => {
@@ -237,7 +269,7 @@ export function captureEntireDocument(
   return capture({
     document,
     ...(explicitText !== undefined ? { explicit: boundExplicitText(explicitText) } : {}),
-    extract: (adapter) => accumulateText(adapter),
+    extract: (adapter, lost) => accumulateText(adapter, lost),
     emptyMessage: 'This document has no readable text to attach to Agent context.',
     fallbackError: 'Could not attach the entire document to Agent context.',
     packet: (exactQuote, { truncated }) => contextPacket(document, exactQuote, truncated, {

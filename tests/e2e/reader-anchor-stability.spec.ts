@@ -537,6 +537,17 @@ test.describe('Reader anchor stability across a Markdown reflow', () => {
       return stable;
     };
     await expect.poll(measureIsStable, { timeout: 10_000, intervals: [150] }).toBe(true);
+    // Two equal reads can both land while the companion pane's width
+    // transition is still running (or has not begun moving the measure, which
+    // the `ch` cap can hold steady). A scroll made then lands mid-transition,
+    // and the adapter's next ResizeObserver restore puts the reader back on the
+    // anchor captured before it. Settled means the pane has stopped animating.
+    await expect
+      .poll(
+        () => app.window.getByTestId('resizable-panel-right').evaluate((node) => node.getAnimations({ subtree: true }).length),
+        { timeout: 10_000 }
+      )
+      .toBe(0);
   };
 
   test.beforeEach(async () => {

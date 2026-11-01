@@ -104,7 +104,8 @@ test('app:get-info returns validated runtime info over the typed IPC', async () 
   });
   expect(info.name).toBe('Interleaf');
   expect(info.tagline).toBe('Read. Think. Build.');
-  expect(info.platform).toBe('darwin');
+  // Electron runs on the same host as the suite, which runs on macOS and Linux.
+  expect(info.platform).toBe(process.platform);
   expect(parseFloat(info.versions.electron)).toBeGreaterThanOrEqual(43);
 });
 

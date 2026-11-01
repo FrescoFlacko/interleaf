@@ -212,6 +212,11 @@ test.describe('Settings AI providers — 5a list and 5d merged profiles', () => 
       apiKey: 'sk-or-v1-e2e0000000000000000000000000000000000000000000000000000000wxyz',
       model: 'openrouter/auto',
     }).then(() => window.interleafAPI.credentials.getOpenRouterStatus(), () => null));
+    // A job that declares the credential store (the CI jobs do) fails here
+    // instead of skipping; a local run without one skips with the reason.
+    if (process.env.INTERLEAF_E2E_REQUIRE_CREDENTIAL_STORE === '1') {
+      expect(stored, 'the job declares a credential store, but storing a key failed').not.toBeNull();
+    }
     test.skip(stored === null, 'OS credential storage is unavailable in this environment.');
     // The exact projection: the masked preview and the non-secret storage
     // diagnostic, and no other field that could carry credential material.

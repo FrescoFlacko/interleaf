@@ -50,7 +50,7 @@ import { notePointerDetachOwner, notePointerInvalidateLayout, paintAnchoredRange
 import { applySearchHighlight, clearSearchHighlight } from '../annotations/search-highlight';
 import { searchAnchorMatchesQuery } from '@shared/search/match-anchor';
 import { resolveTextAnchor } from '../annotations/text-anchor-resolver';
-import { captureReflowAnchor, restoreReflowAnchor, type ReflowAnchor } from './reflow-anchor';
+import { captureReflowAnchor, pageAtProbe, restoreReflowAnchor, type ReflowAnchor } from './reflow-anchor';
 import { caseFold, lookupFolding } from 'unicode-case-folding';
 
 const MAX_DOCX_BYTES = 128 * 1024 * 1024;
@@ -606,7 +606,7 @@ export class DocxAdapter implements DocumentAdapter {
     let chosenElement: HTMLElement | undefined;
     let bestDistance = Number.POSITIVE_INFINITY;
     let bestHeight = Number.POSITIVE_INFINITY;
-    for (const element of scroller.querySelectorAll<HTMLElement>('[data-docx-paragraph]')) {
+    for (const element of pageAtProbe(this.pageWrappers.values(), target, '[data-docx-paragraph]', scroller).querySelectorAll<HTMLElement>('[data-docx-paragraph]')) {
       const index = Number(element.dataset.docxParagraph);
       const paragraph = this.paragraphsByIndex.get(index);
       if (!paragraph) continue;

@@ -1,5 +1,5 @@
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
-import { _electron, expect } from '@playwright/test';
+import { _electron, expect, test } from '@playwright/test';
 import type { BaseWindow, MessageBoxOptions } from 'electron';
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -8,6 +8,7 @@ import { ISOLATED_ELECTRON_SWITCHES, isolatedLaunchEnvironment } from './offline
 import { installMainNetworkGuard } from './main-network-guard';
 import { denyAllLocalServer, type DenyAllLocalServer } from './offline-local-server';
 import { chooseListboxValue } from './listbox';
+import { closeThenRemoveOwned, settleOwnedRun, type OwnedCleanup } from './owned-run-cleanup';
 
 export type AppHandle = {
   readonly electronApp: ElectronApplication;
@@ -19,6 +20,33 @@ export type AppHandle = {
    */
   readonly localServer: DenyAllLocalServer;
   close(options?: { readonly preserveUserData?: boolean }): Promise<void>;
+};
+
+/**
+ * What a launch owns, handed to its caller before its first await, so a launch
+ * that rejects after Playwright returned its app never takes that app out of
+ * the caller's reach.
+ *
+ * `onLaunch` is called once the directories exist (`prepared`, no app yet) and
+ * again once Playwright has returned the app and its process could be read
+ * (`started`), before any later setup step. If anything after that return
+ * fails, reading the process included, the launch closes the app and removes
+ * what it created only once that close succeeded or the process exited;
+ * otherwise both are left here for the caller to close and clean up. The
+ * launch's own failure is rethrown as it was thrown.
+ *
+ * Not covered: if `_electron.launch` itself rejects, Playwright returns no app
+ * (whatever it started internally is its own to clean up), so this record has
+ * no app to close and no process to prove exited; its paths are kept.
+ */
+export type LaunchRecord = {
+  readonly userDataDir: string;
+  /** Directories this launch created (not a caller's `userDataDir` or `isolatedHome`). */
+  readonly createdPaths: readonly string[];
+  /** The app's process, taken when it started: Playwright refuses `process()` once the app has closed. Null until then. */
+  readonly child: ReturnType<ElectronApplication['process']> | null;
+  /** Closes the started app; rejects when none was started. A failed close stays retryable. */
+  closeProcess(): Promise<void>;
 };
 
 export async function launchInterleaf(options?: {
@@ -54,11 +82,42 @@ export async function launchInterleaf(options?: {
    * spec supplies one only to plant files the app must *not* discover there.
    */
   isolatedHome?: string;
+  /** Receives this launch's record as it is prepared and again once its app has started. */
+  onLaunch?: (record: LaunchRecord, phase: 'prepared' | 'started') => void;
 }): Promise<AppHandle> {
   const isCustomDir = options?.userDataDir !== undefined;
   const userDataDir = options?.userDataDir ?? mkdtempSync(path.join(os.tmpdir(), 'interleaf-e2e-'));
   const ownsIsolatedHome = options?.isolatedHome === undefined;
   const isolatedHome = options?.isolatedHome ?? mkdtempSync(path.join(os.tmpdir(), 'interleaf-e2e-home-'));
+  const scope = currentTestScope();
+  let started: ElectronApplication | null = null;
+  let child: LaunchRecord['child'] = null;
+  let processClosed = false;
+  let processClosePromise: Promise<void> | null = null;
+  const closeProcess = async (): Promise<void> => {
+    const app = started;
+    if (app === null) throw new Error('This launch started no app: there is nothing to close and no process to prove exited.');
+    if (processClosed) return;
+    processClosePromise ??= (async () => {
+      try {
+        await app.close();
+        processClosed = true;
+      } catch (error) {
+        // A failed close must remain retryable. Do not leave the helper
+        // claiming the process is closed when Playwright still owns it.
+        processClosePromise = null;
+        throw error;
+      }
+    })();
+    await processClosePromise;
+  };
+  const record: LaunchRecord = {
+    userDataDir,
+    createdPaths: [...(isCustomDir ? [] : [userDataDir]), ...(ownsIsolatedHome ? [isolatedHome] : [])],
+    get child() { return child; },
+    closeProcess,
+  };
+  options?.onLaunch?.(record, 'prepared');
   const localServer = await denyAllLocalServer();
   const electronApp = await _electron.launch({
     args: [...ISOLATED_ELECTRON_SWITCHES, 'out/main/index.js'],
@@ -71,6 +130,132 @@ export async function launchInterleaf(options?: {
       ...(options?.fakeResumeSleep === true ? { INTERLEAF_FAKE_RESUME_SLEEP: '1' } : {}),
     },
   });
+  // Owned from here: anything that fails below, reading its process included, closes it.
+  started = electronApp;
+  let window: Page;
+  try {
+    child = electronApp.process();
+    options?.onLaunch?.(record, 'started');
+    window = await setUpLaunchedApp(electronApp, localServer, options?.preserveOnboarding === true);
+  } catch (thrown) {
+    await abandonLaunch(record, options?.onLaunch === undefined ? scope : undefined);
+    throw thrown;
+  }
+  let directoryCleaned = false;
+  return {
+    electronApp,
+    window,
+    userDataDir,
+    localServer,
+    close: async (closeOpts) => {
+      await closeProcess();
+      if (!isCustomDir && closeOpts?.preserveUserData !== true && !directoryCleaned) {
+        directoryCleaned = true;
+        rmSync(userDataDir, { recursive: true, force: true });
+      }
+      if (ownsIsolatedHome) rmSync(isolatedHome, { recursive: true, force: true });
+    },
+  };
+}
+
+/**
+ * A launch that rejected after Playwright returned its app, and whose app or
+ * directories its own cleanup could not settle. With no `onLaunch` subscriber
+ * nobody else holds the record, so it is kept here, for the test it ran in,
+ * until `settleAbandonedLaunches` closes the app and removes what is left —
+ * which the runner does when that test ends (see the hook below).
+ */
+type AbandonedLaunch = { readonly record: LaunchRecord; readonly testId: string | null; readonly file: string | null; retained: readonly string[] };
+
+/** The test, and its file, a launch ran in, as far as the runner can say. */
+type TestScope = { readonly testId: string | null; readonly file: string | null };
+
+/**
+ * One registry per worker process. This module is evaluated once per test
+ * file that loads it (see the end of the file), so its state lives on the
+ * worker's global rather than in the module.
+ */
+type AbandonedLaunchRegistry = { readonly launches: Set<AbandonedLaunch>; readonly settledTests: WeakSet<object>; readonly settledSuites: WeakSet<object> };
+const workerGlobal = globalThis as typeof globalThis & { __interleafAbandonedLaunches?: AbandonedLaunchRegistry };
+const registry = workerGlobal.__interleafAbandonedLaunches ??= { launches: new Set(), settledTests: new WeakSet(), settledSuites: new WeakSet() };
+const abandoned = registry.launches;
+
+/** The test the current launch runs in, if the runner can say. */
+function currentTestScope(): TestScope {
+  try {
+    const info = test.info();
+    return { testId: info.testId, file: info.file };
+  } catch {
+    return { testId: null, file: null };
+  }
+}
+
+/** Closes, then removes `owned`; if even that cannot run, nothing is proven and everything is kept. */
+async function settleLaunch(record: LaunchRecord, owned: readonly string[]): Promise<OwnedCleanup> {
+  try {
+    return await closeThenRemoveOwned({
+      close: () => record.closeProcess(),
+      hasExited: () => hasExited(record),
+      owned,
+      remove: (created) => { rmSync(created, { recursive: true, force: true }); },
+    });
+  } catch (thrown) {
+    return { exit: 'unproven', removed: [], retained: [...owned], failures: [{ step: 'close', path: null, thrown }] };
+  }
+}
+
+/**
+ * Closes the app a failed launch started and removes the directories that
+ * launch created, but only once the close succeeded or the process has
+ * exited. Never throws, so the launch's own failure is what its caller sees.
+ * Whatever it could not do stays on the record: with a subscriber, its owner
+ * retries; without one (`owner` is the launch's test), it is kept for
+ * `settleAbandonedLaunches`.
+ */
+async function abandonLaunch(record: LaunchRecord, owner: TestScope | undefined): Promise<void> {
+  const cleanup = await settleLaunch(record, record.createdPaths);
+  if (owner === undefined || (cleanup.exit !== 'unproven' && cleanup.retained.length === 0)) return;
+  abandoned.add({ record, testId: owner.testId, file: owner.file, retained: cleanup.retained });
+}
+
+/** Launches kept after a rejected launch, with the paths each still holds. */
+export function abandonedLaunches(): readonly { readonly testId: string | null; readonly userDataDir: string; readonly retained: readonly string[] }[] {
+  return [...abandoned].map((entry) => ({ testId: entry.testId, userDataDir: entry.record.userDataDir, retained: entry.retained }));
+}
+
+/**
+ * Retries the launches a test's rejected launches left behind: closes each app
+ * and removes what it created, only after that close or a positive exit. A
+ * launch is let go once nothing is left; otherwise it stays, with exactly what
+ * it still holds, and its outcome is reported. Never throws.
+ */
+export function settleAbandonedLaunches(scope: { readonly testId: string | null }): Promise<readonly OwnedCleanup[]> {
+  return settleWhere((entry) => entry.testId === scope.testId);
+}
+
+async function settleWhere(matches: (entry: AbandonedLaunch) => boolean): Promise<readonly OwnedCleanup[]> {
+  const outcomes: OwnedCleanup[] = [];
+  for (const entry of [...abandoned].filter(matches)) {
+    const cleanup = await settleLaunch(entry.record, entry.retained);
+    outcomes.push(cleanup);
+    if (cleanup.exit !== 'unproven' && cleanup.retained.length === 0) abandoned.delete(entry);
+    else entry.retained = cleanup.retained;
+  }
+  return outcomes;
+}
+
+/** Whether the launch's process positively reports an exit; anything unreadable is no proof. */
+function hasExited(record: LaunchRecord): boolean {
+  try {
+    const child = record.child;
+    return child !== null && (child.exitCode !== null || child.signalCode !== null);
+  } catch {
+    return false;
+  }
+}
+
+/** Everything a launch does between starting the app and handing it over. */
+async function setUpLaunchedApp(electronApp: ElectronApplication, localServer: DenyAllLocalServer, preserveOnboarding: boolean): Promise<Page> {
   // Before the window is awaited: main makes no outbound request until the
   // renderer asks for one, and from here on none can leave the machine.
   await installMainNetworkGuard(electronApp);
@@ -82,7 +267,7 @@ export async function launchInterleaf(options?: {
   // writer that submits the document it hydrated will put the default back —
   // which is what the second, enforced call below is for.
   await pointLocalProviderAtTheTrap(window, localServer.endpoint, { enforce: false });
-  if (options?.preserveOnboarding === true) {
+  if (preserveOnboarding) {
     await waitForGuidedOnboarding(window);
   } else {
     await leaveGuidedOnboarding(window);
@@ -90,37 +275,8 @@ export async function launchInterleaf(options?: {
   }
   await pointLocalProviderAtTheTrap(window, localServer.endpoint, { rehydrate: true });
   // The reload above put the wizard back for the specs that came to watch it.
-  if (options?.preserveOnboarding === true) await waitForGuidedOnboarding(window);
-  let processClosed = false;
-  let processClosePromise: Promise<void> | null = null;
-  let directoryCleaned = false;
-  return {
-    electronApp,
-    window,
-    userDataDir,
-    localServer,
-    close: async (closeOpts) => {
-      if (!processClosed) {
-        processClosePromise ??= (async () => {
-          try {
-            await electronApp.close();
-            processClosed = true;
-          } catch (error) {
-            // A failed close must remain retryable. Do not leave the helper
-            // claiming the process is closed when Playwright still owns it.
-            processClosePromise = null;
-            throw error;
-          }
-        })();
-        await processClosePromise;
-      }
-      if (!isCustomDir && closeOpts?.preserveUserData !== true && !directoryCleaned) {
-        directoryCleaned = true;
-        rmSync(userDataDir, { recursive: true, force: true });
-      }
-      if (ownsIsolatedHome) rmSync(isolatedHome, { recursive: true, force: true });
-    },
-  };
+  if (preserveOnboarding) await waitForGuidedOnboarding(window);
+  return window;
 }
 
 /**
@@ -532,3 +688,58 @@ export async function restoreDefaultWindowSize(app: AppHandle): Promise<void> {
 export function searchStatus(app: AppHandle): Locator {
   return app.window.getByTestId('search-panel').getByRole('status');
 }
+
+/**
+ * When a test ends, the runner retries what that test's rejected launches left
+ * behind: it closes each app and removes what that launch created only after
+ * the close or a positive exit, and annotates the outcome. A failed test keeps
+ * its own failure; a test that passed fails on cleanup it could not finish.
+ * Whatever still cannot be settled stays named in the registry for the rest of
+ * this worker's life; nothing outside it recovers it after the worker exits.
+ * Settles each test once, however many times this hook was registered for it.
+ */
+async function settleTestsAbandonedLaunches(): Promise<void> {
+  const info = test.info();
+  if (registry.settledTests.has(info)) return;
+  registry.settledTests.add(info);
+  reportSettlement(info, await settleAbandonedLaunches({ testId: info.testId }));
+}
+
+/**
+ * A `beforeAll` that throws a truthy value stops Playwright running the tests
+ * and their `afterEach` hooks; one that throws a falsy value (`0`,
+ * `undefined`) is recorded as a failure but can still let the body and
+ * `afterEach` run. Either way, what is left is settled here when the test
+ * file's suite ends: every launch that file's tests and hooks abandoned and
+ * nothing settled yet, never another file's and never a launch that was
+ * handed over. Same rules as above; a failed `beforeAll` keeps its failure.
+ * Settles each ending suite once.
+ */
+async function settleFilesAbandonedLaunches(): Promise<void> {
+  const info = test.info();
+  if (registry.settledSuites.has(info)) return;
+  registry.settledSuites.add(info);
+  reportSettlement(info, await settleWhere((entry) => entry.file === info.file));
+}
+
+/** Annotates what was settled; fails only a test or suite that otherwise passed, and only on cleanup it could not finish. */
+function reportSettlement(info: ReturnType<typeof test.info>, outcomes: readonly OwnedCleanup[]): void {
+  if (outcomes.length === 0) return;
+  info.annotations.push({ type: 'abandoned-launch', description: outcomes.map((outcome) => settleOwnedRun.describe(outcome)).join(' | ') });
+  if (info.status !== info.expectedStatus) return;
+  for (const outcome of outcomes) settleOwnedRun({ failed: false }, outcome);
+}
+
+// Playwright attaches a hook to the test file being loaded. Outside a test
+// file (global setup, unit tests) there is no test to settle, so no hook.
+try {
+  test.afterEach(settleTestsAbandonedLaunches);
+  test.afterAll(settleFilesAbandonedLaunches);
+} catch { /* not loaded by a Playwright test file */ }
+
+// A worker evaluates a cached module only for the first test file that loads
+// it, and only that file would get the hook. Leaving the CommonJS cache makes
+// every test file that imports this module register its own.
+try {
+  Reflect.deleteProperty(require.cache, module.id);
+} catch { /* not loaded as CommonJS: nothing cached to leave */ }

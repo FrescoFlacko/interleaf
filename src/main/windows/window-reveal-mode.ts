@@ -15,7 +15,8 @@ import { isDevelopmentRun, type RuntimePackagingSignals } from '../app/runtime-p
  * sees — but it is ordered in without activating the app and, on macOS, at a
  * native level below every ordinary window, so it stays behind the user's
  * work; the test Dock icon is withdrawn too. It is not headless, and other
- * platforms get the non-activating reveal only (unverified there).
+ * platforms get the non-activating reveal only (checked on Linux X11 without a
+ * window manager; unverified on Windows).
  *
  * Main decides this from its own environment and packaging signals. Nothing in
  * the renderer can see or change it.
@@ -94,8 +95,12 @@ export type NewRevealWindow = LevelledWindow & {
  * A new window's first reveal, once its content is ready: maximized to the
  * work area, then shown. The foreground reveal activates the app. The
  * background reveal first drops the window below ordinary windows (macOS),
- * then orders the same maximized window in without activating the app;
- * `maximize()` itself never activates it.
+ * then orders the same maximized window in without activating the app.
+ *
+ * On Linux the background order is reversed. Maximizing a still-hidden X11
+ * window shows it the way `show()` does — Electron sets the X input focus to
+ * it and emits `browser-window-focus` — so the window is ordered in inactive
+ * first and maximized once it is on screen, which does not activate it.
  */
 export function revealNewWindow(
   window: NewRevealWindow,
@@ -108,6 +113,11 @@ export function revealNewWindow(
     return;
   }
   keepBelowOrdinaryWindows(window, platform);
+  if (platform === 'linux') {
+    window.showInactive();
+    window.maximize();
+    return;
+  }
   window.maximize();
   window.showInactive();
 }

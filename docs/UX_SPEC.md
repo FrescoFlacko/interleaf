@@ -347,7 +347,7 @@ chrome transition runs longer than 300ms, and nothing animates `width`.
 | Dialogs (Settings, shortcuts, library and import dialogs) | Scrim fades, and the panel fades and scales from 0.98, over 200ms |
 | Every exit | A 100ms fade (`--dur-exit`), opacity only. The leaving surface is `inert` and `aria-hidden` from the first frame, and focus moves on deliberately (back to the trigger, or onward on Tab) |
 | Drawers | Slide over 280ms with `--ease-drawer` |
-| Resizable panels | No animation while dragging. The width changes in one step; the content then fades in and slides 20px from its own edge over 200ms, and fades out over 100ms on close |
+| Resizable panels | No animation while dragging. The width changes in one step; the content then fades in and slides 20px from its own edge over 200ms, and fades out over 100ms on close. A closing panel is inert, `aria-hidden` and hands focus to its toggle at once; its content stays visible until the page has rendered that state (normally one or two frames), then the 100ms fade runs, and the width is released in one step when the fade ends. A fade whose first frame comes by 550ms after the action ends, and releases the width, by 650ms. A close that never gets its frames or never reports the fade's end is released at 650ms from the action, the end of that budget; a fade with no frames before then is not seen |
 | Reader outline | Fades and slides 8px from its leading edge over 150ms |
 | Theme change | 200ms cross-fade |
 | Progress bar and toasts | The bar scales on the x-axis; toasts fade over 150–200ms |

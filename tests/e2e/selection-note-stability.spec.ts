@@ -319,6 +319,59 @@ test.describe('Selection note stability', () => {
   });
 });
 
+/**
+ * Brings `needle` near the top of the PDF reader and drag-selects it, so the
+ * note box opens below it and nothing but the mark lies over its glyphs. It
+ * stays 40px clear of the scroller's top edge: a drag that starts closer is
+ * inside Chromium's selection autoscroll zone, which scrolls the line out
+ * from under the pointer and selects the wrong text.
+ */
+async function parkAndSelectPdfPassage(page: Page, needle: string): Promise<void> {
+  await page.evaluate((target) => {
+    const walker = document.createTreeWalker(document.querySelector('[data-testid="pdf-textlayer-p1"]')!, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const index = (node.textContent ?? '').indexOf(target);
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + target.length);
+      const reader = document.querySelector('[data-reader-focus-target="true"]')!.getBoundingClientRect();
+      document.querySelector<HTMLElement>('[data-testid="pdf-scroll-container"]')!.scrollTop += range.getBoundingClientRect().top - (reader.top + 40);
+      return;
+    }
+    throw new Error(`selection target not found: ${target}`);
+  }, needle);
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  const pdfScrollTop = (): Promise<number> => page.evaluate(() => document.querySelector<HTMLElement>('[data-testid="pdf-scroll-container"]')!.scrollTop);
+  const parkedAt = await pdfScrollTop();
+  await dragSelect(page, needle, '[data-testid="pdf-textlayer-p1"]');
+  // The drag selected the passage where it was parked, without scrolling.
+  expect(await pdfScrollTop()).toBe(parkedAt);
+  expect(await page.evaluate(() => document.getSelection()?.toString())).toBe(needle);
+}
+
+/**
+ * Narrows the window to `width` CSS px and waits for the PDF page to settle at
+ * its new fit-width scale: canvas and text layer the same width on two reads.
+ */
+async function setPdfWindowWidth(app: AppHandle, width: number): Promise<void> {
+  await app.electronApp.evaluate(({ BrowserWindow }, contentWidth) => {
+    const win = BrowserWindow.getAllWindows()[0]!;
+    win.setContentSize(contentWidth, win.getContentSize()[1]!);
+  }, width);
+  await expect.poll(() => app.window.evaluate(() => window.innerWidth)).toBe(width);
+  let previous = '';
+  await expect.poll(async () => {
+    const sizes = await app.window.evaluate(() => [
+      document.querySelector('[data-testid="pdf-canvas-p1"]')!.getBoundingClientRect().width,
+      document.querySelector('[data-testid="pdf-textlayer-p1"]')!.getBoundingClientRect().width,
+    ]);
+    const settled = sizes[0] === sizes[1] && JSON.stringify(sizes) === previous;
+    previous = JSON.stringify(sizes);
+    return settled;
+  }, { intervals: [250] }).toBe(true);
+}
+
 const PDF_LINES = [
   'Alpha: the opening line of the note fixture page.',
   'Bravo: a passage the reader wants to annotate.',
@@ -399,28 +452,10 @@ test.describe('Selection note paint in a PDF', () => {
   test('the marked passage stays readable on the page canvas while the note is open and after it saves', async () => {
     const page = app.window;
     const toolbar = page.getByTestId('annotation-selection-toolbar');
-    const layer = '[data-testid="pdf-textlayer-p1"]';
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-note-open="true"]')).toHaveCount(0);
 
-    // Bring the passage to the top of the reader so the box opens below it and
-    // nothing but the mark lies over its glyphs.
-    await page.evaluate((needle) => {
-      const walker = document.createTreeWalker(document.querySelector('[data-testid="pdf-textlayer-p1"]')!, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-        const index = (node.textContent ?? '').indexOf(needle);
-        if (index < 0) continue;
-        const range = document.createRange();
-        range.setStart(node, index);
-        range.setEnd(node, index + needle.length);
-        const reader = document.querySelector('[data-reader-focus-target="true"]')!.getBoundingClientRect();
-        document.querySelector<HTMLElement>('[data-testid="pdf-scroll-container"]')!.scrollTop += range.getBoundingClientRect().top - (reader.top + 8);
-        return;
-      }
-      throw new Error(`selection target not found: ${needle}`);
-    }, PDF_READABLE);
-    await page.evaluate(() => new Promise(requestAnimationFrame));
-    await dragSelect(page, PDF_READABLE, layer);
+    await parkAndSelectPdfPassage(page, PDF_READABLE);
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Add note' }).click();
     await expect(page.locator('#selection-note')).toBeFocused();
@@ -443,6 +478,35 @@ test.describe('Selection note paint in a PDF', () => {
     expectReadableMark(saved);
     expect(await marked(page)).toEqual([PDF_READABLE]);
     await expectCaretAtEnd(page);
+  });
+
+  test('the marked passage keeps its black glyphs at narrower fit-width page scales', async () => {
+    // A narrower window fits the page at a smaller scale, where antialiased
+    // glyph edges make up more of each letter; the mark must keep them dark there too.
+    const page = app.window;
+    const toolbar = page.getByTestId('annotation-selection-toolbar');
+    const [originalWidth] = await app.electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getContentSize());
+    try {
+      for (const width of [1279, 1100]) {
+        await page.keyboard.press('Escape');
+        await expect(page.locator('[data-note-open="true"]')).toHaveCount(0);
+        await setPdfWindowWidth(app, width);
+        await parkAndSelectPdfPassage(page, PDF_LATER);
+        await expect(toolbar).toBeVisible();
+        await toolbar.getByRole('button', { name: 'Add note' }).click();
+        await expect(page.locator('#selection-note')).toBeFocused();
+        await expect.poll(() => marked(page)).toEqual([PDF_LATER]);
+
+        const proof = await markedGlyphs(page);
+        test.info().annotations.push({ type: `pdf-glyphs-${String(width)}`, description: JSON.stringify(proof) });
+        expectReadableMark(proof);
+        expect(proof.on.ink, `the marked passage keeps its legible ink at ${String(width)}px`).toBeGreaterThan(proof.off.ink * 0.7);
+        expect(proof.on.black, `the marked passage keeps its black glyphs at ${String(width)}px`).toBeGreaterThan(proof.off.black * 0.7);
+      }
+    } finally {
+      await page.keyboard.press('Escape');
+      if (originalWidth !== undefined) await setPdfWindowWidth(app, originalWidth);
+    }
   });
 });
 

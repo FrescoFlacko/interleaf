@@ -33,8 +33,10 @@ import type {
   SearchHighlightRequest,
   SearchHighlightResult,
   SelectionIssue,
+  TextExtractionOptions,
 } from '../types';
 import { isSearchHighlightCancelled } from '../types';
+import { pdfDocumentText } from './pdf-document-text';
 import { TextLayerBuilder, textLayerRenderer } from './pdf-viewer-runtime';
 import { configurePdfWorker } from './pdf-worker-setup';
 import {
@@ -719,29 +721,8 @@ export class PdfAdapter implements DocumentAdapter {
     clearSearchHighlight(document);
   }
 
-  async *extractText(): AsyncIterable<NormalizedTextChunk> {
-    if (!this.pdfDoc) return;
-    let ordinal = 0;
-
-    for (let pageNum = 1; pageNum <= this.pageCount; pageNum++) {
-      const page = await this.pdfDoc.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const text = pdfIndexedPageText(pdfTextItemStrings(textContent.items));
-
-      if (text.length > 0) {
-        const tokenCount = Math.ceil(text.length / 4);
-        yield {
-          id: `chunk-${this.documentId}-p${String(pageNum)}`,
-          documentId: this.documentId,
-          ordinal: ordinal++,
-          text,
-          tokenCount,
-          location: { format: 'pdf', pageIndex: pageNum - 1 },
-          heading: null,
-          pageLabel: `Page ${String(pageNum)}`,
-        };
-      }
-    }
+  extractText(options: TextExtractionOptions = {}): AsyncIterable<NormalizedTextChunk> {
+    return pdfDocumentText(this.pdfDoc, this.pageCount, this.documentId, options);
   }
 
   async extractLocationText(location: DocumentLocation): Promise<readonly NormalizedTextChunk[]> {

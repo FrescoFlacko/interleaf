@@ -52,6 +52,21 @@ async function menuRecipe(surface: Locator, item: Locator): Promise<MenuRecipe> 
   return { surface: surfaceStyle, item: itemStyle };
 }
 
+/**
+ * Waits for a menu surface to come to rest before its recipe is measured. A
+ * popover enters from `scale(0.96)`, so a row measured during its entry is a
+ * pixel short; the surface is at rest once it has left its entering phase and
+ * no transition or animation runs on it or its rows.
+ */
+async function expectSurfaceAtRest(surface: Locator): Promise<void> {
+  await expect
+    .poll(() => surface.evaluate((element) => ({
+      phase: element.getAttribute('data-phase'),
+      animations: element.getAnimations({ subtree: true }).length,
+    })))
+    .toEqual({ phase: 'open', animations: 0 });
+}
+
 test.describe('UI consistency interactions', () => {
   let app: AppHandle | undefined;
   let fixtureDir: string;
@@ -122,7 +137,7 @@ test.describe('UI consistency interactions', () => {
     const themeMenu = page.getByTestId('theme-menu');
     await expect(themeMenu).toBeVisible();
     // Entry animation settles before measuring.
-    await page.waitForTimeout(250);
+    await expectSurfaceAtRest(themeMenu);
     const theme = await menuRecipe(themeMenu, themeMenu.locator('[role="menuitemradio"]').first());
     await page.keyboard.press('Escape');
     await expect(themeMenu).toHaveCount(0);
@@ -131,7 +146,7 @@ test.describe('UI consistency interactions', () => {
     await page.getByTestId('chat-model-picker').click();
     const chatPicker = page.getByTestId('chat-model-picker-popover');
     await expect(chatPicker).toBeVisible();
-    await page.waitForTimeout(250);
+    await expectSurfaceAtRest(chatPicker);
     const chatItem = chatPicker.locator('[role="option"], [data-testid="chat-provider-edit"]').first();
     const chat = await menuRecipe(chatPicker, chatItem);
     await page.keyboard.press('Escape');
@@ -144,7 +159,7 @@ test.describe('UI consistency interactions', () => {
     await expect(combobox).toHaveAttribute('aria-expanded', 'true');
     const listbox = page.locator(`[id="${String(await combobox.getAttribute('aria-controls'))}"]`);
     await expect(listbox).toBeVisible();
-    await page.waitForTimeout(250);
+    await expectSurfaceAtRest(listbox);
     // "Match app theme" carries no description, so it is a plain one-line row.
     const select = await menuRecipe(listbox, listbox.locator('[role="option"][data-value="palette"]'));
 
@@ -163,6 +178,12 @@ test.describe('UI consistency interactions', () => {
     await page.getByTestId('settings-rail-theme').click();
     const anchor = page.getByTestId('theme-option-paper');
     await expect(anchor).toBeVisible();
+    // The reference box is the gallery at rest: while the dialog's entrance
+    // animation runs, its transform still moves the cards by a fraction of a
+    // pixel.
+    await expect
+      .poll(() => page.getByRole('dialog', { name: 'Settings' }).evaluate((node) => node.getAnimations({ subtree: true }).length))
+      .toBe(0);
     const before = await anchor.boundingBox();
 
     // Sample the card's box on every frame across the change and its fade.
@@ -172,8 +193,12 @@ test.describe('UI consistency interactions', () => {
       if (card === null || target === null) throw new Error('Gallery is not open.');
       const boxes: { x: number; y: number }[] = [];
       target.click();
+      // At least 600ms and at least 12 painted frames: a loaded compositor
+      // paints fewer frames in the window, and the change still has to be seen.
+      // Sampling continues while either the time or the frame count remains.
       const end = performance.now() + 600;
-      while (performance.now() < end) {
+      const remaining = (): number => Math.max(end - performance.now(), 12 - boxes.length);
+      while (remaining() > 0) {
         await new Promise<void>((resolve) => { requestAnimationFrame(() => { resolve(); }); });
         const box = card.getBoundingClientRect();
         boxes.push({ x: box.x, y: box.y });
@@ -181,7 +206,7 @@ test.describe('UI consistency interactions', () => {
       return boxes;
     });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'heather');
-    expect(samples.length).toBeGreaterThan(5);
+    expect(samples.length).toBeGreaterThanOrEqual(12);
     for (const sample of samples) expect(sample).toEqual({ x: before?.x, y: before?.y });
     // The saved status is announced in the footer, not above the gallery.
     await expect(page.getByText('Settings saved on this device.')).toBeVisible();

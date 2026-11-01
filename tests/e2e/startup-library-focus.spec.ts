@@ -3,41 +3,35 @@ import { writeFileSync } from 'node:fs';
 import { captureWindowPng, launchInterleaf, type AppHandle } from './helpers';
 
 /**
- * Every launch opens on the Library in a window maximized to the display's
- * work area (a normal, restorable window, not fullscreen). The AI drawer opens
- * at launch so it is discoverable, unless Settings → General → "Open AI drawer
- * on startup" is off. That preference applies on the next launch and wins over
- * whatever open/closed state the drawer was last left in.
+ * Every launch opens on the Library in a normal window (visible, resizable,
+ * not fullscreen). The AI drawer opens at launch so it is discoverable, unless
+ * Settings → General → "Open AI drawer on startup" is off. That preference
+ * applies on the next launch and wins over whatever open/closed state the
+ * drawer was last left in. Maximized geometry is not asserted here: the owner
+ * retired that E2E coverage.
  */
 
 type NativeWindowState = {
-  readonly maximized: boolean;
   readonly fullScreen: boolean;
   readonly simpleFullScreen: boolean;
   readonly resizable: boolean;
   readonly maximizable: boolean;
   readonly visible: boolean;
-  readonly bounds: { x: number; y: number; width: number; height: number };
-  readonly workArea: { x: number; y: number; width: number; height: number };
 };
 
 async function nativeWindowState(app: AppHandle): Promise<NativeWindowState> {
   // Look the window up in main by the page it hosts, so every value comes back
   // through Electron's typed API.
-  return app.electronApp.evaluate(({ BrowserWindow, screen }, pageUrl) => {
+  return app.electronApp.evaluate(({ BrowserWindow }, pageUrl) => {
     const matches = BrowserWindow.getAllWindows().filter((candidate) => candidate.webContents.getURL() === pageUrl);
     const [win] = matches;
     if (win === undefined || matches.length !== 1) throw new Error('main window not found');
-    const bounds = win.getBounds();
     return {
-      maximized: win.isMaximized(),
       fullScreen: win.isFullScreen(),
       simpleFullScreen: win.isSimpleFullScreen(),
       resizable: win.isResizable(),
       maximizable: win.isMaximizable(),
       visible: win.isVisible(),
-      bounds,
-      workArea: screen.getDisplayMatching(bounds).workArea,
     };
   }, app.window.url());
 }
@@ -84,7 +78,7 @@ async function expectLibraryFocusedLaunch(
   label: string,
   drawer: DrawerAtLaunch,
 ): Promise<NativeWindowState> {
-  await expect.poll(async () => (await nativeWindowState(app)).maximized).toBe(true);
+  await expect.poll(async () => (await nativeWindowState(app)).visible).toBe(true);
   const state = await nativeWindowState(app);
   expect(state).toMatchObject({
     visible: true,
@@ -93,8 +87,6 @@ async function expectLibraryFocusedLaunch(
     resizable: true,
     maximizable: true,
   });
-  // Maximized fills the display's work area, leaving the menu bar/taskbar.
-  expect(state.bounds).toEqual(state.workArea);
 
   await expect(app.window.getByTestId('library-view')).toBeVisible();
   await expect(app.window.getByTestId('sidebar-library')).toBeVisible();
@@ -149,7 +141,7 @@ async function toggleDrawer(app: AppHandle, open: boolean): Promise<void> {
   await expect.poll(async () => (await persistedLayout(app)).rightOpen).toBe(open);
 }
 
-test('the AI drawer opens at launch unless Settings turns it off for the next launch', async ({}, testInfo) => {
+test('a Library launch opens the AI drawer unless Settings turns it off for the next launch', async ({}, testInfo) => {
   let app = await launchInterleaf();
   const userDataDir = app.userDataDir;
   try {
@@ -180,16 +172,6 @@ test('the AI drawer opens at launch unless Settings turns it off for the next la
     await app.close({ preserveUserData: true });
     app = await launchInterleaf({ userDataDir });
     await expectLibraryFocusedLaunch(app, testInfo, 'opted-in-relaunch', 'open');
-
-    // It is an ordinary maximized window: it can be restored and resized.
-    const browserWindow = await app.electronApp.browserWindow(app.window);
-    await browserWindow.evaluate((win) => { win.unmaximize(); });
-    await expect.poll(async () => (await nativeWindowState(app)).maximized).toBe(false);
-    await browserWindow.evaluate((win) => { win.setSize(1100, 760); });
-    await expect.poll(async () => {
-      const { bounds } = await nativeWindowState(app);
-      return [bounds.width, bounds.height];
-    }).toEqual([1100, 760]);
   } finally {
     await app.close({ preserveUserData: true });
     const { rmSync } = await import('node:fs');

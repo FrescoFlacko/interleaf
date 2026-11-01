@@ -2,17 +2,85 @@ import { expect, test } from '@playwright/test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { launchInterleaf, returnToLibrary, type AppHandle } from './helpers';
+import { launchInterleaf, returnToLibrary, settleAbandonedLaunches, type AppHandle, type LaunchRecord } from './helpers';
+import { closeThenRemoveOwned, settleOwnedRun } from './owned-run-cleanup';
 import { makeDocxFixture } from '../fixtures/document-fixtures';
 import { chooseListboxValue } from './listbox';
+
+/** Where a DOCX page sits in the viewport, and whether the scroll moved across two frames. */
+type DocxPagePosition = { readonly offset: number; readonly room: number; readonly moved: number };
+
+function measureDocxPage(app: AppHandle, page: number): Promise<DocxPagePosition | null> {
+  return app.window.evaluate(async (target) => {
+    const scroller = document.querySelector<HTMLElement>('[data-testid="docx-scroll-container"]');
+    const wrapper = document.querySelector<HTMLElement>(`[data-testid="docx-page-${String(target)}"]`);
+    if (scroller === null || wrapper === null) return null;
+    const before = scroller.scrollTop;
+    await new Promise<void>((resolve) => { requestAnimationFrame(() => { requestAnimationFrame(() => { resolve(); }); }); });
+    return {
+      offset: wrapper.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+      room: scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop,
+      moved: Math.abs(scroller.scrollTop - before),
+    };
+  }, page);
+}
+
+/** At the top of the viewport, or as far down as the scroller goes. */
+function atTopOrEnd(position: DocxPagePosition): boolean {
+  return Math.abs(position.offset) < 3 || (position.room <= 1 && position.offset >= 0);
+}
+
+/**
+ * Whether DOCX page `page` has really arrived: at the top of the viewport (or
+ * as far as the scroller can go), with the smooth scroll that brought it there
+ * no longer moving across two frames. The page-number field and an attached
+ * page node both update before that scroll has even begun.
+ */
+async function docxPageSettledAtTop(app: AppHandle, page: number): Promise<boolean> {
+  const position = await measureDocxPage(app, page);
+  return position !== null && atTopOrEnd(position) && position.moved < 0.5;
+}
+
+function docxScrollTop(app: AppHandle): Promise<number> {
+  return app.window.evaluate(() => document.querySelector<HTMLElement>('[data-testid="docx-scroll-container"]')?.scrollTop ?? -1);
+}
 
 test.describe('DOCX Reader End-to-End Workflow', () => {
   let app: AppHandle;
   let fixtureDir: string;
   let docxPath: string;
+  // Teardown state. `openApp` is the app this case must still close (unset
+  // between a restart's close and its relaunch); `launch` is the latest
+  // launch's record, which holds its app even if that launch rejected; `owned`
+  // is exactly what this case created: its fixture directory and every
+  // directory its launches created, recorded before anything can fail.
+  let openApp: AppHandle | undefined;
+  let launch: LaunchRecord | undefined;
+  let owned: string[] = [];
+  const onLaunch = (record: LaunchRecord): void => {
+    launch = record;
+    owned.push(...record.createdPaths);
+  };
+
+  async function launchOwned(userDataDir?: string): Promise<void> {
+    openApp = undefined;
+    app = await launchInterleaf({ ...(userDataDir === undefined ? {} : { userDataDir }), onLaunch });
+    openApp = app;
+  }
+
+  /** Quits and relaunches on the same profile, as a reader restarting the app. */
+  async function restart(): Promise<void> {
+    const profile = app.userDataDir;
+    await app.close({ preserveUserData: true });
+    await launchOwned(profile);
+  }
 
   test.beforeEach(async () => {
+    openApp = undefined;
+    launch = undefined;
+    owned = [];
     fixtureDir = mkdtempSync(join(tmpdir(), 'interleaf-docx-e2e-'));
+    owned.push(fixtureDir);
     docxPath = join(fixtureDir, 'Semantic_Research.docx');
     writeFileSync(docxPath, makeDocxFixture({
       title: 'Semantic Research Notes',
@@ -20,14 +88,33 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
       bodyText: 'A unique searchable phrase is anchored to this semantic paragraph.',
       includeExternalRelationship: true,
     }));
-    app = await launchInterleaf();
+    await launchOwned();
   });
 
+  // Removes what this case owns only once its app has closed or positively
+  // exited, keeps and names it otherwise, and leaves the case's own failure as
+  // it was: a passing case fails on cleanup it could not finish.
   test.afterEach(async () => {
-    const userDataDir = app.userDataDir;
-    await app.electronApp.close();
-    rmSync(userDataDir, { recursive: true, force: true });
-    rmSync(fixtureDir, { recursive: true, force: true });
+    const testInfo = test.info();
+    const open = openApp;
+    const last = launch;
+    const cleanup = await closeThenRemoveOwned({
+      close: async () => {
+        if (open !== undefined) await open.close();
+        else if (last !== undefined) await last.closeProcess();
+        else throw new Error('No launch was recorded: there is no app to close and no process to prove exited.');
+      },
+      hasExited: () => {
+        const child = last?.child ?? null;
+        return child !== null && (child.exitCode !== null || child.signalCode !== null);
+      },
+      owned: [...new Set(owned)],
+      remove: (path) => { rmSync(path, { recursive: true, force: true }); },
+    });
+    const outcomes = [cleanup, ...await settleAbandonedLaunches({ testId: testInfo.testId })];
+    testInfo.annotations.push({ type: 'owned-cleanup', description: outcomes.map((outcome) => settleOwnedRun.describe(outcome)).join(' | ') });
+    if (testInfo.status !== testInfo.expectedStatus) return;
+    for (const outcome of outcomes) settleOwnedRun({ failed: false }, outcome);
   });
 
   test('imports, renders, navigates, styles, and restores a semantic DOCX anchor', async () => {
@@ -158,9 +245,7 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
       (await window.interleafAPI.annotations.list(documentId, { limit: 100 })).length,
     document!.id)).toBe(2);
 
-    const userDataDir = app.userDataDir;
-    await app.electronApp.close();
-    app = await launchInterleaf({ userDataDir });
+    await restart();
     const [restoredDocument] = await app.window.evaluate(async () => window.interleafAPI.library.listDocuments());
     await app.window.getByTestId(`read-doc-${restoredDocument!.id}`).click();
     await expect(app.window.getByText('A unique searchable phrase')).toBeVisible();
@@ -209,9 +294,7 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
     await app.window.getByTestId('page-number-input').press('Enter');
     await expect(app.window.getByTestId('page-number-input')).toHaveValue('2');
 
-    const userDataDir = app.userDataDir;
-    await app.electronApp.close();
-    app = await launchInterleaf({ userDataDir });
+    await restart();
     const [restored] = await app.window.evaluate(async () => window.interleafAPI.library.listDocuments());
     await app.window.getByTestId(`read-doc-${restored!.id}`).click();
     await expect(app.window.getByText('A unique searchable phrase')).toBeVisible();
@@ -267,7 +350,8 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
     await expect(app.window.getByText('A unique searchable phrase')).toBeVisible();
   });
 
-  test('keeps production DOCX page content bounded while jumping through a long document', async () => {
+  /** Imports and opens a DOCX long enough to virtualize its pages. */
+  async function openVirtualizationStress(): Promise<void> {
     const longPath = join(fixtureDir, 'DOCX_Virtualization_Stress.docx');
     writeFileSync(longPath, makeDocxFixture({
       title: 'DOCX Virtualization Stress',
@@ -284,6 +368,10 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
     expect(document).toBeDefined();
     await app.window.getByTestId(`read-doc-${document!.id}`).click();
     await expect(app.window.getByRole('heading', { level: 1, name: 'DOCX Foundations' })).toBeVisible();
+  }
+
+  test('keeps production DOCX page content bounded while jumping through a long document', async () => {
+    await openVirtualizationStress();
     const pageCount = await app.window.locator('.docx-page-wrapper').count();
     expect(pageCount).toBeGreaterThan(20);
 
@@ -296,7 +384,30 @@ test.describe('DOCX Reader End-to-End Workflow', () => {
       await expect.poll(async () => app.window.locator('.docx-page-wrapper').evaluateAll((wrappers) =>
         wrappers.filter((wrapper) => wrapper.childElementCount > 0).length
       )).toBeLessThanOrEqual(7);
+      // The next jump starts from this page, not from somewhere on the way to it.
+      await expect.poll(() => docxPageSettledAtTop(app, page)).toBe(true);
+      // Settled there, the reader still reports that page, not the one before it.
+      await expect(input).toHaveValue(String(page));
     }
+  });
+
+  test('keeps a page number typed while the previous jump is still scrolling, and goes to that page', async () => {
+    await openVirtualizationStress();
+    const input = app.window.getByTestId('page-number-input');
+    await input.fill('5');
+    await input.press('Enter');
+    // Type the next page while the smooth scroll to page 5 is still under way:
+    // it reports every page it passes, and none of them may replace the draft.
+    await input.fill('10');
+    const scrollTopWhenTyped = await docxScrollTop(app);
+    await expect.poll(() => docxPageSettledAtTop(app, 5)).toBe(true);
+    // The scroll really was still moving after the page was typed.
+    expect(await docxScrollTop(app)).not.toBe(scrollTopWhenTyped);
+    await expect(input).toHaveValue('10');
+    await input.press('Enter');
+    await expect(input).toHaveValue('10');
+    await expect.poll(() => docxPageSettledAtTop(app, 10)).toBe(true);
+    await expect(input).toHaveValue('10');
   });
 
   test('derives and restores an exact range inside a long wrapped paragraph', async () => {

@@ -26,6 +26,14 @@ function nextFrame(): Promise<boolean> {
   });
 }
 
+/** The close's preparation: the frame that renders it, then the next, where the fade starts. */
+async function preparedFrames(): Promise<void> {
+  await act(async () => {
+    await nextFrame();
+    await nextFrame();
+  });
+}
+
 /** Wait past the full slide budget so timed phases have certainly settled. */
 function slideSettled(): Promise<number> {
   return new Promise<number>((resolve) => {
@@ -95,11 +103,15 @@ describe('Defect 22: desktop panel toggle transitions', () => {
       </ResizablePanel>
     );
 
-    // Exit phase contract: still mounted, already unreachable.
+    // Exit phase contract: still mounted, already unreachable. The content
+    // stays fully visible until its prepared state has rendered.
     expect(panel.isConnected).toBe(true);
-    expect(panel.getAttribute('data-panel-state')).toBe('closing');
+    expect(panel.getAttribute('data-panel-state')).toBe('preparing');
     expect(panel).toHaveAttribute('inert');
     expect(panel).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('resizable-panel-left-content').style.opacity).toBe('1');
+    await preparedFrames();
+    expect(panel.getAttribute('data-panel-state')).toBe('closing');
     // The width is never animated: it holds while the content fades out
     // (opacity only, the 100ms exit), and drops to 0 once, when the exit settles.
     expect(panel.style.width).toBe('320px');
@@ -155,7 +167,7 @@ describe('Defect 22: desktop panel toggle transitions', () => {
     expect(document.querySelector('[data-testid="panel-resizer-left"]')).toBe(resizerRef.current);
   });
 
-  it('releases the width as soon as the content fade ends, not after the grace', () => {
+  it('releases the width as soon as the content fade ends, not after the grace', async () => {
     const panelProps = { side: 'right' as const, width: 360, otherOpenWidth: 0, onWidthChange: () => undefined };
     const { rerender } = render(
       <ResizablePanel {...panelProps} open>
@@ -171,6 +183,7 @@ describe('Defect 22: desktop panel toggle transitions', () => {
     const content = screen.getByTestId('resizable-panel-right-content');
     const transitionEnd = (propertyName: string): Event =>
       Object.assign(new Event('transitionend', { bubbles: true }), { propertyName });
+    await preparedFrames();
 
     // A child's transition, or another property, is not the exit finishing.
     act(() => { screen.getByTestId('inner').dispatchEvent(transitionEnd('opacity')); });
@@ -183,13 +196,14 @@ describe('Defect 22: desktop panel toggle transitions', () => {
     expect(panel.style.width).toBe('0px');
   });
 
-  it('a close during the entry drops the entry animation so the exit fade runs', () => {
+  it('a close during the entry drops the entry animation so the exit fade runs', async () => {
     const panelProps = { side: 'right' as const, width: 360, otherOpenWidth: 0, onWidthChange: () => undefined };
     const { rerender } = render(<ResizablePanel {...panelProps} open={false}><div>Companion</div></ResizablePanel>);
     rerender(<ResizablePanel {...panelProps} open><div>Companion</div></ResizablePanel>);
     const content = screen.getByTestId('resizable-panel-right-content');
     expect(content.style.animation).toBe('panel-content-enter-right var(--dur-base) ease-out');
     rerender(<ResizablePanel {...panelProps} open={false}><div>Companion</div></ResizablePanel>);
+    await preparedFrames();
     expect(screen.getByTestId('resizable-panel-right').getAttribute('data-panel-state')).toBe('closing');
     expect(content.style.animation).toBe('none');
     expect(content.style.opacity).toBe('0');
@@ -215,6 +229,7 @@ describe('Defect 22: desktop panel toggle transitions', () => {
         <div>Sidebar</div>
       </ResizablePanel>
     );
+    await preparedFrames();
     expect(panel.getAttribute('data-panel-state')).toBe('closing');
 
     rerender(

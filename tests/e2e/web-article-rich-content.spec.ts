@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchInterleaf, returnToLibrary, type AppHandle } from './helpers';
+import { setWindowSize } from './web-article-resize';
 import {
   ASTRA_ALT_TEXT,
   ASTRA_ARCHIVED_IMAGE_URLS,
@@ -178,13 +179,6 @@ async function assertKeyboardScrolling(app: AppHandle): Promise<void> {
     await table.evaluate((element) => element.scrollLeft),
     'the arrow keys scroll it back'
   ).toBe(0);
-}
-
-async function setWindowSize(app: AppHandle, width: number, height: number): Promise<void> {
-  await app.electronApp.evaluate(({ BrowserWindow }, size: { width: number; height: number }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(size.width, size.height);
-  }, { width, height });
-  await app.window.waitForTimeout(400);
 }
 
 async function setZoomFactor(app: AppHandle, factor: number): Promise<void> {

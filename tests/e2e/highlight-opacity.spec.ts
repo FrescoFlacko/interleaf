@@ -16,26 +16,100 @@ function hexToRgbString(hex: string): string {
   return `rgb(${String((value >> 16) & 0xff)}, ${String((value >> 8) & 0xff)}, ${String(value & 0xff)})`;
 }
 
-/** Selects a phrase in the PDF text layer through the reader's own pathway. */
-async function selectPhraseInTextLayer(page: Page, phrase: string): Promise<void> {
-  await page.getByTestId('pdf-textlayer-p1').evaluate((layer, needle) => {
+/** What a selection attempt found on page 1's current text layer. */
+type LayerSelection = { readonly selected: string; readonly layer: number } | { readonly notReady: string };
+
+/** A phrase selected on one text layer generation, to check again before acting on it. */
+type PhraseSelection = { readonly phrase: string; readonly layer: number };
+
+/**
+ * Runs in the renderer. Page 1's text layer is replaced on every re-render,
+ * and the retired one is emptied, so a layer handle taken earlier can be stale
+ * by the time it is used. This waits until the current layer is committed —
+ * in its page, no zoom preview, its canvas at its committed size, the same for
+ * two frames — and then finds the phrase and selects it in the same
+ * synchronous step, through the reader's own `selectionchange` pathway.
+ */
+async function selectInCurrentLayer(needle: string): Promise<LayerSelection> {
+  const store = window as Window & { __opacityLayerIds?: WeakMap<Element, number>; __opacityLayerSerial?: number };
+  const idOf = (layer: Element): number => {
+    const ids = (store.__opacityLayerIds ??= new WeakMap<Element, number>());
+    const known = ids.get(layer);
+    if (known !== undefined) return known;
+    store.__opacityLayerSerial = (store.__opacityLayerSerial ?? 0) + 1;
+    ids.set(layer, store.__opacityLayerSerial);
+    return store.__opacityLayerSerial;
+  };
+  const checks: readonly ((layer: HTMLElement, canvas: HTMLCanvasElement) => boolean)[] = [
+    (layer, canvas) => layer.isConnected && canvas.parentElement === layer.parentElement,
+    (layer, canvas) => layer.style.getPropertyValue('--preview-scale') === '' && canvas.style.transform === '',
+    (_layer, canvas) => canvas.style.width === canvas.parentElement?.style.width,
+    (_layer, canvas) => Math.abs(canvas.width - Number.parseFloat(canvas.style.width) * window.devicePixelRatio) <= 1,
+  ];
+  type Committed = { readonly layer: HTMLElement; readonly signature: string };
+  const committed = (): Committed | null => {
+    const layer = document.querySelector<HTMLElement>('[data-testid="pdf-textlayer-p1"]');
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="pdf-canvas-p1"]');
+    if (layer === null || canvas === null) return null;
+    return checks.every((check) => check(layer, canvas)) ? { layer, signature: `${String(idOf(layer))}:${String(canvas.width)}x${String(canvas.height)}` } : null;
+  };
+  const textContaining = (layer: HTMLElement): Text | undefined => {
     const walker = layer.ownerDocument.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
     const nodes: Text[] = [];
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      nodes.push(node as Text);
-    }
-    const target = nodes.find((node) => node.textContent.includes(needle));
-    if (!target) throw new Error(`Target phrase "${needle}" was not found in PDF text layer.`);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node as Text);
+    return nodes.find((node) => node.textContent.includes(needle));
+  };
+  const frame = (): Promise<number> => new Promise((resolve) => { requestAnimationFrame(resolve); });
+  const signatureNow = (): string | undefined => committed()?.signature;
+  const first = signatureNow();
+  await frame();
+  const second = signatureNow();
+  await frame();
+  // From here on, nothing else runs in the renderer until this returns.
+  const current = committed();
+  const stable = (candidate: Committed | null): candidate is Committed => candidate !== null && candidate.signature === first && first === second;
+  if (!stable(current)) return { notReady: `page 1 text layer not committed and stable over two frames (${String(first)} / ${String(second)})` };
+  const target = textContaining(current.layer);
+  if (!target) return { notReady: `current page 1 text layer lacks the phrase: ${current.layer.textContent.slice(0, 160)}` };
+  const start = target.textContent.indexOf(needle);
+  const range = current.layer.ownerDocument.createRange();
+  range.setStart(target, start);
+  range.setEnd(target, start + needle.length);
+  const selection = current.layer.ownerDocument.getSelection()!;
+  selection.removeAllRanges();
+  selection.addRange(range);
+  current.layer.ownerDocument.dispatchEvent(new Event('selectionchange'));
+  return { selected: selection.toString(), layer: idOf(current.layer) };
+}
 
-    const start = target.textContent.indexOf(needle);
-    const range = layer.ownerDocument.createRange();
-    range.setStart(target, start);
-    range.setEnd(target, start + needle.length);
-    const selection = layer.ownerDocument.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    layer.ownerDocument.dispatchEvent(new Event('selectionchange'));
-  }, phrase);
+/**
+ * Selects a phrase in the PDF text layer through the reader's own pathway, on
+ * the current committed layer (see `selectInCurrentLayer`), retrying only
+ * while that layer is not ready, within the expect deadline. The native
+ * selection must be exactly the phrase.
+ */
+async function selectPhraseInTextLayer(page: Page, phrase: string): Promise<PhraseSelection> {
+  const last: { outcome: LayerSelection } = { outcome: { notReady: 'not attempted' } };
+  await expect.poll(async () => {
+    last.outcome = await page.evaluate(selectInCurrentLayer, phrase);
+    return 'selected' in last.outcome ? last.outcome.selected : last.outcome.notReady;
+  }).toBe(phrase);
+  return { phrase, layer: 'layer' in last.outcome ? last.outcome.layer : -1 };
+}
+
+/**
+ * Runs in the renderer: the native selection and the identity of page 1's
+ * current text layer, as `selectInCurrentLayer` numbered it.
+ */
+function currentSelection(): { readonly selected: string; readonly layer: number } {
+  const store = window as Window & { __opacityLayerIds?: WeakMap<Element, number> };
+  const layer = document.querySelector('[data-testid="pdf-textlayer-p1"]');
+  return { selected: document.getSelection()?.toString() ?? '', layer: layer === null ? -1 : store.__opacityLayerIds?.get(layer) ?? -1 };
+}
+
+/** Before acting on a selection: still exactly that phrase, on the layer it was made on. */
+async function expectSelectionKept(page: Page, selection: PhraseSelection): Promise<void> {
+  expect(await page.evaluate(currentSelection), 'page 1 re-rendered or the selection changed before the highlight action').toEqual({ selected: selection.phrase, layer: selection.layer });
 }
 
 type PaintedSwatch = {
@@ -144,7 +218,7 @@ test.describe('Defect 08: Highlight selection and color opacity', () => {
 
     // 2. Select "Architecture and Design Principles" on Line 1.
     const targetPhrase = 'Architecture and Design Principles';
-    await selectPhraseInTextLayer(app.window, targetPhrase);
+    const firstSelection = await selectPhraseInTextLayer(app.window, targetPhrase);
     const toolbar = app.window.getByTestId('annotation-selection-toolbar');
     await expect(toolbar).toBeVisible();
 
@@ -181,6 +255,7 @@ test.describe('Defect 08: Highlight selection and color opacity', () => {
 
     // 4. Create and persist highlights
     // Apply Pink highlight to first selection ("Architecture and Design Principles")
+    await expectSelectionKept(app.window, firstSelection);
     await toolbar.getByRole('button', { name: 'Pink highlight' }).click();
 
     // Verify pink highlight registered in CSS Highlight API and SQLite
@@ -195,9 +270,10 @@ test.describe('Defect 08: Highlight selection and color opacity', () => {
     })).toBe(true);
 
     // Select second passage for Yellow highlight: "Text selection preview must remain" on Line 2
-    await selectPhraseInTextLayer(app.window, 'Text selection preview must remain');
+    const secondSelection = await selectPhraseInTextLayer(app.window, 'Text selection preview must remain');
 
     await expect(toolbar).toBeVisible();
+    await expectSelectionKept(app.window, secondSelection);
     await toolbar.getByRole('button', { name: 'Yellow highlight' }).click();
 
     await expect.poll(async () => app.window.evaluate(async (docId) => {
@@ -470,7 +546,7 @@ test.describe('Defect 08: Highlight selection and color opacity', () => {
     await app.window.setViewportSize({ width: 960, height: 608 });
     await app.window.waitForTimeout(400);
 
-    await selectPhraseInTextLayer(app.window, 'All six reading palettes');
+    const zoomedSelection = await selectPhraseInTextLayer(app.window, 'All six reading palettes');
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Yellow highlight' }).focus();
     await app.window.keyboard.press('Tab');
@@ -513,6 +589,7 @@ test.describe('Defect 08: Highlight selection and color opacity', () => {
       return list.map((item) => item.color);
     }, openedDocument!.id);
 
+    await expectSelectionKept(app.window, zoomedSelection);
     await app.window.keyboard.press('Enter');
     await expect.poll(storedColors).toEqual(['green']);
 
@@ -528,10 +605,11 @@ test.describe('Defect 08: Highlight selection and color opacity', () => {
 
     // 7. Space is the other native activation key for a button, and it has to
     //    produce the same payload as Enter: the color of the focused swatch.
-    await selectPhraseInTextLayer(app.window, 'Persisted annotations use consistent');
+    const resetSelection = await selectPhraseInTextLayer(app.window, 'Persisted annotations use consistent');
     await expect(toolbar).toBeVisible();
     await toolbar.getByRole('button', { name: 'Pink highlight' }).focus();
     await expect(colorName).toHaveText('Pink');
+    await expectSelectionKept(app.window, resetSelection);
     await app.window.keyboard.press('Space');
     await expect.poll(async () => (await storedColors()).sort((a, b) => String(a).localeCompare(String(b))))
       .toEqual(['green', 'pink']);

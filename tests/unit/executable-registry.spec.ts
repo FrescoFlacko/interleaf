@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { chmodSync, mkdtempSync, statSync, truncateSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { chmodSync, mkdtempSync, realpathSync, statSync, symlinkSync, truncateSync, writeFileSync, rmSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { ExecutableRegistry } from '@main/agents/executable-registry';
+import { ExecutableRegistry, validateShellExecutable } from '@main/agents/executable-registry';
 import { hashFileInWorker, MAX_HASH_QUEUE } from '@main/workers/hash-file-worker';
 
 function tempRoot(): string {
@@ -209,6 +209,28 @@ describe('ExecutableRegistry integrity hashing', () => {
         .rejects.toThrow(/exceeded its safe time limit/i);
       await expect(hashFileInWorker(timeoutPath, timeoutIdentity))
         .resolves.toMatch(/^[a-f0-9]{64}$/iu);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 20_000);
+});
+
+describe('ExecutableRegistry selection of the system shell', () => {
+  it('refuses a link to the system shell and registers the canonical shell file by its own name', async () => {
+    const root = tempRoot();
+    try {
+      // Debian and Ubuntu ship /bin/sh itself as a link to dash; macOS ships a
+      // regular file. Either way the canonical file is the only acceptable pick.
+      const shellPath = realpathSync('/bin/sh');
+      const shellLink = join(root, 'sh');
+      symlinkSync(shellPath, shellLink);
+      const registry = new ExecutableRegistry();
+      await expect(registry.register(shellLink)).rejects.toThrow('Symlinked executables are not allowed.');
+
+      const registered = await registry.register(shellPath);
+      expect(registered.canonicalPath).toBe(shellPath);
+      expect(registered.displayName).toBe(basename(shellPath));
+      expect(() => { validateShellExecutable(registered.canonicalPath, 'posix'); }).not.toThrow();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
