@@ -90,7 +90,7 @@ async function openPendingPassage(): Promise<void> {
     const target = await bridge.files.openPassage();
     if (!target || !claimOutcome(ticket)) return;
     useOpenFileStore.setState({ error: null });
-    await useReaderStore.getState().openDocument(target.documentId, target.location, target.documentHash);
+    await useReaderStore.getState().openPassage(target);
   } catch (caught) {
     if (claimOutcome(ticket)) useOpenFileStore.setState({ error: describeFailure(caught instanceof Error ? caught : null) });
   }

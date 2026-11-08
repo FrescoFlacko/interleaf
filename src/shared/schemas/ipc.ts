@@ -320,7 +320,7 @@ type IpcResults = {
   readonly [IPC.libraryGetDocumentPreview]: DocumentPreviewData;
   readonly [IPC.filesOpenDialog]: DocumentMetadata | null;
   readonly [IPC.filesOpenPending]: DocumentMetadata | null;
-  readonly [IPC.filesOpenPassage]: { readonly documentId: string; readonly documentHash: string; readonly location: import('../types/document').DocumentLocation } | null;
+  readonly [IPC.filesOpenPassage]: { readonly documentId: string; readonly documentHash: string; readonly anchor: import('../types/annotation').DocumentAnchor } | null;
   readonly [IPC.readerRenderMermaid]: MermaidRenderResult;
   readonly [IPC.importedHighlightsPreview]: ImportPreview | null;
   readonly [IPC.importedHighlightsRelease]: undefined;

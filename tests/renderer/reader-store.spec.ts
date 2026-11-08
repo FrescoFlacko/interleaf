@@ -6,6 +6,9 @@ import type { SearchMatchAnchor } from '@shared/types/search';
 import type { InterleafAPI } from '@shared/types/api';
 
 const adapterFactory = vi.hoisted(() => vi.fn());
+const navigateSource = vi.hoisted(() => vi.fn());
+
+vi.mock('../../src/renderer/features/reader/learning-source', () => ({ navigateLearningSource: navigateSource }));
 
 vi.mock('../../src/renderer/features/reader/adapters/adapter-factory', () => ({
   createDocumentAdapter: adapterFactory,
@@ -117,11 +120,47 @@ function installLibraryApi(
 describe('reader store lifecycle', () => {
   beforeEach(async () => {
     adapterFactory.mockReset();
+    navigateSource.mockReset();
     // The previous test's document is still open; its stubs were restored, so
     // close it against fresh ones.
     installLibraryApi(() => Promise.reject(new Error('No document is opened during reset.')));
     await useReaderStore.getState().closeDocument();
     useReaderStore.setState({ error: null, isLoading: false });
+  });
+
+  test('cancels a pending exact passage when the user navigates', async () => {
+    const document = makeDocument('doc-passage');
+    installLibraryApi(() => Promise.resolve({ document, assetUrl: 'interleaf-media://passage', mediaAssets: [] }));
+    const adapter = makeAdapter();
+    adapterFactory.mockReturnValue(adapter);
+    const pending = deferred<boolean>();
+    navigateSource.mockReturnValue(pending.promise);
+    const target = { documentId: document.id, documentHash: document.fileHash, anchor: { format: 'pdf' as const, pageIndex: 0, quote: { exact: 'needle', prefix: '', suffix: '' } } };
+    await useReaderStore.getState().openPassage(target);
+    const mounting = useReaderStore.getState().mountAdapter(documentNode());
+    await vi.waitFor(() => { expect(navigateSource).toHaveBeenCalledOnce(); });
+    const isCurrent = navigateSource.mock.calls[0]?.[2] as () => boolean;
+    expect(isCurrent()).toBe(true);
+    useReaderStore.getState().clearExplicitNavigationLocation();
+    expect(isCurrent()).toBe(false);
+    pending.resolve(false);
+    await mounting;
+    expect(useReaderStore.getState().error).toBeNull();
+  });
+
+  test('reports an unresolved exact passage instead of treating a coarse open as success', async () => {
+    const document = makeDocument('doc-unresolved');
+    installLibraryApi(() => Promise.resolve({ document, assetUrl: 'interleaf-media://passage', mediaAssets: [] }));
+    adapterFactory.mockReturnValue(makeAdapter());
+    navigateSource.mockResolvedValue(false);
+    await useReaderStore.getState().openPassage({ documentId: document.id, documentHash: document.fileHash, anchor: { format: 'pdf', pageIndex: 0, quote: { exact: 'needle', prefix: '', suffix: '' } } });
+    const container = documentNode();
+    await useReaderStore.getState().mountAdapter(container);
+    expect(useReaderStore.getState().error).toMatch(/exact passage could not be displayed/);
+    navigateSource.mockResolvedValueOnce(true);
+    await useReaderStore.getState().mountAdapter(container);
+    expect(navigateSource).toHaveBeenCalledTimes(2);
+    expect(useReaderStore.getState().error).toBeNull();
   });
 
   test('passes an explicit initial location through to the adapter', async () => {

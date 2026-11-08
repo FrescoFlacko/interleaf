@@ -33,7 +33,7 @@ function map(row: Row): Proposal {
 export class ProposalRepository {
   constructor(private readonly database: InterleafDatabase, private readonly handlers: ProposalAcceptHandlers) {}
 
-  private validateSource(source: AgentSource): void {
+  validateSource(source: AgentSource): void {
     const row = this.database.raw.prepare(`SELECT d.format, c.text, c.location_json FROM documents d
       JOIN document_index_state s ON s.document_id = d.id
       JOIN document_text_chunks c ON c.document_id = d.id

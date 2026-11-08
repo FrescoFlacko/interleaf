@@ -33,6 +33,7 @@ export type ShutdownBarrierDeps<TWindow extends BarrierWindow> = {
   readonly mainWindow: () => TWindow | null;
   /** Stops every service. Called at most once; must release resources even when a step throws. */
   readonly drain: () => Promise<void>;
+  readonly closeAdmission?: () => void;
   /** True while main still holds a service or the database that `drain` would release. */
   readonly hasLiveServices: () => boolean;
   readonly quit: () => void;
@@ -65,6 +66,7 @@ export class ShutdownBarrier<TWindow extends BarrierWindow> {
     if (this.complete) return;
     event.preventDefault();
     this.appQuitRequested = true;
+    this.deps.closeAdmission?.();
     if (this.shuttingDown) return;
     this.startQuit();
   }
@@ -74,6 +76,7 @@ export class ShutdownBarrier<TWindow extends BarrierWindow> {
     if (this.complete || !this.deps.hasLiveServices()) return true;
     event.preventDefault();
     this.appQuitRequested = true;
+    this.deps.closeAdmission?.();
     if (!this.shuttingDown) void this.shutdown().then(() => { this.quitAfterShutdown(); });
     return false;
   }

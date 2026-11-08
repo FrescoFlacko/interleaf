@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { McpTools } from './mcp-tools';
 import { handleMcp } from './mcp-protocol';
+import { AgentAccessLifetime } from './lifetime';
 
 const MAX_BODY = 65_536;
 const MAX_SESSIONS = 64;
@@ -13,7 +14,8 @@ export class McpServer {
   private readonly sessions = new Map<string, { expiry: number; state: 'initializing' | 'ready' }>();
   private readonly server: Server;
   private port = 0;
-  constructor(private readonly tools: McpTools) {
+  private starting: Promise<void> | null = null;
+  constructor(private readonly tools: McpTools, private readonly lifetime = new AgentAccessLifetime()) {
     this.server = createServer((request, response) => { this.handle(request, response); });
     this.server.headersTimeout = 10_000;
     this.server.requestTimeout = 15_000;
@@ -22,16 +24,19 @@ export class McpServer {
   }
 
   start(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    if (!this.lifetime.isOpen()) return Promise.reject(new Error('MCP server is closed.'));
+    const starting = new Promise<void>((resolve, reject) => {
       this.server.once('error', reject);
       this.server.listen(0, '127.0.0.1', () => {
         this.server.removeListener('error', reject);
         const address = this.server.address();
         if (!address || typeof address === 'string') { reject(new Error('MCP server has no TCP address.')); return; }
-        this.port = address.port;
+        if (this.lifetime.isOpen()) this.port = address.port;
         resolve();
       });
     });
+    this.starting = starting;
+    return starting;
   }
 
   /** Only call from a deliberate main-owned user action; never expose to renderer. */
@@ -40,12 +45,19 @@ export class McpServer {
     return { url: `http://127.0.0.1:${String(this.port)}/mcp`, token: this.token };
   }
 
-  close(): Promise<void> {
+  closeAdmission(): void {
+    this.lifetime.closeAdmission();
+    this.server.closeAllConnections();
+  }
+
+  async close(): Promise<void> {
+    this.closeAdmission();
     this.port = 0;
     this.sessions.clear();
-    if (!this.server.listening) return Promise.resolve();
+    if (this.starting) await this.starting.catch(() => undefined);
+    if (!this.server.listening) return;
     this.server.closeAllConnections();
-    return new Promise((resolve, reject) => { this.server.close((error) => { if (error) reject(error); else resolve(); }); });
+    return new Promise<void>((resolve, reject) => { this.server.close((error) => { if (error) reject(error); else resolve(); }); });
   }
 
   private authenticated(value: string | undefined): boolean {
@@ -55,6 +67,9 @@ export class McpServer {
   }
 
   private handle(request: IncomingMessage, response: ServerResponse): void {
+    const release = this.lifetime.enter();
+    if (!release) { response.writeHead(503).end(); return; }
+    response.once('close', release);
     if (request.headers.origin !== undefined || request.headers.host !== `127.0.0.1:${String(this.port)}` ||
         !this.authenticated(request.headers.authorization)) { response.writeHead(403).end(); return; }
     if (request.url !== '/mcp') { response.writeHead(404).end(); return; }
@@ -71,7 +86,7 @@ export class McpServer {
       chunks.push(chunk);
     });
     request.on('end', () => {
-      if (response.writableEnded || request.destroyed) return;
+      if (response.writableEnded || request.destroyed || !this.lifetime.isOpen()) return;
       this.process(request, response, Buffer.concat(chunks).toString('utf8'));
     });
     request.on('error', () => { if (!response.writableEnded) response.writeHead(400).end(); });

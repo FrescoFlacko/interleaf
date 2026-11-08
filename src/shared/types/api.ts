@@ -152,7 +152,7 @@ export type InterleafAPI = {
   readonly files: {
     openDialog(): Promise<DocumentMetadata | null>;
     openPending(): Promise<DocumentMetadata | null>;
-    openPassage(): Promise<{ readonly documentId: string; readonly documentHash: string; readonly location: DocumentLocation } | null>;
+    openPassage(): Promise<{ readonly documentId: string; readonly documentHash: string; readonly anchor: import('./annotation').DocumentAnchor } | null>;
     onCommand(callback: (command: FileCommand) => void): () => void;
   };
   readonly reader: {
