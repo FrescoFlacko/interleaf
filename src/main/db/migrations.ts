@@ -11,6 +11,7 @@ import { EXTERNAL_HIGHLIGHT_STATEMENTS } from './external-highlight-migration';
 import { AGENT_ACCESS_STATEMENTS } from './agent-access-migration';
 import { LEARNING_STATEMENTS } from './learning-migration';
 import { CHAT_CONTEXT_COMPACTION_STATEMENTS } from './chat-context-compaction-migration';
+import { PRACTICE_STATEMENTS } from '../practice/migration';
 /**
  * Forward-only schema migrations (docs/DATABASE.md §2), each run in BEGIN IMMEDIATE and
  * recorded in `schema_migrations` with a SHA-256 checksum that detects drift.
@@ -708,6 +709,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 29, name: 'external_highlights', statements: EXTERNAL_HIGHLIGHT_STATEMENTS },
   { version: 30, name: 'agent_access', statements: AGENT_ACCESS_STATEMENTS },
   { version: 31, name: 'learning_items', statements: LEARNING_STATEMENTS },
+  { version: 32, name: 'practice_cards', statements: PRACTICE_STATEMENTS },
 ];
 
 /**

@@ -1,4 +1,7 @@
 import type { HighlightImportService } from '../highlight-import/import-service';
+import { practiceOwner } from '../practice/owner';
+import type { PracticeChecker } from '../practice/checker';
+import type { PracticeRepository } from '../practice/repository';
 import { ZodError, type ZodType } from 'zod';
 import { randomUUID } from 'node:crypto';
 import type { BrowserWindow } from 'electron';
@@ -79,6 +82,8 @@ export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
   readonly annotations: AnnotationRepository;
   readonly highlightImport: HighlightImportService;
   readonly learning: LearningRepository;
+  readonly practice: PracticeRepository;
+  readonly practiceChecker: PracticeChecker;
   readonly search: SearchRepository;
   readonly chat: ChatService;
   readonly credentials: CredentialVault;
@@ -275,6 +280,18 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'learning:list': (req) => servicesForDocument(deps, req.documentId).learning.list(req.documentId),
     'learning:dismiss': (req) => servicesForDocument(deps, req.documentId).learning.dismiss(req.documentId, req.id),
     'learning:remove': (req) => servicesForDocument(deps, req.documentId).learning.remove(req.documentId, req.id),
+    'practice:create': (req) => deps.practice.createFromHighlight(req),
+    'practice:create-imported': (req) => deps.practice.createFromImported(req),
+    'practice:due': (req) => deps.practice.due(req),
+    'practice:rate': (req) => deps.practice.rate(req),
+    'practice:get': (req) => deps.practice.get(req.cardId),
+    'practice:check': (req, event) => {
+      const owner = practiceOwner(event.sender, deps.practiceChecker);
+      return deps.practiceChecker.check(owner, req.cardId, req.answer, req.providerId, req.modelId);
+    },
+    'practice:cancel-check': (_req, event) => {
+      deps.practiceChecker.cancel(practiceOwner(event.sender, deps.practiceChecker));
+    },
     'annotations:create': (req) => servicesForDocument(deps, req.documentId).annotations.create(req),
     'annotations:list': (req) => servicesForDocument(deps, req.documentId).annotations.list(req.documentId, req.filter),
     'annotations:page': (req) => servicesForDocument(deps, req.documentId).annotations.page(req.documentId, req.filter),

@@ -1,3 +1,4 @@
+import { createPracticeBridge } from './practice-bridge';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { z } from 'zod';
 import { IPC, IPC_EVENTS, type IpcChannel } from '@shared/constants/ipc';
@@ -339,6 +340,7 @@ export function createInterleafApi(
     dismiss: (documentId, id) => invokeValidated(IPC.learningDismiss, { documentId, id }, learningItemSchema.nullable(), 'Invalid learning item.'),
     remove: (documentId, id) => invoke(IPC.learningRemove, { documentId, id }),
   },
+  practice: createPracticeBridge(invoke),
   annotations: {
     create: (input) => invoke(IPC.annotationsCreate, input),
     list: (documentId, filter) =>

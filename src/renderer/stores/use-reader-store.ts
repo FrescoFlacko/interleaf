@@ -1,3 +1,4 @@
+import { practiceOpenFailure, verifyPracticeRevision } from './practice-open-guard';
 import { create } from 'zustand';
 import { reportRejection } from '@shared/models/caught-error';
 import type {
@@ -279,6 +280,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         }
         return;
       }
+      await verifyPracticeRevision(opened, expectedHash);
       verifyOpenedPassage(opened, expectedHash);
       const adapter = createDocumentAdapter(opened.document.format);
 

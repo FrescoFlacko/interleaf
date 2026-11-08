@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useUiStore } from "../stores/use-ui-store";
 import { isReaderReady, selectActiveDocument, useReaderStore } from "../stores/use-reader-store";
-import { LibraryView } from "../features/library/LibraryView";
+import { PracticeLibrary } from "../features/practice/PracticeLibrary";
 import { ReaderView } from "../features/reader/ReaderView";
 
 const FOCUS_HINT_FADE_MS = 2500;
@@ -92,7 +92,7 @@ export function ReaderViewport() {
         </div>
       )}
 
-      {activeDocument ? <ReaderView /> : <LibraryView />}
+      {activeDocument ? <ReaderView /> : <PracticeLibrary />}
 
       {focusMode && readerReady && pageCount > 0 && (
         <div

@@ -392,7 +392,7 @@ CREATE TABLE IF NOT EXISTS settings (
 - Migration coverage is exercised by `tests/integration/database.spec.ts` (including the v9-to-v10 chat upgrade and v12-to-v13 agent session upgrade), `tests/unit/custom-agent-profile.spec.ts`, and `tests/unit/agent-session-effective-resume.spec.ts`.
 - `chat_context_items` is an immutable historical snapshot: excerpt text/hash, document revision hash, normalized anchor, and provenance metadata are captured transactionally when attached. Re-indexing or replacing a document never rewrites an old conversation's context rows.
 
-### Learning items (migration 29)
+### Learning items (migration 31)
 
 The additive `learning_items` table stores source-linked learning content and
 its lifecycle separately from highlights, notes and bookmarks. The JSON is
@@ -406,3 +406,15 @@ a SHA-256 fingerprint remains only to detect reuse of the ID with different data
 starting its own. Migration numbers on separately developed branches must be
 reconciled in one final ordered chain before integration; applied checksums are
 never edited.
+### Retrieval practice cards
+
+Migration 32 adds `practice_cards` and an index ordered by due time and card ID.
+The main-owned practice repository stores each question, bounded evidence,
+source identity and self-rated schedule in the library database. A native source
+names its document, revision and validated anchor, optionally its annotation or
+indexed chunk. Imported highlight identities remain distinct from native anchors.
+Due reads are capped and rating updates compare a revision counter, so a stale
+review cannot schedule a card twice. Proposal acceptance uses a caller-owned
+transaction and an idempotency key; the main-only resolver must verify the
+indexed chunk before supplying evidence. Missing or changed sources are marked
+as such rather than mapped to a different document.

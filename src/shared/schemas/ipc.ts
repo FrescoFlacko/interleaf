@@ -1,5 +1,6 @@
 import { importCommitSchema, importListSchema, importAssociateSchema } from './imported-highlight';
 import type { ImportPreview, ImportResult, ImportedHighlight } from '../types/imported-highlight';
+import { practiceCreateSchema, practiceCreateImportedSchema, practiceDueSchema, practiceRateSchema, practiceCardIdSchema, practiceCheckSchema, type PracticeCard } from './practice';
 import { z } from 'zod';
 import { learningContentSchema, listLearningRequestSchema, changeLearningRequestSchema, sourceLearningRequestSchema, type LearningItem, type LearningSourceStatus } from './learning';
 import { IPC, type IpcChannel } from '../constants/ipc';
@@ -204,6 +205,13 @@ export const ipcRequestSchemas = {
   [IPC.importedHighlightsCommit]: importCommitSchema,
   [IPC.importedHighlightsList]: importListSchema,
   [IPC.importedHighlightsAssociate]: importAssociateSchema,
+  [IPC.practiceCreate]: practiceCreateSchema,
+  [IPC.practiceCreateImported]: practiceCreateImportedSchema,
+  [IPC.practiceDue]: practiceDueSchema,
+  [IPC.practiceRate]: practiceRateSchema,
+  [IPC.practiceGet]: practiceCardIdSchema,
+  [IPC.practiceCheck]: practiceCheckSchema,
+  [IPC.practiceCancelCheck]: undefined,
   // Phase 5 — Annotations & Highlights
   [IPC.learningSourceStatus]: sourceLearningRequestSchema,
   [IPC.learningCreate]: learningContentSchema,
@@ -324,6 +332,13 @@ type IpcResults = {
   readonly [IPC.learningList]: readonly LearningItem[];
   readonly [IPC.learningDismiss]: LearningItem | null;
   readonly [IPC.learningRemove]: boolean;
+  readonly [IPC.practiceCreate]: PracticeCard;
+  readonly [IPC.practiceCreateImported]: PracticeCard;
+  readonly [IPC.practiceDue]: readonly PracticeCard[];
+  readonly [IPC.practiceRate]: PracticeCard;
+  readonly [IPC.practiceGet]: PracticeCard | null;
+  readonly [IPC.practiceCheck]: string | null;
+  readonly [IPC.practiceCancelCheck]: undefined;
   readonly [IPC.annotationsCreate]: Annotation;
   readonly [IPC.annotationsList]: readonly Annotation[];
   readonly [IPC.annotationsPage]: AnnotationPage;

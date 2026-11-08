@@ -69,6 +69,13 @@ export const IPC = {
   importedHighlightsCommit: 'imported-highlights:commit',
   importedHighlightsList: 'imported-highlights:list',
   importedHighlightsAssociate: 'imported-highlights:associate',
+  practiceCreate: 'practice:create',
+  practiceCreateImported: 'practice:create-imported',
+  practiceDue: 'practice:due',
+  practiceRate: 'practice:rate',
+  practiceGet: 'practice:get',
+  practiceCheck: 'practice:check',
+  practiceCancelCheck: 'practice:cancel-check',
 
   // Phase 5 — Annotations & Highlights
   learningSourceStatus: 'learning:source-status',

@@ -252,3 +252,9 @@ same way, and can take a page range or the whole document. See
 
 Next: [AI Chat](ai-chat.md) · [Reading a document](reading.md) ·
 [App navigation](navigation.md)
+
+## Practice cards
+
+In the Annotations browser, choose **Make practice card** on an anchored highlight, enter a question and save. In the library, choose **Review practice** to review up to 20 due cards across your library. Write an answer, reveal the saved source and compare it before choosing Again, Hard, Good or Easy. Your rating determines the next due date.
+
+You can explicitly choose an eligible tool-free provider and send the question, answer and displayed evidence for an optional comparison. This may use provider credits and the feedback may be wrong. Manual comparison remains available when no provider is ready. A missing or changed source is identified and cannot be opened at an old location. Imported highlight evidence is an export quote, not a verified book passage.

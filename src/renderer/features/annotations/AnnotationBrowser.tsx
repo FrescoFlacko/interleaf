@@ -1,3 +1,4 @@
+import { PracticeCreate } from '../practice/PracticeCreate';
 import { HIGHLIGHT_COLOR_CONFIGS, HIGHLIGHT_COLOR_OPTIONS, type HighlightColorConfig } from '@shared/constants/annotations';
 import { reportRejection } from '@shared/models/caught-error';
 import { hasParagraphFormat, type ParagraphFormat } from '@shared/document-format-family';
@@ -526,6 +527,7 @@ export function AnnotationBrowser() {
                         </p>
                       )}
 
+                      {isHighlight && !isUnanchored && <PracticeCreate documentId={annotation.documentId} annotationId={annotation.id} />}
                       <div data-testid="annotation-row-actions" className={ANNOTATION_ROW_ACTIONS}>
                         {isUnanchored ? (
                           <>
