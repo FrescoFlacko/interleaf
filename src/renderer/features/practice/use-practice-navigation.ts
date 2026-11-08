@@ -1,3 +1,4 @@
+import { cancelPracticeNavigationOnInput } from './practice-navigation-cancellation';
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import type { PracticeSource } from '@shared/schemas/practice';
@@ -22,6 +23,9 @@ export function usePracticeNavigation(session: ReaderSession | null, pageCount: 
       setError('The source document changed before it could be opened.');
       return;
     }
+    const removeInputListeners = cancelPracticeNavigationOnInput(() => {
+      if (current()) usePracticeNavigationStore.getState().setPending(null);
+    });
     void navigateLearningSource(session.adapter, pending.source, current).then((found) => {
       if (!current()) return;
       usePracticeNavigationStore.getState().setPending(null);
@@ -31,6 +35,7 @@ export function usePracticeNavigation(session: ReaderSession | null, pageCount: 
       usePracticeNavigationStore.getState().setPending(null);
       setError('The source passage could not be resolved in this document.');
     });
+    return removeInputListeners;
   }, [pending, session, pageCount]);
   return error;
 }
