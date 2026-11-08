@@ -6,4 +6,3 @@ export async function verifyPracticeRevision(opened: OpenedDocument, expectedHas
   await bridge.library.closeDocument(opened.document.id);
   throw new Error('The source document has changed.');
 }
-
