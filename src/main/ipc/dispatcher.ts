@@ -1,3 +1,6 @@
+import { practiceOwner } from '../practice/owner';
+import type { PracticeChecker } from '../practice/checker';
+import type { PracticeRepository } from '../practice/repository';
 import { ZodError, type ZodType } from 'zod';
 import { randomUUID } from 'node:crypto';
 import type { BrowserWindow } from 'electron';
@@ -74,6 +77,8 @@ export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
   readonly onboardingLaunchState: () => OnboardingLaunchState;
   readonly library: LibraryService;
   readonly annotations: AnnotationRepository;
+  readonly practice: PracticeRepository;
+  readonly practiceChecker: PracticeChecker;
   readonly search: SearchRepository;
   readonly chat: ChatService;
   readonly credentials: CredentialVault;
@@ -249,6 +254,18 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'files:open-pending': () => openPending(deps),
 
     // Phase 5 — Annotations & Highlights
+    'practice:create': (req) => deps.practice.createFromHighlight(req),
+    'practice:create-imported': (req) => deps.practice.createFromImported(req),
+    'practice:due': (req) => deps.practice.due(req),
+    'practice:rate': (req) => deps.practice.rate(req),
+    'practice:get': (req) => deps.practice.get(req.cardId),
+    'practice:check': (req, event) => {
+      const owner = practiceOwner(event.sender, deps.practiceChecker);
+      return deps.practiceChecker.check(owner, req.cardId, req.answer, req.providerId, req.modelId);
+    },
+    'practice:cancel-check': (_req, event) => {
+      deps.practiceChecker.cancel(practiceOwner(event.sender, deps.practiceChecker));
+    },
     'annotations:create': (req) => servicesForDocument(deps, req.documentId).annotations.create(req),
     'annotations:list': (req) => servicesForDocument(deps, req.documentId).annotations.list(req.documentId, req.filter),
     'annotations:page': (req) => servicesForDocument(deps, req.documentId).annotations.page(req.documentId, req.filter),

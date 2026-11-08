@@ -1,3 +1,4 @@
+import { practiceCreateSchema, practiceCreateImportedSchema, practiceDueSchema, practiceRateSchema, practiceCardIdSchema, practiceCheckSchema, type PracticeCard } from './practice';
 import { z } from 'zod';
 import { IPC, type IpcChannel } from '../constants/ipc';
 import { appSettingsSchema, type AppSettings } from './settings';
@@ -195,6 +196,13 @@ export const ipcRequestSchemas = {
   [IPC.filesOpenDialog]: undefined,
   [IPC.filesOpenPending]: undefined,
   [IPC.readerRenderMermaid]: mermaidRenderRequestSchema,
+  [IPC.practiceCreate]: practiceCreateSchema,
+  [IPC.practiceCreateImported]: practiceCreateImportedSchema,
+  [IPC.practiceDue]: practiceDueSchema,
+  [IPC.practiceRate]: practiceRateSchema,
+  [IPC.practiceGet]: practiceCardIdSchema,
+  [IPC.practiceCheck]: practiceCheckSchema,
+  [IPC.practiceCancelCheck]: undefined,
   // Phase 5 — Annotations & Highlights
   [IPC.annotationsCreate]: createAnnotationRequestSchema,
   [IPC.annotationsList]: listAnnotationsRequestSchema,
@@ -299,6 +307,13 @@ type IpcResults = {
   readonly [IPC.filesOpenDialog]: DocumentMetadata | null;
   readonly [IPC.filesOpenPending]: DocumentMetadata | null;
   readonly [IPC.readerRenderMermaid]: MermaidRenderResult;
+  readonly [IPC.practiceCreate]: PracticeCard;
+  readonly [IPC.practiceCreateImported]: PracticeCard;
+  readonly [IPC.practiceDue]: readonly PracticeCard[];
+  readonly [IPC.practiceRate]: PracticeCard;
+  readonly [IPC.practiceGet]: PracticeCard | null;
+  readonly [IPC.practiceCheck]: string | null;
+  readonly [IPC.practiceCancelCheck]: undefined;
   readonly [IPC.annotationsCreate]: Annotation;
   readonly [IPC.annotationsList]: readonly Annotation[];
   readonly [IPC.annotationsPage]: AnnotationPage;

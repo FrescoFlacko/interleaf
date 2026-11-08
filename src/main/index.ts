@@ -1,3 +1,5 @@
+import { PracticeChecker } from './practice/checker';
+import { PracticeRepository } from './practice/repository';
 import { app, autoUpdater, BrowserWindow, ipcMain, Menu, net, protocol, session, dialog, safeStorage, shell, clipboard } from 'electron';
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
@@ -118,6 +120,7 @@ let durableLogSink: DurableLogSink | null = null;
 let openFiles: OpenFileManager | null = null;
 let updates: UpdateController | null = null;
 let diagnostics: DiagnosticsService | null = null;
+let practiceChecker: PracticeChecker | null = null;
 // Operating-system open requests can arrive before app ready (macOS
 // `open-file`, the launch command line); they wait here for the renderer.
 const openFileRequests = new OpenFileRequestQueue();
@@ -138,7 +141,7 @@ function createAndAttachMainWindow(): BrowserWindow {
   // A reload or navigation leaves no page to own diagnostics handles.
   const ownerId = window.webContents.id;
   window.webContents.on('did-start-navigation', (details) => {
-    if (details.isMainFrame && !details.isSameDocument) diagnostics?.disposeOwner(ownerId);
+    if (details.isMainFrame && !details.isSameDocument) { diagnostics?.disposeOwner(ownerId); practiceChecker?.cancel(ownerId); }
   });
   // Item C: main, not the renderer, names the window that may take over agent
   // sessions a destroyed window left behind. This is the only caller.
@@ -325,6 +328,7 @@ async function bootstrap(): Promise<void> {
   const folders = new FolderRepository(database);
   const readingPositions = new ReadingPositionRepository(database);
   const annotations = new AnnotationRepository(database);
+  const practice = new PracticeRepository(database);
   const search = new SearchRepository(database);
   const chat = new ChatRepository(database);
   const agentRepository = new AgentRepository(database);
@@ -558,6 +562,8 @@ async function bootstrap(): Promise<void> {
     };
   };
   const exportDebugLog = createDebugLogExporter(durableLogSink, showSaveDialog);
+  const livePracticeChecker = new PracticeChecker(practice, aiProviders);
+  practiceChecker = livePracticeChecker;
   const liveDiagnostics = new DiagnosticsService({
     environment: processEnvironment(resolveDiagnosticsAppVersion(app), app.isPackaged),
     logs: durableLogSink,
@@ -592,7 +598,7 @@ async function bootstrap(): Promise<void> {
     releaseSingleInstanceLock: () => { app.releaseSingleInstanceLock(); },
     activeWork: createActiveWork({
       agentSessions: [() => liveAgents.liveWork()],
-      chatStreams: [() => libraryChat.liveWork(), () => liveOpenFiles.liveChatWork(), () => liveDiagnostics.activeCount()],
+      chatStreams: [() => libraryChat.liveWork(), () => liveOpenFiles.liveChatWork(), () => liveDiagnostics.activeCount(), () => livePracticeChecker.activeCount()],
       imports: [() => library.importAdmission.liveWork(), () => liveOpenFiles.liveOpens()],
       closeAdmission: [
         () => { libraryChat.closeAdmission(); },
@@ -600,6 +606,7 @@ async function bootstrap(): Promise<void> {
         () => { liveAgents.closeAdmission(); },
         () => { library.importAdmission.close(); },
         () => { liveDiagnostics.closeAdmission(); },
+        () => { livePracticeChecker.closeAdmission(); },
       ],
     }),
     requestQuitForUpdate: (install, closeAdmission) => shutdownBarrier.requestQuitForUpdate(install, closeAdmission),
@@ -613,6 +620,8 @@ async function bootstrap(): Promise<void> {
     onboardingLaunchState: () => onboardingLaunchStateLatch.get(),
     library,
     annotations,
+    practice,
+    practiceChecker: livePracticeChecker,
     search,
     chat: chatService,
     credentials,
@@ -707,6 +716,8 @@ async function drainServices(): Promise<void> {
   updates = null;
   // Before the providers it borrows are shut down with the chat services; the
   // wait for its provider stops is bounded, never indefinite.
+  await practiceChecker?.shutdown();
+  practiceChecker = null;
   await diagnostics?.shutdown();
   diagnostics = null;
   try {

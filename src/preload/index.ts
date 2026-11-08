@@ -1,3 +1,4 @@
+import { createPracticeBridge } from './practice-bridge';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { z } from 'zod';
 import { IPC, IPC_EVENTS, type IpcChannel } from '@shared/constants/ipc';
@@ -324,6 +325,7 @@ export function createInterleafApi(
         'The diagram renderer returned an invalid response.'
       ),
   },
+  practice: createPracticeBridge(invoke),
   annotations: {
     create: (input) => invoke(IPC.annotationsCreate, input),
     list: (documentId, filter) =>

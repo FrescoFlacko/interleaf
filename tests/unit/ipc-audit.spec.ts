@@ -37,6 +37,9 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
     expect(await invokeChannel(IPC.settingsGet, (() => ({})) as never, undefined, hostileEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'sender-rejected' } });
     expect(await invokeChannel(IPC.appGetInfo, (() => ({})) as never, undefined, { senderFrame: null }, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'sender-rejected' } });
     expect(await invokeChannel(IPC.annotationsCreate, (() => ({})) as never, { invalid: true }, validEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'validation' } });
+    expect(await invokeChannel(IPC.practiceDue, (() => ({})) as never, { limit: 10000 }, validEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'validation' } });
+    expect(await invokeChannel(IPC.practiceRate, (() => ({})) as never, { cardId: 'x', revision: 0, rating: 'perfect' }, validEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'validation' } });
+    expect(await invokeChannel(IPC.practiceGet, (() => ({})) as never, { cardId: 'x' }, hostileEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'sender-rejected' } });
     expect(await invokeChannel(IPC.agentStartSession, (() => ({})) as never, { profileId: 'fake', executionMode: 'auto-isolated', prompt: 'x'.repeat(150_000), workingDirectoryHandle: 'h' }, validEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'validation' } });
     expect(await invokeChannel(IPC.appGetInfo, (() => ({})) as never, { rogue: true }, validEvent, { senderRule, log })).toMatchObject({ ok: false, error: { code: 'validation' } });
   });
@@ -78,7 +81,10 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         compactedThroughOrdinal: 3, isArchived: false,
         createdAt: '2026-09-12T00:00:00.000Z', updatedAt: '2026-09-12T00:00:00.000Z',
       };
+      const practiceCard = { id: 'card', question: 'Why?', source: { kind: 'native', documentId: 'doc', documentHash: 'hash', annotationId: 'anno', anchor: { format: 'pdf', pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } } }, evidence: 'text', sourceLabel: 'Book', exportDetails: null, navigation: null, dueAt: '2026-01-01T00:00:00.000Z', intervalDays: 0, repetitions: 0, lapses: 0, revision: 0, sourceState: 'missing' };
       const replies = new Map<string, CloneableValue>([
+        [IPC.practiceCreate, practiceCard], [IPC.practiceCreateImported, practiceCard], [IPC.practiceDue, [practiceCard]],
+        [IPC.practiceRate, practiceCard], [IPC.practiceGet, practiceCard], [IPC.practiceCheck, 'feedback'],
         [IPC.chatCreateSession, chatSession],
         [IPC.chatGetSession, chatSession],
         [IPC.chatListSessions, [chatSession]],
@@ -234,6 +240,13 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       await api.library.updateReadingPosition('doc', loc, 0.5); last(IPC.libraryUpdateReadingPosition, { documentId: 'doc', location: loc, progress: 0.5 });
       await api.library.getDocumentPreview('doc', null); last(IPC.libraryGetDocumentPreview, { documentId: 'doc', location: null });
       const anchor = { format: 'pdf' as const, pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } };
+      const createCard = { documentId: 'doc', annotationId: 'anno', question: 'Why?' }; await api.practice.create(createCard); last(IPC.practiceCreate, createCard);
+      const importedCard = { importedHighlightId: 'imported', question: 'Why?' }; await api.practice.createImported(importedCard); last(IPC.practiceCreateImported, importedCard);
+      await api.practice.due(10); last(IPC.practiceDue, { limit: 10 });
+      const rating = { cardId: 'card', revision: 0, rating: 'good' as const }; await api.practice.rate(rating); last(IPC.practiceRate, rating);
+      await api.practice.get('card'); last(IPC.practiceGet, { cardId: 'card' });
+      const check = { cardId: 'card', answer: 'answer', providerId: 'claude' as const, modelId: 'model' }; await api.practice.check(check); last(IPC.practiceCheck, check);
+      await api.practice.cancelCheck(); last(IPC.practiceCancelCheck, undefined);
       const createAnno = { documentId: 'doc', type: 'highlight' as const, anchor }; await api.annotations.create(createAnno); last(IPC.annotationsCreate, createAnno);
       await api.annotations.list('doc', { type: 'highlight' }); last(IPC.annotationsList, { documentId: 'doc', filter: { type: 'highlight' } });
       await api.annotations.page('doc', { limit: 10 }); last(IPC.annotationsPage, { documentId: 'doc', filter: { limit: 10 } });
@@ -316,7 +329,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
     it('exposes only the declared namespace surface and no raw or generic bridge', () => {
       const { api } = setup();
       const exposed = new Set(Object.keys(api));
-      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
+      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'library', 'onboarding', 'practice', 'reader', 'search', 'settings', 'updates']);
       for (const key of ['ipcRenderer', 'require', 'process', 'invoke', 'send', 'on']) expect(exposed.has(key)).toBe(false);
       const expectedNamespaces: readonly (readonly [keyof InterleafAPI, readonly string[]])[] = [
         ['app', ['exportDebugLog', 'getInfo', 'onBeforeClose', 'openExternal']],
@@ -325,6 +338,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         // never writes onboarding state on a channel of its own.
         ['onboarding', ['getLaunchState']],
         ['library', ['closeDocument', 'createFolder', 'deleteDocument', 'deleteFolder', 'getContinueReading', 'getDocumentPreview', 'getFolderTree', 'getRecentlyAdded', 'getRecentlyRead', 'getSummary', 'importDroppedFiles', 'importWebArticle', 'listDocuments', 'listFolders', 'moveDocumentToFolder', 'onStorageHealthUpdated', 'openDocument', 'openFileDialog', 'renameFolder', 'updateReadingPosition']],
+        ['practice', ['cancelCheck', 'check', 'create', 'createImported', 'due', 'get', 'rate']],
         ['annotations', ['create', 'delete', 'list', 'page', 'repairAnchor', 'update']],
         ['search', ['appendIndex', 'beginIndex', 'completeIndex', 'failIndex', 'getIndexState', 'resolveHit', 'searchDocument']],
         ['ai', ['configureOpenRouter', 'getProviderStatus', 'listOpenRouterModels', 'listProviders', 'signInWithChatGPT']],

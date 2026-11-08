@@ -1,3 +1,4 @@
+import { PracticeNavigationNotice } from '../practice/PracticeNavigationNotice';
 import { useEffect, useRef } from 'react';
 import { reportRejection } from '@shared/models/caught-error';
 import { AppIcon } from '../../components/AppIcon';
@@ -180,6 +181,7 @@ export function ReaderView() {
 
   return (
     <div id="reader-content" data-testid="reader-view" data-document-id={activeDocument?.id} data-reader-background={readerBackground} style={readerSurfaceStyle(readerBackground)} tabIndex={-1} className="reader-surface flex flex-1 flex-col h-full overflow-hidden">
+      <PracticeNavigationNotice />
       {/* Keep toolbar state mounted while Focus Mode hides it, so transient
           popovers restore exactly when the reader returns. */}
       <ReaderHeaderToolbar hidden={focusMode} />

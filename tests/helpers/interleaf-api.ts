@@ -191,6 +191,16 @@ const diagnostics: InterleafAPI['diagnostics'] = {
   discard: () => unstubbed('diagnostics.discard'),
 };
 
+const practice: InterleafAPI['practice'] = {
+  create: () => unstubbed('practice.create'),
+  createImported: () => unstubbed('practice.createImported'),
+  due: () => unstubbed('practice.due'),
+  rate: () => unstubbed('practice.rate'),
+  get: () => unstubbed('practice.get'),
+  check: () => unstubbed('practice.check'),
+  cancelCheck: () => unstubbed('practice.cancelCheck'),
+};
+
 function buildApi(overrides: BridgeStubs): InterleafAPI {
   return {
     app: { ...app, ...overrides.app },
@@ -200,6 +210,7 @@ function buildApi(overrides: BridgeStubs): InterleafAPI {
     files: { ...files, ...overrides.files },
     reader: { ...reader, ...overrides.reader },
     annotations: { ...annotations, ...overrides.annotations },
+    practice: { ...practice, ...overrides.practice },
     search: { ...search, ...overrides.search },
     ai: { ...ai, ...overrides.ai },
     credentials: { ...credentials, ...overrides.credentials },

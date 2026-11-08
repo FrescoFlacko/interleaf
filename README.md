@@ -70,6 +70,7 @@ change.
   EPUB/MOBI/Markdown are reflowable; PDF remains fixed-layout; DOCX uses
   responsive derived pages; PPTX decks are read as inert slide text and still
   images.
+- Practice cards from saved highlights, with library-wide due review, source comparison and self-rated schedules. Optional source checks send the question, answer and evidence to a chosen tool-free provider and may be wrong.
 - Highlights, highlight notes, location notes, bookmarks, five highlight
   colors, annotation filtering/search, and format-specific anchor recovery.
   Notes save as you type.

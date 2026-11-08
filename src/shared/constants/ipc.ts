@@ -63,6 +63,14 @@ export const IPC = {
    */
   readerRenderMermaid: 'reader:render-mermaid',
 
+  practiceCreate: 'practice:create',
+  practiceCreateImported: 'practice:create-imported',
+  practiceDue: 'practice:due',
+  practiceRate: 'practice:rate',
+  practiceGet: 'practice:get',
+  practiceCheck: 'practice:check',
+  practiceCancelCheck: 'practice:cancel-check',
+
   // Phase 5 — Annotations & Highlights
   annotationsCreate: 'annotations:create',
   annotationsList: 'annotations:list',

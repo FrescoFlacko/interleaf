@@ -42,6 +42,8 @@ export function makeIpcDeps(overrides: Partial<IpcDispatcherDeps> = {}): IpcDisp
     onboardingLaunchState: notStubbed('onboardingLaunchState'),
     library: unstubbed('library'),
     annotations: unstubbed('annotations'),
+    practice: unstubbed('practice'),
+    practiceChecker: unstubbed('practiceChecker'),
     search: unstubbed('search'),
     chat: unstubbed('chat'),
     credentials: unstubbed('credentials'),

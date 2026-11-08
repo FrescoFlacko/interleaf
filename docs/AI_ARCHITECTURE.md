@@ -555,3 +555,17 @@ this turn only; retrieved web text is untrusted source data on the same terms
 as document text; and web claims must be attributed to their URL and never
 presented as a `[src-N]` document citation. The context budget is estimated
 from whichever prompt is actually sent.
+
+## Retrieval practice answer checks
+
+Review can explicitly request a comparison of a user's answer against the
+card's source evidence. Main resolves the card and rechecks source state before
+and after the bounded request; the renderer cannot supply replacement evidence.
+The user chooses an eligible provider and model for each request. The question,
+answer and source quote are sent as serialized untrusted data with no history,
+web search or tools. Eligibility follows the private diagnostics boundary:
+ready tool-free CLI providers only, with Codex, OpenRouter and local excluded.
+Checks have a deadline, event and text bounds, cancellation, and count as live
+work for restart and shutdown. A failed or unavailable check returns no result;
+the reader can compare the displayed evidence manually. Output is fallible
+advice, not semantic proof, and is shown as inert text. Tests use fake providers.

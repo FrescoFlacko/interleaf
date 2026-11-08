@@ -1,3 +1,4 @@
+import type { PracticeCard, PracticeRating } from '../schemas/practice';
 import type { AppInfo } from '../schemas/ipc';
 import type { AppSettings } from '../schemas/settings';
 import type { DebugLogExportResult } from '../schemas/ipc';
@@ -156,6 +157,15 @@ export type InterleafAPI = {
      * failure is typed so the reader can show the fenced source instead.
      */
     renderMermaid(request: MermaidRenderRequest): Promise<MermaidRenderResult>;
+  };
+  readonly practice: {
+    create(input: { documentId: string; annotationId: string; question: string }): Promise<PracticeCard>;
+    createImported(input: { importedHighlightId: string; question: string }): Promise<PracticeCard>;
+    due(limit: number): Promise<readonly PracticeCard[]>;
+    rate(input: { cardId: string; revision: number; rating: PracticeRating }): Promise<PracticeCard>;
+    get(cardId: string): Promise<PracticeCard | null>;
+    check(input: { cardId: string; answer: string; providerId: AIProviderId; modelId: string }): Promise<string | null>;
+    cancelCheck(): Promise<void>;
   };
   readonly annotations: {
     create(input: CreateAnnotationInput): Promise<Annotation>;
