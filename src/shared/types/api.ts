@@ -1,4 +1,5 @@
 import type { AppInfo } from '../schemas/ipc';
+import type { LearningContent, LearningItem, LearningSource, LearningSourceStatus } from '../schemas/learning';
 import type { AppSettings } from '../schemas/settings';
 import type { DebugLogExportResult } from '../schemas/ipc';
 import type {
@@ -156,6 +157,13 @@ export type InterleafAPI = {
      * failure is typed so the reader can show the fenced source instead.
      */
     renderMermaid(request: MermaidRenderRequest): Promise<MermaidRenderResult>;
+  };
+  readonly learning: {
+    sourceStatus(documentId: string, source: LearningSource): Promise<LearningSourceStatus>;
+    create(input: LearningContent): Promise<LearningItem>;
+    list(documentId: string): Promise<readonly LearningItem[]>;
+    dismiss(documentId: string, id: string): Promise<LearningItem | null>;
+    remove(documentId: string, id: string): Promise<boolean>;
   };
   readonly annotations: {
     create(input: CreateAnnotationInput): Promise<Annotation>;

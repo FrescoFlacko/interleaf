@@ -6,6 +6,7 @@ import { useReaderStore } from '../../stores/use-reader-store';
 import { useUiStore } from '../../stores/use-ui-store';
 import { useAnnotationStore } from '../../stores/use-annotation-store';
 import { useChatStoreApi } from '../../stores/use-chat-store';
+import { LearningMargin } from './components/LearningMargin';
 import { ReaderHeaderToolbar } from './components/ReaderHeaderToolbar';
 import { ReaderOutlineSidebar } from './components/ReaderOutlineSidebar';
 import { AnnotationSelectionToolbar } from './components/AnnotationSelectionToolbar';
@@ -248,6 +249,7 @@ export function ReaderView() {
             className="flex-1 h-full w-full overflow-hidden relative"
           />
         </div>
+        <LearningMargin />
       </div>
       {selectionIssue !== null && (
         <div

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { learningContentSchema, listLearningRequestSchema, changeLearningRequestSchema, sourceLearningRequestSchema, type LearningItem, type LearningSourceStatus } from './learning';
 import { IPC, type IpcChannel } from '../constants/ipc';
 import { appSettingsSchema, type AppSettings } from './settings';
 import type { OnboardingLaunchState } from '../types/onboarding';
@@ -196,6 +197,11 @@ export const ipcRequestSchemas = {
   [IPC.filesOpenPending]: undefined,
   [IPC.readerRenderMermaid]: mermaidRenderRequestSchema,
   // Phase 5 — Annotations & Highlights
+  [IPC.learningSourceStatus]: sourceLearningRequestSchema,
+  [IPC.learningCreate]: learningContentSchema,
+  [IPC.learningList]: listLearningRequestSchema,
+  [IPC.learningDismiss]: changeLearningRequestSchema,
+  [IPC.learningRemove]: changeLearningRequestSchema,
   [IPC.annotationsCreate]: createAnnotationRequestSchema,
   [IPC.annotationsList]: listAnnotationsRequestSchema,
   [IPC.annotationsPage]: listAnnotationsRequestSchema,
@@ -299,6 +305,11 @@ type IpcResults = {
   readonly [IPC.filesOpenDialog]: DocumentMetadata | null;
   readonly [IPC.filesOpenPending]: DocumentMetadata | null;
   readonly [IPC.readerRenderMermaid]: MermaidRenderResult;
+  readonly [IPC.learningSourceStatus]: LearningSourceStatus;
+  readonly [IPC.learningCreate]: LearningItem;
+  readonly [IPC.learningList]: readonly LearningItem[];
+  readonly [IPC.learningDismiss]: LearningItem | null;
+  readonly [IPC.learningRemove]: boolean;
   readonly [IPC.annotationsCreate]: Annotation;
   readonly [IPC.annotationsList]: readonly Annotation[];
   readonly [IPC.annotationsPage]: AnnotationPage;

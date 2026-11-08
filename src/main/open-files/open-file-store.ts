@@ -5,6 +5,7 @@ import { DocumentRepository } from '../db/repositories/document-repository';
 import { DocumentAssetRepository } from '../db/repositories/document-asset-repository';
 import { FolderRepository } from '../db/repositories/folder-repository';
 import { ReadingPositionRepository } from '../db/repositories/reading-position-repository';
+import { LearningRepository } from '../db/repositories/learning-repository';
 import { AnnotationRepository } from '../db/repositories/annotation-repository';
 import { SearchRepository } from '../db/repositories/search-repository';
 import { ChatRepository } from '../db/repositories/chat-repository';
@@ -26,6 +27,7 @@ import type { DocumentMetadata } from '@shared/types/document';
 export type DocumentServices = {
   readonly library: LibraryService;
   readonly annotations: AnnotationRepository;
+  readonly learning: LearningRepository;
   readonly search: SearchRepository;
   readonly chat: ChatService;
 };
@@ -92,6 +94,7 @@ export class OpenFileStore {
     this.services = {
       library,
       annotations: new AnnotationRepository(db),
+      learning: new LearningRepository(db),
       search: new SearchRepository(db),
       chat: new ChatService({
         chat: this.chatRepository,

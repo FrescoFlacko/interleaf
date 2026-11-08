@@ -73,6 +73,9 @@ change.
 - Highlights, highlight notes, location notes, bookmarks, five highlight
   colors, annotation filtering/search, and format-specific anchor recovery.
   Notes save as you type.
+- Source-linked learning items in the reader margin: primers, questions,
+  checkpoints, and prompts comparing two passages. Authoring them stays local
+  and does not send document text to an AI provider.
 - Current-document search and SQLite FTS5-backed indexing with source locations.
 - Persistent one-document chat sessions, explicit selection/location/page-range
   context, bounded retrieval, streamed responses, and validated citation jumps.

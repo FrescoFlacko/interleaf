@@ -7,6 +7,8 @@ import { PPTX_DOCUMENT_FORMAT_STATEMENTS } from './pptx-format-migration';
 import { AGENT_SESSION_TARGET_AUTHORITY_STATEMENTS, FILE_IDENTITY_BIRTH_TIME_STATEMENTS } from './agent-identity-migrations';
 import { CHAT_TITLE_OWNERSHIP_STATEMENTS } from './chat-title-ownership-migration';
 import { CHAT_REASONING_EFFORT_STATEMENTS } from './chat-reasoning-effort-migration';
+import { LEARNING_STATEMENTS } from './learning-migration';
+import { CHAT_CONTEXT_COMPACTION_STATEMENTS } from './chat-context-compaction-migration';
 /**
  * Forward-only schema migrations (docs/DATABASE.md §2), each run in BEGIN IMMEDIATE and
  * recorded in `schema_migrations` with a SHA-256 checksum that detects drift.
@@ -672,16 +674,7 @@ const DOCUMENT_ASSETS_STATEMENTS: readonly string[] = [
  * removes the item, must never be replayed at all. The snapshot row itself stays
  * for citation resolution and audit.
  */
-const CHAT_CONTEXT_COMPACTION_STATEMENTS: readonly string[] = [
-  `ALTER TABLE chat_sessions ADD COLUMN context_summary TEXT`,
-  `ALTER TABLE chat_sessions ADD COLUMN context_summary_updated_at TEXT`,
-  `ALTER TABLE chat_sessions ADD COLUMN compacted_through_ordinal INTEGER`,
-  `ALTER TABLE chat_message_sources ADD COLUMN attached_origin INTEGER NOT NULL DEFAULT 0`,
-  // Sources already stored against a surviving context item were attached ones.
-  // A source whose item was consumed by the old one-turn rule cannot be
-  // recovered here, and is left replayable exactly as it is today.
-  `UPDATE chat_message_sources SET attached_origin = 1 WHERE context_item_id IS NOT NULL`,
-];
+
 
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'initial_schema', statements: INITIAL_SCHEMA_STATEMENTS },
@@ -712,6 +705,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 26, name: 'file_identity_birth_time', statements: FILE_IDENTITY_BIRTH_TIME_STATEMENTS },
   { version: 27, name: 'chat_session_title_ownership', statements: CHAT_TITLE_OWNERSHIP_STATEMENTS },
   { version: 28, name: 'chat_session_reasoning_effort', statements: CHAT_REASONING_EFFORT_STATEMENTS },
+  { version: 29, name: 'learning_items', statements: LEARNING_STATEMENTS },
 ];
 
 /**

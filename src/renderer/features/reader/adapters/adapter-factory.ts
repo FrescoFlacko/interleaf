@@ -1,15 +1,14 @@
 import type { DocumentFormat } from '@shared/types/document';
 import type { DocumentAdapter } from '../types';
-import { EpubAdapter } from './epub-adapter';
-import { MobiAdapter } from './mobi-adapter';
+import { LearningEpubAdapter, LearningMobiAdapter } from './learning-ebook-adapters';
 import { PdfAdapter } from './pdf-adapter';
 import { DocxAdapter } from './docx-adapter';
 import { MarkdownAdapter } from './markdown-adapter';
 import { PptxAdapter } from './pptx-adapter';
 const ADAPTER_FACTORIES: Readonly<Record<DocumentFormat, () => DocumentAdapter>> = {
   pdf: () => new PdfAdapter(),
-  epub: () => new EpubAdapter(),
-  mobi: () => new MobiAdapter(),
+  epub: () => new LearningEpubAdapter(),
+  mobi: () => new LearningMobiAdapter(),
   docx: () => new DocxAdapter(),
   pptx: () => new PptxAdapter(),
   markdown: () => new MarkdownAdapter(),

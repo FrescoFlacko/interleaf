@@ -27,6 +27,7 @@ function services(name: string): DocumentServices {
     library: unstubbed<LibraryService>(`${name}.library`, {
       openDocument: vi.fn(() => Promise.resolve({ document: { id: name } } as never)),
     }),
+    learning: unstubbed(`${name}.learning`),
     annotations: unstubbed<AnnotationRepository>(`${name}.annotations`, { list: vi.fn(() => [name] as never) }),
     search: unstubbed(`${name}.search`),
     chat: unstubbed<ChatService>(`${name}.chat`, {

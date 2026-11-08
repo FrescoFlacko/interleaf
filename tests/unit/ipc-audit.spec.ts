@@ -78,7 +78,14 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         compactedThroughOrdinal: 3, isArchived: false,
         createdAt: '2026-09-12T00:00:00.000Z', updatedAt: '2026-09-12T00:00:00.000Z',
       };
+      const learningSource = { documentId: 'doc', documentHash: 'hash', anchor: { format: 'pdf', pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } } };
+      const learningItem = { id: 'item', content: { kind: 'question', title: 'Why?', body: 'Think', primary: learningSource }, provenance: { kind: 'manual' }, status: 'active', createdAt: 'now', updatedAt: 'now' };
       const replies = new Map<string, CloneableValue>([
+        [IPC.learningSourceStatus, { status: 'current', title: 'Book' }],
+        [IPC.learningCreate, learningItem],
+        [IPC.learningList, [learningItem]],
+        [IPC.learningDismiss, learningItem],
+        [IPC.learningRemove, true],
         [IPC.chatCreateSession, chatSession],
         [IPC.chatGetSession, chatSession],
         [IPC.chatListSessions, [chatSession]],
@@ -234,6 +241,13 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       await api.library.updateReadingPosition('doc', loc, 0.5); last(IPC.libraryUpdateReadingPosition, { documentId: 'doc', location: loc, progress: 0.5 });
       await api.library.getDocumentPreview('doc', null); last(IPC.libraryGetDocumentPreview, { documentId: 'doc', location: null });
       const anchor = { format: 'pdf' as const, pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } };
+      const source = { documentId: 'doc', documentHash: 'hash', anchor };
+      const learning = { kind: 'question' as const, title: 'Why?', body: 'Think', primary: source };
+      await api.learning.sourceStatus('doc', source); last(IPC.learningSourceStatus, { documentId: 'doc', source });
+      await api.learning.create(learning); last(IPC.learningCreate, learning);
+      await api.learning.list('doc'); last(IPC.learningList, { documentId: 'doc' });
+      await api.learning.dismiss('doc', 'item'); last(IPC.learningDismiss, { documentId: 'doc', id: 'item' });
+      await api.learning.remove('doc', 'item'); last(IPC.learningRemove, { documentId: 'doc', id: 'item' });
       const createAnno = { documentId: 'doc', type: 'highlight' as const, anchor }; await api.annotations.create(createAnno); last(IPC.annotationsCreate, createAnno);
       await api.annotations.list('doc', { type: 'highlight' }); last(IPC.annotationsList, { documentId: 'doc', filter: { type: 'highlight' } });
       await api.annotations.page('doc', { limit: 10 }); last(IPC.annotationsPage, { documentId: 'doc', filter: { limit: 10 } });
@@ -316,7 +330,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
     it('exposes only the declared namespace surface and no raw or generic bridge', () => {
       const { api } = setup();
       const exposed = new Set(Object.keys(api));
-      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
+      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'learning', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
       for (const key of ['ipcRenderer', 'require', 'process', 'invoke', 'send', 'on']) expect(exposed.has(key)).toBe(false);
       const expectedNamespaces: readonly (readonly [keyof InterleafAPI, readonly string[]])[] = [
         ['app', ['exportDebugLog', 'getInfo', 'onBeforeClose', 'openExternal']],
@@ -325,6 +339,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         // never writes onboarding state on a channel of its own.
         ['onboarding', ['getLaunchState']],
         ['library', ['closeDocument', 'createFolder', 'deleteDocument', 'deleteFolder', 'getContinueReading', 'getDocumentPreview', 'getFolderTree', 'getRecentlyAdded', 'getRecentlyRead', 'getSummary', 'importDroppedFiles', 'importWebArticle', 'listDocuments', 'listFolders', 'moveDocumentToFolder', 'onStorageHealthUpdated', 'openDocument', 'openFileDialog', 'renameFolder', 'updateReadingPosition']],
+        ['learning', ['create', 'dismiss', 'list', 'remove', 'sourceStatus']],
         ['annotations', ['create', 'delete', 'list', 'page', 'repairAnchor', 'update']],
         ['search', ['appendIndex', 'beginIndex', 'completeIndex', 'failIndex', 'getIndexState', 'resolveHit', 'searchDocument']],
         ['ai', ['configureOpenRouter', 'getProviderStatus', 'listOpenRouterModels', 'listProviders', 'signInWithChatGPT']],

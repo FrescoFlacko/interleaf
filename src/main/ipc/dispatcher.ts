@@ -21,6 +21,7 @@ import { openExternalFromDocument } from '../app/open-external';
 import { reconcileOnboardingLaunchState } from '../app/onboarding-launch-state';
 import type { SettingsRepository } from '../db/repositories/settings-repository';
 import type { LibraryService } from '../library/library-service';
+import type { LearningRepository } from '../db/repositories/learning-repository';
 import type { AnnotationRepository } from '../db/repositories/annotation-repository';
 import type { SearchRepository } from '../db/repositories/search-repository';
 import type { ChatService } from '../ai/chat-service';
@@ -74,6 +75,7 @@ export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
   readonly onboardingLaunchState: () => OnboardingLaunchState;
   readonly library: LibraryService;
   readonly annotations: AnnotationRepository;
+  readonly learning: LearningRepository;
   readonly search: SearchRepository;
   readonly chat: ChatService;
   readonly credentials: CredentialVault;
@@ -249,6 +251,11 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'files:open-pending': () => openPending(deps),
 
     // Phase 5 — Annotations & Highlights
+    'learning:source-status': (req) => servicesForDocument(deps, req.documentId).learning.sourceStatus(req.source),
+    'learning:create': (req) => servicesForDocument(deps, req.primary.documentId).learning.create(req),
+    'learning:list': (req) => servicesForDocument(deps, req.documentId).learning.list(req.documentId),
+    'learning:dismiss': (req) => servicesForDocument(deps, req.documentId).learning.dismiss(req.documentId, req.id),
+    'learning:remove': (req) => servicesForDocument(deps, req.documentId).learning.remove(req.documentId, req.id),
     'annotations:create': (req) => servicesForDocument(deps, req.documentId).annotations.create(req),
     'annotations:list': (req) => servicesForDocument(deps, req.documentId).annotations.list(req.documentId, req.filter),
     'annotations:page': (req) => servicesForDocument(deps, req.documentId).annotations.page(req.documentId, req.filter),

@@ -30,6 +30,7 @@ import { SettingsRepository } from './db/repositories/settings-repository';
 import { DocumentRepository } from './db/repositories/document-repository';
 import { FolderRepository } from './db/repositories/folder-repository';
 import { ReadingPositionRepository } from './db/repositories/reading-position-repository';
+import { LearningRepository } from './db/repositories/learning-repository';
 import { AnnotationRepository } from './db/repositories/annotation-repository';
 import { SearchRepository } from './db/repositories/search-repository';
 import { ChatRepository } from './db/repositories/chat-repository';
@@ -325,6 +326,7 @@ async function bootstrap(): Promise<void> {
   const folders = new FolderRepository(database);
   const readingPositions = new ReadingPositionRepository(database);
   const annotations = new AnnotationRepository(database);
+  const learning = new LearningRepository(database);
   const search = new SearchRepository(database);
   const chat = new ChatRepository(database);
   const agentRepository = new AgentRepository(database);
@@ -613,6 +615,7 @@ async function bootstrap(): Promise<void> {
     onboardingLaunchState: () => onboardingLaunchStateLatch.get(),
     library,
     annotations,
+    learning,
     search,
     chat: chatService,
     credentials,

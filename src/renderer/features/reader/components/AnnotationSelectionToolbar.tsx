@@ -15,6 +15,7 @@ import { createThenUpdateNote } from '../../../hooks/note-persistence';
 import { newNoteDraftKey } from '../../../hooks/note-drafts';
 import type { NotePersistResult } from '../../../hooks/note-autosave';
 import { bridge } from '../../../app/api-client';
+import { useLearningStore } from '../../../stores/use-learning-store';
 import { Button } from '../../../components/ui/button';
 import { selectionToolbarBounds, selectionToolbarPosition } from './selection-toolbar-position';
 import type { HighlightEditing } from '../annotations/use-highlight-edit';
@@ -449,6 +450,16 @@ export function AnnotationSelectionToolbar({ editing: reopened = null }: Annotat
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-1">
+          {!editing && selection.anchor && (
+            <Button variant="ghost" size="chip" onClick={() => {
+              if (!selection.anchor) return;
+              const source = { documentId: activeDocument.id, documentHash: activeDocument.fileHash, anchor: selection.anchor };
+              const learning = useLearningStore.getState();
+              if (learning.primary) learning.setSecondary(source);
+              else learning.start(source);
+              clear();
+            }}>Learning</Button>
+          )}
           <Button
             ref={noteButtonRef}
             variant="ghost"

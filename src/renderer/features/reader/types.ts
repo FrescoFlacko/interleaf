@@ -219,6 +219,9 @@ export type DocumentAdapter = {
   /** Re-resolve and paint persisted annotations after render/zoom/reflow. */
   setAnnotations(annotations: readonly Annotation[]): Promise<readonly AnnotationAnchorResolution[]>;
 
+  /** Refuse ebook fallback locations when validating a learning source. */
+  verifyLearningAnchor?(anchor: DocumentAnchor): boolean;
+
   /** Navigate to an annotation's exact anchor when possible. */
   goToAnnotation(annotation: Annotation): Promise<void>;
 
