@@ -21,6 +21,7 @@ type Row = {
 type ProposalContext = { readonly proposalId: string };
 export type ProposalAcceptHandlers = {
   readonly annotation: (input: Extract<AgentProposalInput, { kind: 'annotation' }>, context: ProposalContext) => string;
+  readonly verifyAccepted?: (proposal: Proposal) => boolean;
   readonly learning?: (input: Extract<AgentProposalInput, { kind: 'primer' | 'question' | 'checkpoint' | 'conflict' }>, context: ProposalContext) => string;
   readonly card?: (input: Extract<AgentProposalInput, { kind: 'card' }>, context: ProposalContext) => string;
 };
@@ -83,6 +84,11 @@ export class ProposalRepository {
       const proposal = map(row);
       if (proposal.status !== 'pending') {
         if (proposal.status !== (action === 'accept' ? 'accepted' : 'rejected')) throw new InterleafError('validation', 'Proposal has already been resolved.');
+        if (action === 'accept') {
+          this.validateSource(proposal.input.source);
+          if (proposal.input.kind === 'conflict') this.validateSource(proposal.input.secondSource);
+          if (this.handlers.verifyAccepted && !this.handlers.verifyAccepted(proposal)) throw new InterleafError('validation', 'The accepted item is no longer available.');
+        }
         db.exec('COMMIT');
         return proposal;
       }

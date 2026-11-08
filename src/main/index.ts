@@ -1,3 +1,4 @@
+import { agentSelectionDialogs } from './app/agent-selection-dialogs';
 import { indexedPracticeResolver, importedPracticeResolver, proposalIntegrationHandlers } from './agent-access/integration-adapters';
 import { ExternalHighlightRepository } from './db/repositories/external-highlight-repository';
 import { HighlightImportService } from './highlight-import/import-service';
@@ -359,6 +360,7 @@ async function bootstrap(): Promise<void> {
   const agentRepository = new AgentRepository(database);
   const customProfileRepository = new CustomAgentProfileRepository(database);
   const executableRegistry = new ExecutableRegistry();
+  const selectionDialogs = agentSelectionDialogs(dialog, () => lifecycleCoordinator.mainWindow, process.platform);
   // Main-owned protected application-data roots (docs/REMAINING_WORK.md item
   // A). An agent target that equals, contains, or lives inside any of these
   // would put the database, library, credentials, logs, or another session's
@@ -473,19 +475,7 @@ async function bootstrap(): Promise<void> {
     allowFakeAgent: allowTestDoubles,
     contextRoot: paths.agentContext,
     clipboard,
-    chooseDirectory: async () => {
-      const parent = lifecycleCoordinator.mainWindow;
-      const result = parent === null
-        ? await dialog.showOpenDialog({
-          properties: ['openDirectory', 'createDirectory'],
-          title: 'Select an agent working directory',
-        })
-        : await dialog.showOpenDialog(parent, {
-        properties: ['openDirectory', 'createDirectory'],
-        title: 'Select an agent working directory',
-      });
-      return result.canceled || result.filePaths.length === 0 ? null : (result.filePaths[0] ?? null);
-    },
+    chooseDirectory: selectionDialogs.chooseDirectory,
     log: createLogger('agent'),
     isPackaged: app.isPackaged,
     confirmDirectWorkspace: async ({ mode, riskLevel, canonicalTargetPath, profileName }) => {
@@ -508,21 +498,7 @@ async function bootstrap(): Promise<void> {
     },
     customProfiles: customProfileRepository,
     executableRegistry,
-    chooseExecutable: async () => {
-      const parent = lifecycleCoordinator.mainWindow;
-      const result = parent === null
-        ? await dialog.showOpenDialog({
-          properties: ['openFile'],
-          title: 'Select a custom agent executable',
-          ...(process.platform === 'win32' ? { filters: [{ name: 'Executable files', extensions: ['exe', 'com'] }] } : {}),
-        })
-        : await dialog.showOpenDialog(parent, {
-          properties: ['openFile'],
-          title: 'Select a custom agent executable',
-          ...(process.platform === 'win32' ? { filters: [{ name: 'Executable files', extensions: ['exe', 'com'] }] } : {}),
-        });
-      return result.canceled || result.filePaths.length === 0 ? null : (result.filePaths[0] ?? null);
-    },
+    chooseExecutable: selectionDialogs.chooseExecutable,
     confirmUnsafeCustomProfile: async (profileName) => {
       const message = `The custom agent profile “${profileName}” is marked unsafe. It may bypass the CLI's normal permission controls. Continue?`;
       const parent = lifecycleCoordinator.mainWindow;
@@ -704,7 +680,7 @@ async function bootstrap(): Promise<void> {
   const deliverFileCommand = (command: FileCommand): void => {
     sendFileCommand(() => lifecycleCoordinator.ensureMainWindow(), command);
   };
-  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, acceptHandlers: proposalIntegrationHandlers(learning, practice), onAccepted: (source) => { lifecycleCoordinator.mainWindow?.webContents.send(IPC_EVENTS.learningAccepted, source); }, parent: () => lifecycleCoordinator.mainWindow, openSource: (source) => { passageRequests.enqueueSource(source); lifecycleCoordinator.handleActivate(); } });
+  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, acceptHandlers: proposalIntegrationHandlers(database, learning, practice), onAccepted: (source) => { lifecycleCoordinator.mainWindow?.webContents.send(IPC_EVENTS.learningAccepted, source); }, parent: () => lifecycleCoordinator.mainWindow, openSource: (source) => { passageRequests.enqueueSource(source); lifecycleCoordinator.handleActivate(); } });
   await agentAccess.start();
   installAppMenu(Menu, process.platform, {
     openFile: () => { deliverFileCommand('open-dialog'); },

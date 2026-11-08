@@ -43,7 +43,7 @@ describe('combined learning source contracts', () => {
       const learning = new LearningRepository(db);
       const external = new ExternalHighlightRepository(db);
       const practice = new PracticeRepository(db, importedPracticeResolver(external), undefined, indexedPracticeResolver(db));
-      const handlers = proposalIntegrationHandlers(learning, practice);
+      const handlers = proposalIntegrationHandlers(db, learning, practice);
       const proposals = new ProposalRepository(db, { annotation: () => 'unused', ...handlers });
       const conflict = proposals.submit({ kind: 'conflict', source: one, secondSource: two, text: 'Compare.' });
       const accepted = proposals.resolve(conflict.id, 'accept');
@@ -59,6 +59,30 @@ describe('combined learning source contracts', () => {
       expect(() => proposals.resolve(stale.id, 'accept')).toThrow();
       expect(proposals.list().map((entry) => entry.id)).toContain(stale.id);
       expect(learning.list('one')).toHaveLength(1);
+    } finally { db.close(); }
+  });
+  it('rolls back domain creation on failure and rejects removed-artifact replay', () => {
+    const db = InterleafDatabase.open(':memory:'); runMigrations(db);
+    try {
+      const source = fixture(db, 'one', 'Alpha passage');
+      const learning = new LearningRepository(db);
+      const external = new ExternalHighlightRepository(db);
+      const practice = new PracticeRepository(db, importedPracticeResolver(external), undefined, indexedPracticeResolver(db));
+      const handlers = proposalIntegrationHandlers(db, learning, practice);
+      const failing = new ProposalRepository(db, { annotation: () => 'unused', ...handlers, learning: (input, context) => {
+        if (!handlers.learning) throw new Error('Missing handler');
+        handlers.learning(input, context);
+        throw new Error('After creation');
+      } });
+      const pending = failing.submit({ kind: 'question', source, text: 'Why?' });
+      expect(() => failing.resolve(pending.id, 'accept')).toThrow('After creation');
+      expect(learning.list('one')).toEqual([]);
+      expect(failing.list().map((item) => item.id)).toContain(pending.id);
+      const normal = new ProposalRepository(db, { annotation: () => 'unused', ...handlers });
+      const accepted = normal.resolve(pending.id, 'accept');
+      expect(learning.remove('one', accepted.resultId!)).toBe(true);
+      expect(() => normal.resolve(pending.id, 'accept')).toThrow(/no longer available/);
+      expect(learning.list('one')).toEqual([]);
     } finally { db.close(); }
   });
   it('turns retained imported quotes into export-only practice evidence', () => {

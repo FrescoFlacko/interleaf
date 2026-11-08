@@ -21,7 +21,7 @@ type Dependencies = {
   readonly clipboard: Pick<Clipboard, 'writeText'>;
   readonly parent: () => BrowserWindow | null;
   readonly openSource: (source: AgentSource) => void;
-  readonly acceptHandlers?: Pick<ProposalAcceptHandlers, 'learning' | 'card'>;
+  readonly acceptHandlers?: Pick<ProposalAcceptHandlers, 'learning' | 'card' | 'verifyAccepted'>;
   readonly onAccepted?: (source: { readonly documentId: string; readonly documentHash: string }) => void;
 };
 
@@ -131,7 +131,10 @@ export class AgentAccessController {
       if (choice !== rejectChoice && (!canAccept || choice !== rejectChoice + 1)) return;
       try {
         const result = this.proposals.resolve(proposal.id, choice === rejectChoice ? 'reject' : 'accept');
-        if (result.status === 'accepted') this.deps.onAccepted?.({ documentId: input.source.documentId, documentHash: input.source.documentHash });
+        if (result.status === 'accepted') {
+          try { this.deps.onAccepted?.({ documentId: input.source.documentId, documentHash: input.source.documentHash }); }
+          catch { /* The transaction succeeded; a closed renderer does not undo it. */ }
+        }
       }
       catch { await this.show({ type: 'warning', title: 'Suggestion not accepted', message: 'The source changed or this suggestion type is not available yet. It remains pending.' }); }
     }
