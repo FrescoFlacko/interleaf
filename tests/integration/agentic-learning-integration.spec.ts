@@ -138,6 +138,9 @@ describe('combined learning source contracts', () => {
       const practice = new PracticeRepository(db, importedPracticeResolver(external), undefined, indexedPracticeResolver(db));
       const card = practice.createFromImported({ importedHighlightId: record.id, question: 'What?' });
       expect(card).toMatchObject({ source: { kind: 'imported' }, sourceState: 'available', navigation: { annotationId: annotation.id, documentHash: 'hash-one', anchor: source.anchor } });
+      db.raw.prepare('UPDATE document_index_state SET published_total_chunks = ? WHERE document_id = ?').run(2, 'one');
+      expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
+      db.raw.prepare('UPDATE document_index_state SET published_total_chunks = ? WHERE document_id = ?').run(1, 'one');
       db.raw.prepare('UPDATE document_index_state SET published_document_hash = ? WHERE document_id = ?').run('stale', 'one');
       expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
       expect(practice.get(card.id)).toMatchObject({ sourceState: 'export-only', navigation: null, evidence: 'Exact native quote' });

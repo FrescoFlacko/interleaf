@@ -13,13 +13,15 @@ type SourceRow = { document_id: string | null; quote: string; verified_annotatio
 /** The existing highlight and the published index are separate pieces of evidence. */
 function nativeSource(db: DatabaseSync, row: SourceRow, annotationId: string, chunkId: string): Native | null {
   if (!row.document_id) return null;
-  const doc = db.prepare(`SELECT d.file_hash, d.format FROM documents d JOIN document_index_state s ON s.document_id = d.id
-    WHERE d.id = ? AND s.published_document_hash = d.file_hash`).get(row.document_id) as { file_hash: string; format: string } | undefined;
+  const doc = db.prepare(`SELECT d.file_hash, d.format, s.published_total_chunks FROM documents d JOIN document_index_state s ON s.document_id = d.id
+    WHERE d.id = ? AND s.published_document_hash = d.file_hash`).get(row.document_id) as { file_hash: string; format: string; published_total_chunks: number } | undefined;
   const annotation = db.prepare(`SELECT id, anchor_json, document_hash, selected_text, status FROM annotations
     WHERE id = ? AND document_id = ? AND type = 'highlight'`).get(annotationId, row.document_id) as Annotation | undefined;
   const chunk = db.prepare('SELECT id, text, location_json FROM document_text_chunks WHERE document_id = ? AND id = ?')
     .get(row.document_id, chunkId) as Chunk | undefined;
   if (!doc || !annotation || !chunk || annotation.status !== 'anchored' || annotation.document_hash !== doc.file_hash || annotation.selected_text !== row.quote) return null;
+  const count = db.prepare('SELECT COUNT(*) AS count FROM document_text_chunks WHERE document_id = ?').get(row.document_id) as { count: number };
+  if (count.count !== doc.published_total_chunks) return null;
   try {
     const anchor = documentAnchorSchema.parse(parsePortableJson(annotation.anchor_json));
     if (anchor.format !== doc.format || anchor.quote.exact !== row.quote) return null;
