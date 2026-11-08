@@ -2,28 +2,44 @@ import type { PdfAnnotationAnchor } from '@shared/types/annotation';
 import { resolvePdfAnnotationAnchor } from './adapters/pdf-annotation-anchor';
 import { rangeFromOffsets } from './annotations/dom-anchors';
 import { positionLearningRange } from './learning-range-position';
+import { TEXT_ANCHOR_LIMITS } from './annotations/text-anchor-resolver';
 
-/** Confirm and position the live PDF text range; a rectangle alone is not proof. */
+// Slow devices may need several seconds to render a page; this is a limit, not a delay.
+const RENDER_DEADLINE_MS = 10_000;
+
+/** Wait for the adapter's committed text render and prove a live, visible range. */
 export async function confirmPdfLearningRange(anchor: PdfAnnotationAnchor, isCurrent: () => boolean): Promise<boolean> {
-  const layer = await waitForPdfTextLayer(anchor.pageIndex, isCurrent);
-  const scroller = document.querySelector<HTMLElement>('[data-testid="pdf-scroll-container"]');
-  if (!isCurrent() || !layer || !scroller) return false;
-  const resolution = await resolvePdfAnnotationAnchor(layer.textContent, anchor.quote, {
-    ...(anchor.textStart !== undefined && anchor.textEnd !== undefined
-      ? { nativeRange: { start: anchor.textStart, end: anchor.textEnd }, priorOffset: anchor.textStart }
-      : {}),
-  });
-  if (!isCurrent() || !resolution || resolution.stage === 'fuzzy') return false;
-  const range = rangeFromOffsets(layer, resolution);
-  return !!range && positionLearningRange(range, scroller, isCurrent);
+  const deadline = performance.now() + RENDER_DEADLINE_MS;
+  while (isCurrent() && performance.now() < deadline) {
+    const scroller = document.querySelector<HTMLElement>('[data-testid="pdf-scroll-container"]');
+    const layer = scroller?.querySelector<HTMLElement>(`[data-testid="pdf-textlayer-p${String(anchor.pageIndex + 1)}"][data-pdf-text-ready="true"]`);
+    const overlay = document.querySelector('[data-testid="reader-error"]');
+    if (scroller && layer && !overlay) {
+      const text = layer.textContent;
+      if (text.length > TEXT_ANCHOR_LIMITS.maxExactSearchChars) return false;
+      const resolution = await resolvePdfAnnotationAnchor(text, anchor.quote, {
+        ...(anchor.textStart !== undefined && anchor.textEnd !== undefined
+          ? { nativeRange: { start: anchor.textStart, end: anchor.textEnd }, priorOffset: anchor.textStart }
+          : {}),
+      });
+      if (!isCurrent()) return false;
+      if (!layer.isConnected || !scroller.contains(layer) || layer.textContent !== text || document.querySelector('[data-testid="reader-error"]')) continue;
+      if (!resolution || resolution.stage === 'fuzzy') return false;
+      const range = rangeFromOffsets(layer, resolution);
+      const matched = text.slice(resolution.start, resolution.end);
+      if (!range || !matched || range.toString() !== matched) return false;
+      if (positionLearningRange(range, scroller, isCurrent)) return isCurrent();
+    }
+    await nextFrame(deadline);
+  }
+  return false;
 }
 
-/** Virtualized PDF pages can mount their text layer after the page transition. */
-async function waitForPdfTextLayer(pageIndex: number, isCurrent: () => boolean): Promise<HTMLElement | null> {
-  for (let attempt = 0; attempt < 200 && isCurrent(); attempt++) {
-    const layer = document.querySelector<HTMLElement>(`[data-testid="pdf-textlayer-p${String(pageIndex + 1)}"]`);
-    if (layer) return layer;
-    await new Promise<void>((resolve) => { window.setTimeout(resolve, 10); });
-  }
-  return null;
+/** A deadline also completes when animation frames are suspended in a hidden window. */
+function nextFrame(deadline: number): Promise<void> {
+  return new Promise((resolve) => {
+    const finish = (): void => { window.cancelAnimationFrame(frame); window.clearTimeout(timer); resolve(); };
+    const frame = window.requestAnimationFrame(finish);
+    const timer = window.setTimeout(finish, Math.max(0, deadline - performance.now()));
+  });
 }
