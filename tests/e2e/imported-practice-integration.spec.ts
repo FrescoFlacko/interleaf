@@ -15,6 +15,7 @@ test('retained unmatched export creates a due card with honest source evidence',
   const app = await launchInterleaf({ binDir: claude.binDir, userDataDir: profile });
   try {
     await stubOpenDialog(app, [file]);
+    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await captureWindowPng(app, join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'library-actions.png'));
     await app.window.getByRole('button', { name: 'Imported highlights' }).click();
     await app.window.getByRole('button', { name: 'Choose export…' }).click();
     await expect(app.window.getByText('Preview: Kindle')).toBeVisible();

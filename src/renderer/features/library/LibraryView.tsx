@@ -118,9 +118,6 @@ export function LibraryView() {
             import split button is deliberately outside it: its menu must
             layer over the library, which a scroll container clips. */}
         <LibraryHeaderControls />
-        <PracticeEntry />
-
-        <ImportedHighlights />
 
         {/* Import Menu. Outside the scrolling strip so the split button keeps
             its place at the end of the row at every width, and so its menu
@@ -137,6 +134,11 @@ export function LibraryView() {
           />
         </div>
       </header>
+
+      <div className="flex shrink-0 items-center gap-4 border-b border-border-subtle bg-bg-primary px-4 py-1 text-xs">
+        <PracticeEntry />
+        <ImportedHighlights />
+      </div>
 
       {/* Alert Notifications */}
       {readerError && (

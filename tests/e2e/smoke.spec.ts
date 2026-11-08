@@ -58,14 +58,18 @@ test('launches with the Interleaf title and a narrow typed bridge', async () => 
     'chat',
     'clipboard',
     'credentials',
+    'diagnostics',
     // Opening a file without importing it: a dialog request, the pending
     // launch files, and a menu-command subscription, each over a fixed channel.
     'files',
+    'importedHighlights',
+    'learning',
     'library',
     // Guided onboarding reads one latched launch verdict — booleans and one
     // enum member — over a schema-validated call. It is listed here because the
     // exhaustive list is the point: a namespace appears only by being reviewed.
     'onboarding',
+    'practice',
     // The reader namespace carries exactly one reviewed call: the fenced
     // `mermaid` render request (`docs/ARCHITECTURE.md` §7, `docs/SECURITY.md`).
     // Its reply is re-parsed against the shared schema at the bridge, so the
@@ -104,7 +108,7 @@ test('app:get-info returns validated runtime info over the typed IPC', async () 
   });
   expect(info.name).toBe('Interleaf');
   expect(info.tagline).toBe('Read. Think. Build.');
-  expect(info.platform).toBe('darwin');
+  expect(info.platform).toBe(process.platform);
   expect(parseFloat(info.versions.electron)).toBeGreaterThanOrEqual(43);
 });
 
