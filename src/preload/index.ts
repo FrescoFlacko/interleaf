@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { z } from 'zod';
 import { IPC, IPC_EVENTS, type IpcChannel } from '@shared/constants/ipc';
 import type { IpcContracts, IpcResultEnvelope } from '@shared/schemas/ipc';
+import { learningItemSchema, learningSourceStatusSchema } from '@shared/schemas/learning';
 import { openRouterCredentialStatusSchema } from '@shared/schemas/credential-preview';
 import type {
   ImportFileError,
@@ -330,6 +331,13 @@ export function createInterleafApi(
     commit: (input) => invoke(IPC.importedHighlightsCommit, input),
     list: (offset) => invoke(IPC.importedHighlightsList, { offset }),
     associate: (id, documentId) => invoke(IPC.importedHighlightsAssociate, { id, documentId }),
+  },
+  learning: {
+    sourceStatus: (documentId, source) => invokeValidated(IPC.learningSourceStatus, { documentId, source }, learningSourceStatusSchema, 'Invalid source status.'),
+    create: (input) => invokeValidated(IPC.learningCreate, input, learningItemSchema, 'Invalid learning item.'),
+    list: (documentId) => invokeValidated(IPC.learningList, { documentId }, z.array(learningItemSchema).max(250), 'Invalid learning items.'),
+    dismiss: (documentId, id) => invokeValidated(IPC.learningDismiss, { documentId, id }, learningItemSchema.nullable(), 'Invalid learning item.'),
+    remove: (documentId, id) => invoke(IPC.learningRemove, { documentId, id }),
   },
   annotations: {
     create: (input) => invoke(IPC.annotationsCreate, input),

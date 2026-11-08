@@ -71,6 +71,11 @@ export const IPC = {
   importedHighlightsAssociate: 'imported-highlights:associate',
 
   // Phase 5 — Annotations & Highlights
+  learningSourceStatus: 'learning:source-status',
+  learningCreate: 'learning:create',
+  learningList: 'learning:list',
+  learningDismiss: 'learning:dismiss',
+  learningRemove: 'learning:remove',
   annotationsCreate: 'annotations:create',
   annotationsList: 'annotations:list',
   annotationsPage: 'annotations:page',

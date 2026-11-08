@@ -8,6 +8,7 @@ import { StorageManager } from '../../src/main/library/storage-manager';
 import { DocumentRepository } from '../../src/main/db/repositories/document-repository';
 import { FolderRepository } from '../../src/main/db/repositories/folder-repository';
 import { ReadingPositionRepository } from '../../src/main/db/repositories/reading-position-repository';
+import { LearningRepository } from '../../src/main/db/repositories/learning-repository';
 import { AnnotationRepository } from '../../src/main/db/repositories/annotation-repository';
 import { SearchRepository } from '../../src/main/db/repositories/search-repository';
 import { ChatRepository } from '../../src/main/db/repositories/chat-repository';
@@ -171,6 +172,7 @@ describe('opening files without adding them to the library', () => {
   let deps: {
     library: LibraryService;
     annotations: AnnotationRepository;
+    learning: LearningRepository;
     search: SearchRepository;
     chat: ChatService;
     openFiles: OpenFileManager;
@@ -219,6 +221,7 @@ describe('opening files without adding them to the library', () => {
     deps = {
       library,
       annotations: new AnnotationRepository(libraryDb),
+      learning: new LearningRepository(libraryDb),
       search: new SearchRepository(libraryDb),
       chat: new ChatService({
         resolveOpenRouterModelId: () => Promise.resolve(null),

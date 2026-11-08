@@ -1,6 +1,7 @@
 import type { ImportCommitInput } from '../schemas/imported-highlight';
 import type { ImportPreview, ImportResult, ImportedHighlight } from './imported-highlight';
 import type { AppInfo } from '../schemas/ipc';
+import type { LearningContent, LearningItem, LearningSource, LearningSourceStatus } from '../schemas/learning';
 import type { AppSettings } from '../schemas/settings';
 import type { DebugLogExportResult } from '../schemas/ipc';
 import type {
@@ -166,6 +167,13 @@ export type InterleafAPI = {
     commit(input: ImportCommitInput): Promise<ImportResult>;
     list(offset: number): Promise<readonly ImportedHighlight[]>;
     associate(id: string, documentId: string | null): Promise<ImportedHighlight | null>;
+  },
+  readonly learning: {
+    sourceStatus(documentId: string, source: LearningSource): Promise<LearningSourceStatus>;
+    create(input: LearningContent): Promise<LearningItem>;
+    list(documentId: string): Promise<readonly LearningItem[]>;
+    dismiss(documentId: string, id: string): Promise<LearningItem | null>;
+    remove(documentId: string, id: string): Promise<boolean>;
   };
   readonly annotations: {
     create(input: CreateAnnotationInput): Promise<Annotation>;

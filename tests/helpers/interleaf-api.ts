@@ -170,6 +170,14 @@ const agent: InterleafAPI['agent'] = {
   onEvent: () => noSubscription(),
 };
 
+const learning: InterleafAPI['learning'] = {
+  sourceStatus: () => unstubbed('learning.sourceStatus'),
+  create: () => unstubbed('learning.create'),
+  list: () => Promise.resolve([]),
+  dismiss: () => unstubbed('learning.dismiss'),
+  remove: () => unstubbed('learning.remove'),
+};
+
 const clipboard: InterleafAPI['clipboard'] = {
   writeText: () => unstubbed('clipboard.writeText'),
 };
@@ -202,6 +210,7 @@ function buildApi(overrides: BridgeStubs): InterleafAPI {
     reader: { ...reader, ...overrides.reader },
     importedHighlights: { preview: () => Promise.resolve(null), release: () => Promise.resolve(), commit: () => Promise.resolve({ inserted: 0, duplicates: 0 }), list: () => Promise.resolve([]), associate: () => Promise.resolve(null), ...overrides.importedHighlights },
     annotations: { ...annotations, ...overrides.annotations },
+    learning: { ...learning, ...overrides.learning },
     search: { ...search, ...overrides.search },
     ai: { ...ai, ...overrides.ai },
     credentials: { ...credentials, ...overrides.credentials },

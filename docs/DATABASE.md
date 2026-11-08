@@ -391,3 +391,18 @@ CREATE TABLE IF NOT EXISTS settings (
 - `agent_sessions.environment_json`, `environment_workspace_path`, and `environment_updated_at` remain idempotent compatibility columns added by `AgentRepository.ensureEnvironmentColumns()` for older fixtures. The persisted `environment_lifecycle` field is owned by forward migration v13 and remains nullable for legacy rows.
 - Migration coverage is exercised by `tests/integration/database.spec.ts` (including the v9-to-v10 chat upgrade and v12-to-v13 agent session upgrade), `tests/unit/custom-agent-profile.spec.ts`, and `tests/unit/agent-session-effective-resume.spec.ts`.
 - `chat_context_items` is an immutable historical snapshot: excerpt text/hash, document revision hash, normalized anchor, and provenance metadata are captured transactionally when attached. Re-indexing or replacing a document never rewrites an old conversation's context rows.
+
+### Learning items (migration 29)
+
+The additive `learning_items` table stores source-linked learning content and
+its lifecycle separately from highlights, notes and bookmarks. The JSON is
+validated as `learningContentSchema` on write and read. `document_id` is the
+primary document; conflict content also retains the secondary document ID,
+revision and native anchor, including when the secondary document is removed.
+A unique proposal ID records external provenance; removed rows retain their ID
+as tombstones so replay cannot recreate them. Removal clears the stored content;
+a SHA-256 fingerprint remains only to detect reuse of the ID with different data. The main-owned synchronous
+`LearningRepository.acceptProposal` can join the inbox's transaction without
+starting its own. Migration numbers on separately developed branches must be
+reconciled in one final ordered chain before integration; applied checksums are
+never edited.

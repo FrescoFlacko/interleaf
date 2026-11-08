@@ -573,3 +573,27 @@ If a follow-up materially changes scope, the agent identifies the new boundary a
 ```
 
 All stores update asynchronously in response to typed IPC events pushed from the main process, ensuring the UI is never frozen by background file operations or AI streaming.
+
+### Learning proposal integration
+
+`LearningRepository.acceptProposal(proposalId, content)` is a synchronous,
+main-only integration seam for locally approved external proposals. The inbox
+owns admission and approval; it must validate/translate its bounded proposal
+payload to `learningContentSchema` and call this method inside the same SQLite
+transaction that marks its proposal accepted. The method does not begin or
+commit a transaction. Repeated IDs with identical content return the existing
+item (or `null` if the reader removed it); a reused ID with different content
+fails. No proposal inbox or external write channel is provided by this feature.
+The primary and, for a conflict, secondary source each carry a document ID,
+revision hash and native `DocumentAnchor`. The repository checks document
+identity, revision and anchor format in main. After acceptance the inbox should call the renderer learning store's `load`
+for the primary document (or deliver an equivalent invalidation) so an open
+reader refreshes. The reader checks the source again before navigation, and treats missing, changed or unresolved sources as
+unavailable. The shared renderer helper `navigateLearningSource(adapter, source, isCurrent)`
+requires a live session/request predicate; omitting it fails closed. The mounted
+adapter's `navigateLearningAnchor` returns success only after positioning and
+checking the exact live text range in the reader viewport. It preserves the PDF
+text-layer proof and rejects stored-rectangle fallback; ebook targets also use
+their native capability checks. Integrations must use this single guarded path,
+not copy a weaker page-only helper. Learning text is inert and no provider is
+called by this feature.

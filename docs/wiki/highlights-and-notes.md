@@ -10,6 +10,7 @@ is never modified.
 
 - [Importing highlights](#importing-highlights)
 - [Highlighting a passage](#highlighting-a-passage)
+- [Learning in the margin](#learning-in-the-margin)
 - [Notes](#notes)
 - [Bookmarks](#bookmarks)
 - [The Annotations browser](#the-annotations-browser)
@@ -64,6 +65,7 @@ The same toolbar also offers:
 
 | Button | What it does |
 | --- | --- |
+| **Learning** | Start a learning item from the selected passage (see below). |
 | **Add note** | Attaches a note to the selected passage (see below). |
 | **Copy** | Copies the selected text to the clipboard. |
 | **Ask AI** | Sends the selection to the AI Chat panel as context. See [AI Chat](ai-chat.md). |
@@ -71,6 +73,29 @@ The same toolbar also offers:
 | × | Closes the toolbar. `Esc` does the same. |
 
 ---
+
+## Learning in the margin
+
+Select a passage and choose **Learning** in the selection toolbar. Give the
+item a title and text, choose **Chapter primer**, **Passage question**,
+**Section checkpoint**, or **Conflict prompt**, and choose **Save**. A conflict
+prompt needs a second passage: leave the draft open, select the other passage
+(in this document or another library document), and choose **Learning** again.
+The source quotes appear in the margin; the text you enter is displayed as text,
+not interpreted as instructions. Authoring and saving do not send document
+content to an AI provider. Each source anchor is limited to 32,000 serialized
+characters, and a document can hold up to 250 active or dismissed learning
+items; remove an item to make room.
+
+The margin shows items near the current passage. **Show all learning** lists the
+current document's items; **Show nearby** returns to the reading region. Use
+**Open source** or **Open other source** to return to a passage. If a document
+is missing or changed, or a passage cannot be resolved, Interleaf reports that
+instead of guessing a destination. **Dismiss** keeps an item marked dismissed;
+**Remove** removes it from the margin. Highlights and notes remain separate.
+Like annotations, items for a file opened without importing are temporary and
+are discarded when that file is closed. Import a document into the library to
+keep its learning items.
 
 ## Notes
 

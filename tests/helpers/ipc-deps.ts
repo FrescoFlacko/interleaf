@@ -43,6 +43,7 @@ export function makeIpcDeps(overrides: Partial<IpcDispatcherDeps> = {}): IpcDisp
     library: unstubbed('library'),
     annotations: unstubbed('annotations'),
     highlightImport: unstubbed('highlightImport'),
+    learning: unstubbed('learning'),
     search: unstubbed('search'),
     chat: unstubbed('chat'),
     credentials: unstubbed('credentials'),

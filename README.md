@@ -75,6 +75,9 @@ change.
   Notes save as you type. Kindle My Clippings and Readwise Highlights CSV exports
   can be previewed and imported as separate source material; provider locations
   are not verified document anchors.
+- Source-linked learning items in the reader margin: primers, questions,
+  checkpoints, and prompts comparing two passages. Authoring them stays local
+  and does not send document text to an AI provider.
 - Current-document search and SQLite FTS5-backed indexing with source locations.
 - Persistent one-document chat sessions, explicit selection/location/page-range
   context, bounded retrieval, streamed responses, and validated citation jumps.
