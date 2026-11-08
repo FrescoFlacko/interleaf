@@ -23,6 +23,7 @@ export function LearningMargin() {
   const { items, primary, secondary, error, load, create, dismiss, remove, clearDraft,
     pending, setPending, message, setMessage, kind, setKind, title, setTitle, body, setBody } = useLearningStore();
   const titleRef = useRef<HTMLInputElement>(null);
+  const followSequence = useRef(0);
   const [showAll, setShowAll] = useState(false);
   const documentId = session?.document.id ?? null;
   useEffect(() => { if (documentId) void load(documentId); }, [documentId, load]);
@@ -30,31 +31,34 @@ export function LearningMargin() {
   useEffect(() => {
     if (!pending || !session || pageCount <= 0 || pending.documentId !== session.document.id) return;
     let cancelled = false;
+    const isCurrent = (): boolean => !cancelled && useReaderStore.getState().session === session && useLearningStore.getState().pending === pending;
     const resolve = async (): Promise<void> => {
       if (pending.documentHash !== session.document.fileHash) {
-        if (!cancelled) { setMessage('This source has changed; its passage cannot be opened.'); setPending(null); }
+        if (isCurrent()) { setMessage('This source has changed; its passage cannot be opened.'); setPending(null); }
         return;
       }
       try {
-        const found = await navigateLearningSource(session.adapter, pending);
-        if (!cancelled) {
+        const found = await navigateLearningSource(session.adapter, pending, isCurrent);
+        if (isCurrent()) {
           setMessage(found ? 'Source opened.' : 'This passage could not be resolved.');
           setPending(null);
           if (found) focusReader();
         }
       } catch {
-        if (!cancelled) { setMessage('This passage could not be resolved.'); setPending(null); }
+        if (isCurrent()) { setMessage('This passage could not be resolved.'); setPending(null); }
       }
     };
     void resolve();
     return () => { cancelled = true; };
   }, [pending, session, pageCount, setMessage, setPending]);
   const follow = (source: LearningSource): void => {
-    if (!documentId) return;
+    if (!documentId || !session) return;
+    const request = ++followSequence.current;
     setMessage('');
     void (async () => {
       try {
         const status = await bridge.learning.sourceStatus(documentId, source);
+        if (followSequence.current !== request || useReaderStore.getState().session !== session) return;
         if (status.status !== 'current') {
           setMessage(status.status === 'missing' ? 'The source document is unavailable.' : 'The source document has changed.');
           return;
@@ -62,13 +66,14 @@ export function LearningMargin() {
         setPending(source);
         if (source.documentId !== documentId) {
           await openDocument(source.documentId);
-          if (useReaderStore.getState().session?.document.id !== source.documentId) {
+          if (useReaderStore.getState().failedDocumentId === source.documentId && useLearningStore.getState().pending === source) {
             setPending(null);
-            await openDocument(documentId);
             setMessage('The source document is unavailable.');
           }
         }
-      } catch { setMessage('The source document is unavailable.'); }
+      } catch {
+        if (followSequence.current === request && useReaderStore.getState().session === session) setMessage('The source document is unavailable.');
+      }
     })();
   };
   if ((!session || items.length === 0) && !primary && !pending && !message) return null;

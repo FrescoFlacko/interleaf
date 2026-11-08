@@ -5,6 +5,7 @@ import { PdfAdapter } from './pdf-adapter';
 import { DocxAdapter } from './docx-adapter';
 import { MarkdownAdapter } from './markdown-adapter';
 import { PptxAdapter } from './pptx-adapter';
+import { withLearningNavigation } from '../learning-mounted-navigation';
 const ADAPTER_FACTORIES: Readonly<Record<DocumentFormat, () => DocumentAdapter>> = {
   pdf: () => new PdfAdapter(),
   epub: () => new LearningEpubAdapter(),
@@ -16,5 +17,5 @@ const ADAPTER_FACTORIES: Readonly<Record<DocumentFormat, () => DocumentAdapter>>
 
 export function createDocumentAdapter(format: DocumentFormat): DocumentAdapter {
   if (!Object.hasOwn(ADAPTER_FACTORIES, format)) throw new Error(`Unsupported document format: ${format}`);
-  return ADAPTER_FACTORIES[format]();
+  return withLearningNavigation(ADAPTER_FACTORIES[format]());
 }

@@ -589,4 +589,11 @@ revision hash and native `DocumentAnchor`. The repository checks document
 identity, revision and anchor format in main. After acceptance the inbox should call the renderer learning store's `load`
 for the primary document (or deliver an equivalent invalidation) so an open
 reader refreshes. The reader checks the source again before navigation, and treats missing, changed or unresolved sources as
-unavailable. Learning text is inert and no provider is called by this feature.
+unavailable. The shared renderer helper `navigateLearningSource(adapter, source, isCurrent)`
+requires a live session/request predicate; omitting it fails closed. The mounted
+adapter's `navigateLearningAnchor` returns success only after positioning and
+checking the exact live text range in the reader viewport. It preserves the PDF
+text-layer proof and rejects stored-rectangle fallback; ebook targets also use
+their native capability checks. Integrations must use this single guarded path,
+not copy a weaker page-only helper. Learning text is inert and no provider is
+called by this feature.
