@@ -219,6 +219,9 @@ export type DocumentAdapter = {
   /** Re-resolve and paint persisted annotations after render/zoom/reflow. */
   setAnnotations(annotations: readonly Annotation[]): Promise<readonly AnnotationAnchorResolution[]>;
 
+  /** Position a verified source range in the mounted reader, returning true only when visible. */
+  navigateLearningAnchor?(anchor: DocumentAnchor, isCurrent: () => boolean): Promise<boolean>;
+
   /** Refuse ebook fallback coordinates during source navigation. */
   verifyLearningAnchor?(anchor: import('@shared/types/annotation').DocumentAnchor): boolean;
 
