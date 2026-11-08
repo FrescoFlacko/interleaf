@@ -115,6 +115,8 @@ export class PracticeRepository {
       if (annotation.document_hash !== source.documentHash) return 'changed';
       if (annotation.status !== 'anchored') return 'unanchored';
       if (annotation.selected_text !== source.anchor.quote.exact || !samePassageAnchor(annotation.anchor_json, source.anchor)) return 'changed';
+    } else if (!source.chunkId || !this.resolvePassage(source, source.chunkId)) {
+      return 'changed';
     }
     return 'available';
   }
