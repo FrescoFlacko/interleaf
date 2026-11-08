@@ -87,7 +87,7 @@ export function ReaderView() {
 
   useEffect(() => bridge.learning.onAccepted((source) => {
     const current = useReaderStore.getState().session;
-    if (!current || current.document.id !== source.documentId || current.document.fileHash !== source.documentHash) return;
+    if (current?.document.id !== source.documentId || current.document.fileHash !== source.documentHash) return;
     void useLearningStore.getState().load(source.documentId, () => useReaderStore.getState().session === current);
     const loaded = useAnnotationStore.getState().loaded;
     if (loaded?.documentId === source.documentId && loaded.documentHash === source.documentHash) {

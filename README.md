@@ -75,7 +75,8 @@ change.
   colors, annotation filtering/search, and format-specific anchor recovery.
   Notes save as you type. Kindle My Clippings and Readwise Highlights CSV exports
   can be previewed and imported as separate source material; provider locations
-  are not verified document anchors.
+  are not verified document anchors. Saved imported highlights can also become
+  practice cards, with the exported record available during review.
 - Source-linked learning items in the reader margin: primers, questions,
   checkpoints, and prompts comparing two passages. Authoring them stays local
   and does not send document text to an AI provider.
@@ -92,7 +93,7 @@ change.
   OpenCode, Pi, and Cursor. Missing CLIs are shown as unavailable rather than
   crashing the app. GitHub Copilot is not offered: it cannot run unattended
   Agent Mode in this integration.
-- Local MCP library access with revision-bound passage links and an opt-in suggestion inbox; see [Agent access](docs/wiki/agent-access.md).
+- Local MCP library access with revision-bound passage links and an opt-in suggestion inbox. Locally accepted suggestions appear in learning or practice; see [Agent access](docs/wiki/agent-access.md).
 - Six semantic reading palettes (Paper, Sepia, Moss, Ocean, Graphite,
   Midnight), resizable panels, keyboard shortcuts, and Focus Reading Mode.
 

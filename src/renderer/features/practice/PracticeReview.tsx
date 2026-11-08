@@ -1,6 +1,6 @@
 import { practiceSourceLocation } from './source-label';
 import { Select } from '../../components/ui/select';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PracticeCard, PracticeRating } from '@shared/schemas/practice';
 import type { AIProviderStatus } from '@shared/types/ai';
 import { bridge } from '../../app/api-client';
@@ -17,11 +17,21 @@ export function PracticeReview({ onClose }: { readonly onClose: () => void }) {
   const [checking, setChecking] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [showExport, setShowExport] = useState(false);
+  const queueGeneration = useRef(0);
   const card = cards[0];
   useEffect(() => {
     let live = true;
-    void bridge.practice.due(20).then((items) => { if (live) { setCards(items); setStatus(items.length ? '' : 'No cards are due.'); } }).catch(() => { if (live) setStatus('Could not load practice cards.'); });
-    return () => { live = false; void bridge.practice.cancelCheck(); };
+    const refresh = () => {
+      const generation = ++queueGeneration.current;
+      void bridge.practice.due(20).then((items) => {
+        if (!live || generation !== queueGeneration.current) return;
+        setCards((current) => [...current, ...items.filter((item) => !current.some((saved) => saved.id === item.id))]);
+        setStatus(items.length ? '' : 'No cards are due.');
+      }).catch(() => { if (live && generation === queueGeneration.current) setStatus('Could not load practice cards.'); });
+    };
+    refresh();
+    const unsubscribe = bridge.learning.onAccepted(refresh);
+    return () => { live = false; unsubscribe(); void bridge.practice.cancelCheck(); };
   }, []);
   const loadChoices = () => {
     void bridge.ai.listProviders().then((items) => {
@@ -31,7 +41,9 @@ export function PracticeReview({ onClose }: { readonly onClose: () => void }) {
   };
   const rate = (rating: PracticeRating) => {
     if (!card) return;
+    queueGeneration.current++;
     void bridge.practice.rate({ cardId: card.id, revision: card.revision, rating }).then(() => {
+      queueGeneration.current++;
       setCards((items) => items.slice(1)); setAnswer(''); setRevealed(false); setFeedback(''); setChoices([]); setSelection(''); setShowExport(false);
       if (cards.length === 1) setStatus('Review complete.');
     }).catch(() => { setStatus('The card changed or could not be saved. Reopen review.'); });

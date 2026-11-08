@@ -17,7 +17,7 @@ export function indexedPracticeResolver(database: InterleafDatabase): VerifiedPa
       WHERE d.id = ? AND d.file_hash = ? AND s.published_document_hash = d.file_hash AND c.id = ?`)
       .get(source.documentId, source.documentHash, chunkId) as { title: string; format: string; text: string; location_json: string } | undefined;
     const candidate: AgentSource = { documentId: source.documentId, documentHash: source.documentHash, chunkId, anchor: source.anchor };
-    if (!row || row.format !== source.anchor.format || !sourceMatchesChunk(candidate, row.location_json, row.text)) return null;
+    if (row?.format !== source.anchor.format || !sourceMatchesChunk(candidate, row.location_json, row.text)) return null;
     return { evidence: source.anchor.quote.exact, label: row.title.slice(0, 500) };
   };
 }

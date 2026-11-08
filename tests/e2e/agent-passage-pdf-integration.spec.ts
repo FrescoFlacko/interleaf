@@ -38,7 +38,7 @@ test('MCP citation resolves a real indexed PDF passage into its mounted text lay
     const hit = result.hits.find((entry) => entry.documentId === doc.id);
     if (!hit) throw new Error('Missing PDF search hit');
     // Exercise the actual app's registered OS delivery handler; not packaged OS registration.
-    await handle.electronApp.evaluate(({ app }, link) => { app.emit('open-url', { preventDefault: () => undefined } as Electron.Event, link); }, hit.link);
+    await handle.electronApp.evaluate(({ app }, link) => { app.emit('open-url', { preventDefault: () => undefined }, link); }, hit.link);
     await handle.window.locator(`[data-testid="reader-view"][data-document-id="${doc.id}"]`).waitFor();
     await expect.poll(() => handle.window.evaluate((word) => {
       const layer = document.querySelector('[data-testid="pdf-textlayer-p6"]');
@@ -55,6 +55,8 @@ test('MCP citation resolves a real indexed PDF passage into its mounted text lay
       }
       return false;
     }, marker)).toBe(true);
+    await expect(handle.window.getByText('Failed to Open Document')).toHaveCount(0);
+    await expect(handle.window.getByText('The exact passage could not be displayed in this document.')).toHaveCount(0);
     if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await handle.window.screenshot({ path: join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'mcp-pdf-range.png') });
   } finally { await handle.close(); rmSync(directory, { recursive: true, force: true }); }
 });

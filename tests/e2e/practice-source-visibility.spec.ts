@@ -97,6 +97,17 @@ for (const format of ['markdown', 'epub', 'mobi'] as const) {
         await app.window.screenshot({ path: join(EVIDENCE, `${format}${reflow ? "-reflow" : ""}-source.png`) });
       }
       expect(position.visible, 'Opening the source must position the actual quote in the viewport').toBe(true);
+      if (!reflow && format !== 'markdown') {
+        await app.window.getByTestId('sidebar-library').locator('nav[aria-label="Library sections"] button').first().click();
+        await expect(app.window.getByText('Where is the late quote?')).toBeVisible();
+        await app.window.getByLabel('Your answer').fill('At the end again');
+        await app.window.getByRole('button', { name: 'Reveal source', exact: true }).click();
+        await expect(app.window.getByText('Source status: available')).toBeVisible();
+        await app.window.getByRole('button', { name: 'Open source passage', exact: true }).click();
+        await expect(app.window.getByText('Source passage opened.', { exact: true })).toBeVisible();
+        expect((await quotePosition(frame())).visible).toBe(true);
+      }
+
     } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }
   });
 }
