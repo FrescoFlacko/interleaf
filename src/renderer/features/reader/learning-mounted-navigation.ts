@@ -16,6 +16,11 @@ async function navigateMountedLearningAnchor(adapter: DocumentAdapter, anchor: D
   if (!isCurrent()) return false;
   if (anchor.format === 'pdf') {
     await adapter.goToLocation(anchorToLocation(anchor));
+    if (!isCurrent()) return false;
+    const scroller = document.querySelector<HTMLElement>('[data-testid="pdf-scroll-container"]');
+    const page = scroller?.querySelector<HTMLElement>(`[data-testid="pdf-page-${String(anchor.pageIndex + 1)}"]`);
+    if (!page) return false;
+    page.scrollIntoView({ behavior: 'instant', block: 'start' });
     return isCurrent() && confirmPdfLearningRange(anchor, isCurrent);
   }
   const location = anchorToLocation(anchor);

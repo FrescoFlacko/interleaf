@@ -1290,7 +1290,6 @@ export class PdfAdapter implements DocumentAdapter {
         // Original progressive order: shell attached, then filled in place.
         wrapper.appendChild(textLayerDiv);
       }
-
       await textLayerRenderer(builder).render({
         viewport,
         // `TextLayerBuilder` defaults to `disableNormalization: true`, which is
@@ -1363,7 +1362,6 @@ export class PdfAdapter implements DocumentAdapter {
       } catch (annotErr) {
         console.warn(`Failed to render link annotations for page ${String(pageNumber)}:`, annotErr);
       }
-
       // Retire the previous layer before the new one is registered so the swap
       // never leaves two builders claiming the same page.
       this.destroyTextLayer(pageNumber);
@@ -1381,6 +1379,8 @@ export class PdfAdapter implements DocumentAdapter {
         this.annotationLayerDivs.set(pageNumber, annotationLayerDiv);
       }
       this.renderedPages.add(pageNumber);
+      // Source navigation must not inspect the progressively attached shell.
+      textLayerDiv.dataset.pdfTextReady = 'true';
       this.renderedScales.set(pageNumber, renderScale);
       // Surface may lag zoom after mid-flight resize; preview until commit repaints sharp.
       this.applyPreviewFactor(pageNumber, this.zoom / renderScale);
