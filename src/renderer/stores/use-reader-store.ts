@@ -20,10 +20,17 @@ import { openExternalLink } from '../features/reader/open-external-link';
 import { useSearchStore } from './use-search-store';
 import { bridge } from '../app/api-client';
 import { failedPassageState, verifyOpenedPassage } from './passage-open-guard';
+import { navigateLearningSource } from '../features/reader/learning-source';
+import type { DocumentAnchor } from '@shared/types/annotation';
 
 let readingPositionDebounceTimer: number | null = null;
 let readerOpenSequence = 0;
 let readerMountSequence = 0;
+let passageSequence = 0;
+type PassageTarget = { readonly documentId: string; readonly documentHash: string; readonly anchor: DocumentAnchor };
+type PassageRequest = { readonly target: PassageTarget; readonly sequence: number; readonly adapter: DocumentAdapter };
+let pendingPassage: PassageRequest | null = null;
+let failedPassage: PassageRequest | null = null;
 let searchHighlightRequestSequence = 0;
 let latestRequestedDocumentId: string | null = null;
 let pendingPositionUpdate: {
@@ -105,6 +112,7 @@ export type ReaderState = {
 
   // Actions
   openDocument: (documentId: string, initialLocation?: DocumentLocation | null, expectedHash?: string) => Promise<void>;
+  openPassage: (target: PassageTarget) => Promise<void>;
   retryOpenDocument: () => Promise<void>;
   clearReaderError: () => void;
   requestSearchHighlight: (request: SearchHighlightInput) => void;
@@ -236,6 +244,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   searchHighlightAnnouncement: '',
 
   openDocument: async (documentId: string, initialLocation = null, expectedHash) => {
+    passageSequence += 1;
+    pendingPassage = null;
+    failedPassage = null;
     readerOpenSequence += 1;
     readerMountSequence += 1;
     activeMountContext = null;
@@ -315,6 +326,16 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         ...failedPassageState(documentId, initialLocation, expectedHash),
       });
     }
+  },
+
+  openPassage: async (target) => {
+    const opening = get().openDocument(target.documentId, null, target.documentHash);
+    const sequence = passageSequence;
+    await opening;
+    const session = get().session;
+    if (sequence !== passageSequence || session?.document.id !== target.documentId || session.document.fileHash !== target.documentHash) return;
+    pendingPassage = { target, sequence, adapter: session.adapter };
+    if (activeMountContext?.adapter === session.adapter && activeMountContext.status === 'mounted') await deliverPassage();
   },
 
   retryOpenDocument: async () => {
@@ -399,6 +420,12 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     // coalesce duplicate calls (e.g. from React StrictMode double-invoked effects).
     if (activeMountContext?.adapter === adapter && activeMountContext.container === containerElement) {
       if (activeMountContext.status === 'mounted') {
+        if (failedPassage?.adapter === adapter && failedPassage.sequence === passageSequence) {
+          pendingPassage = failedPassage;
+          failedPassage = null;
+          set({ error: null });
+          await deliverPassage();
+        }
         return;
       }
       if (activeMountContext.status === 'in-flight') {
@@ -457,6 +484,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
           activeMountContext.container === containerElement
         ) {
           activeMountContext.status = 'mounted';
+          await deliverPassage();
         }
       } catch (err) {
         if (
@@ -498,6 +526,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   closeDocument: async () => {
+    passageSequence += 1;
+    pendingPassage = null;
+    failedPassage = null;
     readerOpenSequence += 1;
     readerMountSequence += 1;
     activeMountContext = null;
@@ -534,6 +565,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   goToPage: async (pageNumber: number) => {
+    passageSequence += 1;
+    pendingPassage = null;
+    failedPassage = null;
     const { session, pageCount } = get();
     if (!session) return;
     const { adapter, document: activeDocument } = session;
@@ -561,6 +595,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   goToLocation: async (location: DocumentLocation) => {
+    passageSequence += 1;
+    pendingPassage = null;
+    failedPassage = null;
     const adapter = selectAdapter(get());
     if (!adapter) return;
     if (location.format === 'pdf') {
@@ -645,6 +682,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   clearExplicitNavigationLocation: () => {
+    passageSequence += 1;
+    pendingPassage = null;
+    failedPassage = null;
     set({ explicitNavigationLocation: null });
   },
 
@@ -681,3 +721,22 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     return flushReadingPosition();
   },
 }));
+
+/** Only the currently mounted session may complete a requested exact passage. */
+async function deliverPassage(): Promise<void> {
+  const pending = pendingPassage;
+  if (!pending || activeMountContext?.adapter !== pending.adapter || activeMountContext.status !== 'mounted') return;
+  pendingPassage = null;
+  const isCurrent = (): boolean => {
+    const session = useReaderStore.getState().session;
+    return pending.sequence === passageSequence && session?.adapter === pending.adapter &&
+      session.document.id === pending.target.documentId && session.document.fileHash === pending.target.documentHash &&
+      activeMountContext?.adapter === pending.adapter && activeMountContext.status === 'mounted';
+  };
+  let resolved = false;
+  try { resolved = await navigateLearningSource(pending.adapter, pending.target, isCurrent); } catch { /* Report an unresolved passage below. */ }
+  if (isCurrent() && !resolved) {
+    failedPassage = pending;
+    useReaderStore.setState({ error: 'The exact passage could not be displayed in this document.' });
+  }
+}

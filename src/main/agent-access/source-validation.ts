@@ -12,8 +12,8 @@ export function sourceMatchesChunk(source: AgentSource, locationJson: string, te
     const first = text.indexOf(quote);
     if (!text.includes(quote) || text.includes(quote, first + 1) || anchor.segments !== undefined) return false;
     if (anchor.format === 'pdf' && location.format === 'pdf') return anchor.pageIndex === location.pageIndex && sourceRangeMatches(anchor.textStart, anchor.textEnd, location.textStart, first, quote.length);
-    if (anchor.format === 'epub' && location.format === 'epub') return anchor.cfi === location.cfi;
-    if (anchor.format === 'mobi' && location.format === 'mobi') return anchor.sectionIndex === location.sectionIndex;
+    if (anchor.format === 'epub' && location.format === 'epub') return anchor.cfi === location.cfi && sourceRangeMatches(anchor.textStart, anchor.textEnd, location.textStart, first, quote.length);
+    if (anchor.format === 'mobi' && location.format === 'mobi') return anchor.sectionIndex === location.sectionIndex && sourceRangeMatches(anchor.textStart, anchor.textEnd, location.textStart, first, quote.length);
     if (anchor.format === 'docx' && location.format === 'docx') return anchor.paragraphIndex === location.paragraphIndex && sourceRangeMatches(anchor.characterStart, anchor.characterEnd, location.characterStart, first, quote.length);
     if (anchor.format === 'pptx' && location.format === 'pptx') return anchor.paragraphIndex === location.paragraphIndex && sourceRangeMatches(anchor.characterStart, anchor.characterEnd, location.characterStart, first, quote.length);
     if (anchor.format === 'markdown' && location.format === 'markdown') return anchor.blockIndex === location.blockIndex && sourceRangeMatches(anchor.characterStart, anchor.characterEnd, location.characterStart, first, quote.length);

@@ -161,6 +161,7 @@ const lifecycleCoordinator = new LifecycleCoordinator<BrowserWindow>({
 const shutdownBarrier = new ShutdownBarrier<BrowserWindow>({
   mainWindow: () => lifecycleCoordinator.mainWindow,
   drain: drainServices,
+  closeAdmission: () => { agentAccess?.closeAdmission(); },
   hasLiveServices: () => chatService !== null || database !== null,
   quit: () => { app.quit(); },
   log,
@@ -600,7 +601,7 @@ async function bootstrap(): Promise<void> {
     nativeMacUpdater: autoUpdater,
     releaseSingleInstanceLock: () => { app.releaseSingleInstanceLock(); },
     activeWork: createActiveWork({
-      agentSessions: [() => liveAgents.liveWork()],
+      agentSessions: [() => liveAgents.liveWork(), () => agentAccess?.liveWork() ?? 0],
       chatStreams: [() => libraryChat.liveWork(), () => liveOpenFiles.liveChatWork(), () => liveDiagnostics.activeCount()],
       imports: [() => library.importAdmission.liveWork(), () => liveOpenFiles.liveOpens()],
       closeAdmission: [
@@ -609,6 +610,7 @@ async function bootstrap(): Promise<void> {
         () => { liveAgents.closeAdmission(); },
         () => { library.importAdmission.close(); },
         () => { liveDiagnostics.closeAdmission(); },
+        () => { agentAccess?.closeAdmission(); },
       ],
     }),
     requestQuitForUpdate: (install, closeAdmission) => shutdownBarrier.requestQuitForUpdate(install, closeAdmission),
@@ -675,7 +677,7 @@ async function bootstrap(): Promise<void> {
   const deliverFileCommand = (command: FileCommand): void => {
     sendFileCommand(() => lifecycleCoordinator.ensureMainWindow(), command);
   };
-  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, parent: () => lifecycleCoordinator.mainWindow, openSource: (link) => { passageRequests.enqueue([link]); lifecycleCoordinator.handleActivate(); } });
+  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, parent: () => lifecycleCoordinator.mainWindow, openSource: (source) => { passageRequests.enqueueSource(source); lifecycleCoordinator.handleActivate(); } });
   await agentAccess.start();
   installAppMenu(Menu, process.platform, {
     openFile: () => { deliverFileCommand('open-dialog'); },
@@ -702,6 +704,7 @@ async function bootstrap(): Promise<void> {
 
 function attachMainWindowLifecycle(window: BrowserWindow, scopeId: string): void {
   window.on('close', (event) => {
+    if (process.platform !== 'darwin') agentAccess?.closeAdmission();
     shutdownBarrier.handleWindowClose(window, event);
   });
 

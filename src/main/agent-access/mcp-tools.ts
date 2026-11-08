@@ -26,9 +26,10 @@ export class McpTools {
   call(name: string, args: PortableValue) {
     switch (name) {
       case 'search_library': {
-        const result = this.reader.searchLibrary(searchInput.parse(args));
+        const input = searchInput.parse(args);
+        const result = this.reader.searchLibrary(input);
         return { ...result, hits: result.hits.map((hit) => ({ ...hit,
-          link: makePassageLink({ documentId: hit.documentId, documentHash: hit.documentHash, chunkId: hit.chunkId }) })) };
+          link: makePassageLink({ documentId: hit.documentId, documentHash: hit.documentHash, chunkId: hit.chunkId, query: input.query }) })) };
       }
       case 'get_passage': return this.reader.getPassage(passageInput.parse(args));
       case 'get_annotations': return this.reader.getAnnotations(annotationInput.parse(args));

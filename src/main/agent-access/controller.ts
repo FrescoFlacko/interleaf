@@ -7,7 +7,10 @@ import { LibraryReader } from './library-reader';
 import { ProposalRepository, type ProposalAcceptHandlers } from './proposal-repository';
 import { McpTools } from './mcp-tools';
 import { McpServer } from './mcp-server';
-import { makePassageLink } from './passage-link';
+import type { PassageReference } from './passage-link';
+import type { AgentSource } from '@shared/schemas/agent-access';
+import { InterleafError } from '@shared/errors/interleaf-error';
+import { AgentAccessLifetime, awaitDialog } from './lifetime';
 
 type Dependencies = {
   readonly database: InterleafDatabase;
@@ -17,12 +20,13 @@ type Dependencies = {
   readonly dialog: Pick<Dialog, 'showMessageBox'>;
   readonly clipboard: Pick<Clipboard, 'writeText'>;
   readonly parent: () => BrowserWindow | null;
-  readonly openSource: (link: string) => void;
+  readonly openSource: (source: AgentSource) => void;
   readonly acceptHandlers?: Pick<ProposalAcceptHandlers, 'learning' | 'card'>;
 };
 
 /** Native, main-owned controls; neither token nor arbitrary callbacks cross IPC. */
 export class AgentAccessController {
+  private readonly lifetime = new AgentAccessLifetime();
   private proposalsEnabled = false;
   private reviewing = false;
   private changingPermission = false;
@@ -35,27 +39,47 @@ export class AgentAccessController {
       selectedText: input.source.anchor.quote.exact, note: input.text, isLocationNote: false,
     }).id });
     this.reader = new LibraryReader(deps.database, deps.search, deps.annotations, deps.positions);
-    this.server = new McpServer(new McpTools(this.reader, this.proposals, () => this.proposalsEnabled));
+    this.server = new McpServer(new McpTools(this.reader, this.proposals, () => this.proposalsEnabled), this.lifetime);
   }
-  resolvePassage(reference: { readonly documentId: string; readonly documentHash: string; readonly chunkId: string }) {
-    const passage = this.reader.getPassage(reference);
-    return { documentId: passage.documentId, documentHash: passage.documentHash, location: passage.location };
+  resolvePassage(reference: PassageReference | AgentSource) {
+    if (!this.lifetime.isOpen()) throw new InterleafError('validation', 'Agent access is closed.');
+    if ('anchor' in reference) {
+      this.proposals.validateSource(reference);
+      return { documentId: reference.documentId, documentHash: reference.documentHash, anchor: reference.anchor };
+    }
+    return this.reader.resolvePassage(reference);
   }
   async start(): Promise<void> {
     try { await this.server.start(); } catch { /* The reader remains available if the local listener cannot start. */ }
   }
-  close(): Promise<void> { return this.server.close(); }
+  liveWork(): number { return this.lifetime.liveWork(); }
+  closeAdmission(): void { this.server.closeAdmission(); }
+  async close(): Promise<void> {
+    this.closeAdmission();
+    await Promise.all([this.server.close(), this.lifetime.drain()]);
+  }
+
+  private async admitted(work: () => Promise<void>): Promise<void> {
+    const release = this.lifetime.enter();
+    if (!release) return;
+    try { await work(); } finally { release(); }
+  }
 
   private async show(options: MessageBoxOptions): Promise<number> {
     const parent = this.deps.parent();
-    const result = parent ? await this.deps.dialog.showMessageBox(parent, options) : await this.deps.dialog.showMessageBox(options);
-    return result.response;
+    if (!this.lifetime.isOpen()) return 0;
+    const withSignal = { ...options, signal: this.lifetime.signal };
+    const pending = parent ? this.deps.dialog.showMessageBox(parent, withSignal) : this.deps.dialog.showMessageBox(withSignal);
+    this.lifetime.trackDialog(pending);
+    const result = await awaitDialog(pending, this.lifetime.signal);
+    return this.lifetime.isOpen() ? (result?.response ?? 0) : 0;
   }
-  async copyConnection(): Promise<void> {
+  copyConnection(): Promise<void> { return this.admitted(() => this.copyConnectionAdmitted()); }
+  private async copyConnectionAdmitted(): Promise<void> {
     const accepted = await this.show({ type: 'question', title: 'Connect an agent', message: 'Copy local MCP connection details?',
       detail: 'Anyone with these details can read your library while Interleaf is open. Share them only with an agent you trust. The access token changes when Interleaf restarts.',
       buttons: ['Cancel', 'Copy details'], defaultId: 0, cancelId: 0 });
-    if (accepted !== 1) return;
+    if (accepted !== 1 || !this.lifetime.isOpen()) return;
     let connection: ReturnType<McpServer['connection']>;
     try { connection = this.server.connection(); } catch {
       await this.show({ type: 'warning', title: 'Agent access unavailable', message: 'The local agent service could not start. Restart Interleaf to try again.' });
@@ -63,7 +87,8 @@ export class AgentAccessController {
     }
     await this.deps.clipboard.writeText(JSON.stringify({ url: connection.url, headers: { Authorization: `Bearer ${connection.token}` } }, null, 2));
   }
-  async toggleProposals(): Promise<void> {
+  toggleProposals(): Promise<void> { return this.admitted(() => this.toggleProposalsAdmitted()); }
+  private async toggleProposalsAdmitted(): Promise<void> {
     if (this.changingPermission) return;
     this.changingPermission = true;
     try { await this.changePermission(); } finally { this.changingPermission = false; }
@@ -77,9 +102,10 @@ export class AgentAccessController {
     const accepted = await this.show({ type: 'question', title: 'Allow suggestions', message: 'Allow connected agents to submit suggestions?',
       detail: 'Suggestions stay pending until you review them. Agents cannot accept them or edit documents. This permission lasts until Interleaf closes.',
       buttons: ['Cancel', 'Allow suggestions'], defaultId: 0, cancelId: 0 });
-    this.proposalsEnabled = accepted === 1;
+    if (this.lifetime.isOpen()) this.proposalsEnabled = accepted === 1;
   }
-  async review(): Promise<void> {
+  review(): Promise<void> { return this.admitted(() => this.reviewAdmitted()); }
+  private async reviewAdmitted(): Promise<void> {
     if (this.reviewing) return;
     this.reviewing = true;
     try { await this.reviewPending(); } finally { this.reviewing = false; }
@@ -94,13 +120,14 @@ export class AgentAccessController {
       const choice = await this.show({ type: 'question', title: 'Review suggestion',
         message: `${input.kind}: ${input.text}`, detail: `Source quote: ${input.source.anchor.quote.exact}\nDocument: ${this.proposals.sourceTitle(input.source.documentId)}${input.kind === 'conflict' ? `\nSecond source: ${input.secondSource.anchor.quote.exact}\nDocument: ${this.proposals.sourceTitle(input.secondSource.documentId)}` : ''}${canAccept ? '' : '\nAcceptance is not available yet.'}`,
         buttons, defaultId: 0, cancelId: 0 });
-      if (choice === 0) return;
+      if (choice === 0 || !this.lifetime.isOpen()) return;
       if (choice === 1 || (input.kind === 'conflict' && choice === 2)) {
         const source = input.kind === 'conflict' && choice === 2 ? input.secondSource : input.source;
-        this.deps.openSource(makePassageLink(source));
+        this.deps.openSource(source);
         return;
       }
       const rejectChoice = input.kind === 'conflict' ? 3 : 2;
+      if (choice !== rejectChoice && (!canAccept || choice !== rejectChoice + 1)) return;
       try { this.proposals.resolve(proposal.id, choice === rejectChoice ? 'reject' : 'accept'); }
       catch { await this.show({ type: 'warning', title: 'Suggestion not accepted', message: 'The source changed or this suggestion type is not available yet. It remains pending.' }); }
     }

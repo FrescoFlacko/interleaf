@@ -65,7 +65,7 @@ export type AppInfoProviderResult = {
 };
 
 export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
-  readonly openPassage?: () => { readonly documentId: string; readonly documentHash: string; readonly location: import('@shared/types/document').DocumentLocation } | null;
+  readonly openPassage?: () => { readonly documentId: string; readonly documentHash: string; readonly anchor: import('@shared/types/annotation').DocumentAnchor } | null;
   readonly settings: SettingsRepository;
   /**
    * The guided-onboarding verdict main latched at startup. A getter rather than
