@@ -31,6 +31,7 @@ type Dependencies = {
 export class AgentAccessController {
   private readonly lifetime = new AgentAccessLifetime();
   private proposalsEnabled = false;
+  private proposalGeneration = 0;
   private reviewing = false;
   private changingPermission = false;
   private readonly proposals: ProposalRepository;
@@ -42,7 +43,7 @@ export class AgentAccessController {
       selectedText: input.source.anchor.quote.exact, note: input.text, isLocationNote: false,
     }).id });
     this.reader = new LibraryReader(deps.database, deps.search, deps.annotations, deps.positions);
-    this.server = new McpServer(new McpTools(this.reader, this.proposals, () => this.proposalsEnabled, deps.sourceHealthy, () => this.lifetime.isOpen()), this.lifetime);
+    this.server = new McpServer(new McpTools(this.reader, this.proposals, () => this.proposalsEnabled, () => this.proposalGeneration, deps.sourceHealthy, () => this.lifetime.isOpen()), this.lifetime);
   }
   resolvePassage(reference: PassageReference | AgentSource) {
     if (!this.lifetime.isOpen()) throw new InterleafError('validation', 'Agent access is closed.');
@@ -99,13 +100,14 @@ export class AgentAccessController {
   private async changePermission(): Promise<void> {
     if (this.proposalsEnabled) {
       this.proposalsEnabled = false;
+      this.proposalGeneration += 1;
       await this.show({ type: 'info', title: 'Suggestions disabled', message: 'Connected agents can no longer submit suggestions.' });
       return;
     }
     const accepted = await this.show({ type: 'question', title: 'Allow suggestions', message: 'Allow connected agents to submit suggestions?',
       detail: 'Suggestions stay pending until you review them. Agents cannot accept them or edit documents. This permission lasts until Interleaf closes.',
       buttons: ['Cancel', 'Allow suggestions'], defaultId: 0, cancelId: 0 });
-    if (this.lifetime.isOpen()) this.proposalsEnabled = accepted === 1;
+    if (this.lifetime.isOpen() && accepted === 1) { this.proposalsEnabled = true; this.proposalGeneration += 1; }
   }
   review(): Promise<void> { return this.admitted(() => this.reviewAdmitted()); }
   private async reviewAdmitted(): Promise<void> {

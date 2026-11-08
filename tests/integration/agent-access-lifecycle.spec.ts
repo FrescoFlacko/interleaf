@@ -145,6 +145,34 @@ describe('agent access shutdown ownership', () => {
     } finally { await controller.close(); fixture.database.close(); }
   });
 
+  it('invalidates a pending proposal when submission permission is disabled and enabled again', async () => {
+    const fixture = setup();
+    const entered = Promise.withResolvers<undefined>();
+    const finish = Promise.withResolvers<boolean>();
+    let copied = '';
+    const dialog = { showMessageBox: vi.fn(() => Promise.resolve({ response: 1, checkboxChecked: false })) } as Pick<Dialog, 'showMessageBox'>;
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => { entered.resolve(undefined); return finish.promise; },
+      clipboard: { writeText: (value: string) => { copied = value; return Promise.resolve(); } }, parent: () => null, openSource: vi.fn() });
+    try {
+      await controller.start();
+      await controller.copyConnection();
+      await controller.toggleProposals();
+      const connection = JSON.parse(copied) as { url: string; headers: { Authorization: string } };
+      const input = fixture.proposals.list()[0]?.input;
+      if (!input) throw new Error('Missing source fixture');
+      const meta = { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientInfo': { name: 'fixture', version: '1' }, 'io.modelcontextprotocol/clientCapabilities': {} };
+      const body = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'submit_proposal', arguments: input, _meta: meta } });
+      const pending = fetch(connection.url, { method: 'POST', headers: { ...connection.headers, 'content-type': 'application/json', accept: 'application/json, text/event-stream',
+        'mcp-protocol-version': '2026-07-28', 'mcp-method': 'tools/call', 'mcp-name': 'submit_proposal' }, body });
+      await entered.promise;
+      await controller.toggleProposals();
+      await controller.toggleProposals();
+      finish.resolve(true);
+      expect(await (await pending).json()).toMatchObject({ result: { isError: true } });
+      expect(fixture.proposals.list()).toHaveLength(1);
+    } finally { finish.resolve(false); await controller.close(); fixture.database.close(); }
+  });
+
   it('owns and aborts an incomplete HTTP request before draining', async () => {
     const fixture = setup();
     let copied = '';

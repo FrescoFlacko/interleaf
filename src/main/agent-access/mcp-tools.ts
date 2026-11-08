@@ -17,6 +17,7 @@ const definitions = [
 export class McpTools {
   constructor(private readonly reader: LibraryReader, private readonly proposals: ProposalRepository,
     private readonly proposalsEnabled: () => boolean,
+    private readonly proposalGeneration: () => number,
     private readonly sourceHealthy: (documentId: string, documentHash: string) => Promise<boolean>,
     private readonly isOpen: () => boolean) {}
 
@@ -43,10 +44,11 @@ export class McpTools {
       case 'get_reading_history': return this.reader.getReadingHistory(historyInput.parse(args));
       case 'submit_proposal': {
         if (!this.proposalsEnabled()) throw new Error('Proposal submission is disabled.');
+        const generation = this.proposalGeneration();
         const input = agentProposalInputSchema.parse(args);
         const sources = input.kind === 'conflict' ? [input.source, input.secondSource] : [input.source];
         for (const source of sources) {
-          if (!(await this.sourceHealthy(source.documentId, source.documentHash)) || !this.isOpen() || !this.proposalsEnabled()) throw new Error('Source is unavailable.');
+          if (!(await this.sourceHealthy(source.documentId, source.documentHash)) || !this.isOpen() || !this.proposalsEnabled() || this.proposalGeneration() !== generation) throw new Error('Source is unavailable.');
         }
         return this.proposals.submit(input);
       }

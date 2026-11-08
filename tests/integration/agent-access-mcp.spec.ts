@@ -28,7 +28,7 @@ describe('MCP HTTP boundary', () => {
     search.complete('doc', 'hash', generation.generationId);
     const reader = new LibraryReader(db, search, new AnnotationRepository(db), new ReadingPositionRepository(db));
     let healthy = true;
-    const server = new McpServer(new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false, () => Promise.resolve(healthy), () => true));
+    const server = new McpServer(new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false, () => 0, () => Promise.resolve(healthy), () => true));
     await server.start();
     const { url, token } = server.connection();
     const headers = { 'content-type': 'application/json', accept: 'application/json, text/event-stream',
@@ -77,7 +77,7 @@ describe('MCP HTTP boundary', () => {
     const lifetime = new AgentAccessLifetime();
     const started = Promise.withResolvers<undefined>();
     const finish = Promise.withResolvers<boolean>();
-    const tools = new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false,
+    const tools = new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false, () => 0,
       () => { started.resolve(undefined); return finish.promise; }, () => lifetime.isOpen());
     const server = new McpServer(tools, lifetime);
     await server.start();
