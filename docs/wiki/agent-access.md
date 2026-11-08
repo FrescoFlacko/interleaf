@@ -1,0 +1,11 @@
+[Wiki home](README.md) › Agent access
+
+# Local agent access
+
+While Interleaf is open, the **Agent access** application menu can copy the local MCP connection URL and bearer header. Paste those details into a trusted client's MCP configuration. The token changes when Interleaf restarts. Anyone with it can read your library while the app is open, so treat it like a password; copying it places it on the system clipboard. The listener uses loopback and rejects browser Origin requests.
+
+The default tools search the published library index, retrieve indexed passages, annotations, the latest reading position, and prospective reading history. Search reports how many books have a current published index: a search with no hits does not establish that unindexed books contain no match. History begins when this feature is installed; it does not reconstruct earlier reading sessions. Some large results are explicitly marked truncated.
+
+To allow a connected agent to propose changes, choose **Agent access → Toggle suggestion submissions** and confirm. Submission is off by default and resets when Interleaf closes. Suggestions remain pending until you choose **Review suggestions**, then accept or reject each one. You can open a suggestion's source before deciding; conflict suggestions include a second source. An agent cannot approve a suggestion or write a document through MCP. Learning and card suggestions require their corresponding acceptance service; if it is unavailable the suggestion stays pending.
+
+Links returned for indexed passages use `interleaf://doc/<id>#<anchor>`. Opening one asks Interleaf to find that document and the same indexed revision. If the document, index, or passage has changed or disappeared, the link reports an error instead of choosing a different source. Reindexing may replace chunk identities, so a link can stop resolving even when the file is unchanged. Packaged operating-system URL registration depends on installing a build that declares the scheme.

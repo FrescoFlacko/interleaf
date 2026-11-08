@@ -8,6 +8,7 @@ import { AGENT_SESSION_TARGET_AUTHORITY_STATEMENTS, FILE_IDENTITY_BIRTH_TIME_STA
 import { CHAT_TITLE_OWNERSHIP_STATEMENTS } from './chat-title-ownership-migration';
 import { CHAT_REASONING_EFFORT_STATEMENTS } from './chat-reasoning-effort-migration';
 import { EXTERNAL_HIGHLIGHT_STATEMENTS } from './external-highlight-migration';
+import { AGENT_ACCESS_STATEMENTS } from './agent-access-migration';
 /**
  * Forward-only schema migrations (docs/DATABASE.md §2), each run in BEGIN IMMEDIATE and
  * recorded in `schema_migrations` with a SHA-256 checksum that detects drift.
@@ -20,7 +21,6 @@ import { EXTERNAL_HIGHLIGHT_STATEMENTS } from './external-highlight-migration';
  * on those databases. `InterleafDatabase.open` therefore keeps registering that
  * exact function name (see src/main/db/database.ts).
  */
-
 export type Migration = {
   readonly version: number;
   readonly name: string;
@@ -713,6 +713,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 27, name: 'chat_session_title_ownership', statements: CHAT_TITLE_OWNERSHIP_STATEMENTS },
   { version: 28, name: 'chat_session_reasoning_effort', statements: CHAT_REASONING_EFFORT_STATEMENTS },
   { version: 29, name: 'external_highlights', statements: EXTERNAL_HIGHLIGHT_STATEMENTS },
+  { version: 30, name: 'agent_access', statements: AGENT_ACCESS_STATEMENTS },
 ];
 
 /**

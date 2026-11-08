@@ -52,6 +52,7 @@ export const IPC = {
    */
   filesOpenDialog: 'files:open-dialog',
   filesOpenPending: 'files:open-pending',
+  filesOpenPassage: 'files:open-passage',
 
   /**
    * Draws one fenced diagram found in a document.

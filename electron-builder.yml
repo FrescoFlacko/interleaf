@@ -58,6 +58,11 @@ compression: maximum
 # editor the user already has. electron-builder turns this list into the macOS
 # CFBundleDocumentTypes, the Windows NSIS registrations and the Linux desktop
 # entry's MimeType.
+protocols:
+  - name: Interleaf passage
+    schemes:
+      - interleaf
+
 fileAssociations:
   - ext: pdf
     name: PDF Document

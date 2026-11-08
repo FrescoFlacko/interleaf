@@ -173,6 +173,7 @@ const NAVIGATION: readonly NavSection[] = [
       },
       { source: 'wiki/ai-chat.md', label: 'AI Chat' },
       { source: 'wiki/ai-agent.md', label: 'AI Agent' },
+      { source: 'wiki/agent-access.md', label: 'Agent access' },
     ],
   },
   {

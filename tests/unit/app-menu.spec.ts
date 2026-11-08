@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { MenuItemConstructorOptions } from 'electron';
 import { buildAppMenuTemplate, installAppMenu } from '../../src/main/app/app-menu';
 
+const agentAccess = { copyConnection: vi.fn(), toggleProposals: vi.fn(), review: vi.fn() };
+
 function fileItems(template: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] {
   const file = template.find((item) => item.label === 'File');
   expect(file).toBeDefined();
@@ -17,7 +19,7 @@ describe('application menu', () => {
   it('offers Open and Import to Library with distinct accelerators', () => {
     const openFile = vi.fn();
     const importToLibrary = vi.fn();
-    const items = fileItems(buildAppMenuTemplate('linux', { openFile, importToLibrary }));
+    const items = fileItems(buildAppMenuTemplate('linux', { openFile, importToLibrary, agentAccess }));
     const open = items.find((item) => item.id === 'file-open');
     const imported = items.find((item) => item.id === 'file-import');
     expect(open).toMatchObject({ label: 'Open…', accelerator: 'CmdOrCtrl+O' });
@@ -30,20 +32,20 @@ describe('application menu', () => {
   });
 
   it('adds the macOS application menu and closes windows instead of quitting from File', () => {
-    const commands = { openFile: vi.fn(), importToLibrary: vi.fn() };
+    const commands = { openFile: vi.fn(), importToLibrary: vi.fn(), agentAccess };
     const mac = buildAppMenuTemplate('darwin', commands);
     expect(mac[0]).toEqual({ role: 'appMenu' });
     expect(fileItems(mac).at(-1)).toEqual({ role: 'close' });
     const windows = buildAppMenuTemplate('win32', commands);
     expect(windows.some((item) => item.role === 'appMenu')).toBe(false);
     expect(fileItems(windows).at(-1)).toEqual({ role: 'quit' });
-    expect(windows.map((item) => item.role ?? item.label)).toEqual(['File', 'editMenu', 'viewMenu', 'windowMenu']);
+    expect(windows.map((item) => item.role ?? item.label)).toEqual(['File', 'Agent access', 'editMenu', 'viewMenu', 'windowMenu']);
   });
 
   it('installs the built template as the application menu', () => {
     const built = {} as Electron.Menu;
     const menu = { buildFromTemplate: vi.fn(() => built), setApplicationMenu: vi.fn() };
-    installAppMenu(menu, 'linux', { openFile: vi.fn(), importToLibrary: vi.fn() });
+    installAppMenu(menu, 'linux', { openFile: vi.fn(), importToLibrary: vi.fn(), agentAccess });
     expect(menu.buildFromTemplate).toHaveBeenCalledTimes(1);
     expect(menu.setApplicationMenu).toHaveBeenCalledWith(built);
   });

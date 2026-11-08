@@ -84,10 +84,23 @@ async function importToLibrary(): Promise<void> {
   }
 }
 
+async function openPendingPassage(): Promise<void> {
+  const ticket = ++openSequence;
+  try {
+    const target = await bridge.files.openPassage();
+    if (!target || !claimOutcome(ticket)) return;
+    useOpenFileStore.setState({ error: null });
+    await useReaderStore.getState().openDocument(target.documentId, target.location, target.documentHash);
+  } catch (caught) {
+    if (claimOutcome(ticket)) useOpenFileStore.setState({ error: describeFailure(caught instanceof Error ? caught : null) });
+  }
+}
+
 const FILE_COMMAND_HANDLERS: Readonly<Record<FileCommand, () => Promise<void>>> = {
   'open-dialog': openFileFromDialog,
   'import-dialog': importToLibrary,
   'open-pending': openPendingFile,
+  'open-passage': openPendingPassage,
 };
 
 export function runFileCommand(command: FileCommand): void {
@@ -108,5 +121,6 @@ export function runFileShortcut(event: Pick<KeyboardEvent, 'shiftKey'>): void {
 export function followFileCommands(): () => void {
   const unsubscribe = bridge.files.onCommand(runFileCommand);
   void openPendingFile();
+  void openPendingPassage();
   return unsubscribe;
 }

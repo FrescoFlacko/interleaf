@@ -301,6 +301,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       await api.agent.deleteCustomProfile('custom:550e8400-e29b-41d4-a716-446655440000'); last(IPC.agentDeleteCustomProfile, { id: 'custom:550e8400-e29b-41d4-a716-446655440000' });
       await api.files.openDialog(); last(IPC.filesOpenDialog, undefined);
       await api.files.openPending(); last(IPC.filesOpenPending, undefined);
+      await api.files.openPassage(); last(IPC.filesOpenPassage, undefined);
       const diagram = { source: 'flowchart TD\n  A --> B', appearance: 'light' as const }; await api.reader.renderMermaid(diagram); last(IPC.readerRenderMermaid, diagram);
       await api.clipboard.writeText('copied text'); last(IPC.clipboardWriteText, { text: 'copied text' });
       await api.updates.getState(); last(IPC.updatesGetState, undefined);
@@ -337,7 +338,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         ['credentials', ['clearOpenRouterKey', 'getOpenRouterStatus', 'testOpenRouterConnection']],
         ['chat', ['attachContext', 'cancel', 'cleanContext', 'createSession', 'deleteSession', 'getContextBudget', 'getSession', 'listContext', 'listMessages', 'listSessions', 'onSessionTitleChanged', 'onStreamEvent', 'removeContext', 'resolveCitation', 'sendMessage', 'updateSession']],
         ['agent', ['applyChanges', 'claimSession', 'copyResult', 'createCustomProfile', 'deleteCustomProfile', 'discardSandbox', 'exportPatch', 'getEnvironmentReview', 'getModeAvailability', 'getSession', 'issueRiskGrant', 'listCustomProfiles', 'listProfiles', 'listProfileStatus', 'listSessions', 'listWorkingDirectories', 'onEvent', 'openFolder', 'refreshModels', 'resumeSession', 'selectExecutable', 'selectWorkingDirectory', 'startSession', 'stopSession', 'updateCustomProfile']],
-        ['files', ['onCommand', 'openDialog', 'openPending']],
+        ['files', ['onCommand', 'openDialog', 'openPassage', 'openPending']],
         ['reader', ['renderMermaid']],
         ['clipboard', ['writeText']],
         ['diagnostics', ['analyze', 'cancel', 'collect', 'discard', 'exportReport', 'preview']],

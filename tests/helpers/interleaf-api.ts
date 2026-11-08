@@ -55,6 +55,7 @@ const onboarding: InterleafAPI['onboarding'] = {
 const files: InterleafAPI['files'] = {
   openDialog: () => unstubbed('files.openDialog'),
   openPending: () => Promise.resolve(null),
+  openPassage: () => Promise.resolve(null),
   onCommand: () => noSubscription(),
 };
 

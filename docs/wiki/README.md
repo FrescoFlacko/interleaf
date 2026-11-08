@@ -27,6 +27,7 @@ optional and only run when you connect a provider yourself.
 | Highlight, take notes and find them again | [Highlights and notes](highlights-and-notes.md) |
 | Connect an AI provider | [AI providers](ai-providers.md) |
 | Ask questions about the document you are reading | [AI Chat](ai-chat.md) |
+| Connect a local agent to your library | [Agent access](agent-access.md) |
 | Give a coding task to an agent CLI | [AI Agent](ai-agent.md) |
 | Fix a problem | [Help and troubleshooting](help-and-troubleshooting.md) |
 
@@ -84,6 +85,7 @@ optional and only run when you connect a provider yourself.
   - [OpenCode](providers/agent-only-clis.md)
 - **[AI Chat](ai-chat.md)** — attaching context, citations, models, web search,
   the context budget, conversation history and Clean Context.
+- **[Agent access](agent-access.md)** — local MCP access, source links, and suggestions.
 - **[AI Agent](ai-agent.md)** — choosing a working directory, execution modes,
   starting and stopping a run, reviewing the diff, applying or discarding
   changes, and resuming a session.

@@ -79,6 +79,8 @@ import { createMermaidSandboxWindow } from './documents/mermaid/mermaid-sandbox-
 import type { CloneableValue } from '@shared/models/portable';
 import type { FileCommand } from '@shared/types/files';
 import { installAppMenu } from './app/app-menu';
+import { AgentAccessController } from './agent-access/controller';
+import { PassageQueue } from './agent-access/passage-queue';
 import { OpenFileRequestQueue, openablePathsFromArgv } from './open-files/open-file-requests';
 import { createOpenFiles, sendFileCommand } from './open-files/open-files-bootstrap';
 import type { OpenFileManager } from './open-files/open-file-manager';
@@ -121,9 +123,11 @@ let openFiles: OpenFileManager | null = null;
 let updates: UpdateController | null = null;
 let diagnostics: DiagnosticsService | null = null;
 let highlightImportService: HighlightImportService | null = null;
+let agentAccess: AgentAccessController | null = null;
 // Operating-system open requests can arrive before app ready (macOS
 // `open-file`, the launch command line); they wait here for the renderer.
 const openFileRequests = new OpenFileRequestQueue();
+const passageRequests = new PassageQueue();
 
 // Foreground for every real launch; background only for the E2E suite.
 const revealMode = windowRevealMode({ env: process.env, signals: runtimePackagingSignals() });
@@ -178,8 +182,11 @@ if (!lifecycleCoordinator.handleSingleInstanceLock(hasSingleInstanceLock)) {
 
 function registerAppLifecycle(): void {
   openFileRequests.enqueue(openablePathsFromArgv(process.argv, process.cwd()));
+  passageRequests.enqueue(process.argv);
+  app.on('open-url', (event, url) => { event.preventDefault(); if (passageRequests.enqueue([url])) lifecycleCoordinator.handleActivate(); });
   app.on('second-instance', (_event, argv, workingDirectory) => {
     openFileRequests.enqueue(openablePathsFromArgv(argv, workingDirectory));
+    passageRequests.enqueue(argv);
     lifecycleCoordinator.handleSecondInstance();
   });
   // Registered at module load: macOS delivers a Finder or Dock open before ready.
@@ -195,6 +202,8 @@ function registerAppLifecycle(): void {
       lifecycleCoordinator.markBootstrapFailed();
       updates?.dispose();
       updates = null;
+      await agentAccess?.close();
+      agentAccess = null;
       const diagnostic = formatFatalBootstrapDiagnostic(error instanceof Error ? error : null);
       log.error('fatal startup failure', diagnostic);
       await cleanupBootstrapResources({
@@ -622,6 +631,7 @@ async function bootstrap(): Promise<void> {
 
   registerIpcHandlers(ipcMain, {
     settings,
+    openPassage: () => { const ref = passageRequests.take(); return ref && agentAccess ? agentAccess.resolvePassage(ref) : null; },
     onboardingLaunchState: () => onboardingLaunchStateLatch.get(),
     library,
     annotations,
@@ -678,9 +688,12 @@ async function bootstrap(): Promise<void> {
   const deliverFileCommand = (command: FileCommand): void => {
     sendFileCommand(() => lifecycleCoordinator.ensureMainWindow(), command);
   };
+  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, parent: () => lifecycleCoordinator.mainWindow, openSource: (link) => { passageRequests.enqueue([link]); lifecycleCoordinator.handleActivate(); } });
+  await agentAccess.start();
   installAppMenu(Menu, process.platform, {
     openFile: () => { deliverFileCommand('open-dialog'); },
     importToLibrary: () => { deliverFileCommand('import-dialog'); },
+    agentAccess: { copyConnection: () => { void agentAccess?.copyConnection(); }, toggleProposals: () => { void agentAccess?.toggleProposals(); }, review: () => { void agentAccess?.review(); } },
   });
   ipcMain.on(IPC_EVENTS.appCloseReady, (event, payload: CloneableValue) => {
     shutdownBarrier.handleCloseReady(event.sender, payload);
@@ -696,6 +709,7 @@ async function bootstrap(): Promise<void> {
   lifecycleCoordinator.markBootstrapReady();
   lifecycleCoordinator.ensureMainWindow();
   openFileRequests.attach(() => { deliverFileCommand('open-pending'); });
+  passageRequests.attach(() => { deliverFileCommand('open-passage'); });
   updates.start();
 }
 
@@ -716,6 +730,9 @@ function attachMainWindowLifecycle(window: BrowserWindow, scopeId: string): void
 /** Stops every service once, in dependency order; the shutdown barrier decides when. */
 async function drainServices(): Promise<void> {
   lifecycleCoordinator.startShutdown();
+  const closingAgentAccess = agentAccess?.close();
+  agentAccess = null;
+  await closingAgentAccess?.catch(() => { log.warn('Agent access shutdown failed'); });
   updates?.dispose();
   updates = null;
   await highlightImportService?.shutdown();
