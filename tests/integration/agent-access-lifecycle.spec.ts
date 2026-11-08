@@ -61,6 +61,30 @@ describe('agent access shutdown ownership', () => {
     } finally { await controller.close(); fixture.database.close(); }
   });
 
+  it('keeps delayed source verification admitted and fences acceptance after close', async () => {
+    const fixture = setup();
+    const entered = Promise.withResolvers<undefined>();
+    const health = Promise.withResolvers<boolean>();
+    const dialog = { showMessageBox: vi.fn(() => Promise.resolve({ response: 3, checkboxChecked: false })) } as Pick<Dialog, 'showMessageBox'>;
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => { entered.resolve(undefined); return health.promise; },
+      clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
+    try {
+      await controller.start();
+      const review = controller.review();
+      await entered.promise;
+      controller.closeAdmission();
+      let closed = false;
+      const closing = controller.close().then(() => { closed = true; });
+      await Promise.resolve();
+      expect(controller.liveWork()).toBeGreaterThan(0);
+      expect(closed).toBe(false);
+      health.resolve(true);
+      await Promise.all([review, closing]);
+      expect(fixture.annotations.page('doc').total).toBe(0);
+      expect(fixture.proposals.list()).toHaveLength(1);
+    } finally { health.resolve(false); await controller.close(); fixture.database.close(); }
+  });
+
   it('rechecks native work started while an update was being prepared', async () => {
     const fixture = setup();
     let finishPrepare!: (value: { version: string; install: () => void }) => void;
