@@ -54,6 +54,9 @@ describe('combined learning source contracts', () => {
       const cardResult = proposals.resolve(card.id, 'accept');
       expect(practice.get(cardResult.resultId!)).toMatchObject({ evidence: 'Alpha passage', source: { kind: 'native', annotationId: null, chunkId: one.chunkId } });
       expect(practice.due({ limit: 20 })).toHaveLength(1);
+      db.raw.prepare('UPDATE document_index_state SET published_document_hash = ? WHERE document_id = ?').run('replaced', 'one');
+      expect(practice.get(cardResult.resultId!)?.sourceState).toBe('changed');
+      db.raw.prepare('UPDATE document_index_state SET published_document_hash = ? WHERE document_id = ?').run('hash-one', 'one');
       const stale = proposals.submit({ kind: 'conflict', source: one, secondSource: two, text: 'Stale?' });
       db.raw.prepare('UPDATE documents SET file_hash = ? WHERE id = ?').run('changed', 'two');
       expect(() => proposals.resolve(stale.id, 'accept')).toThrow();
