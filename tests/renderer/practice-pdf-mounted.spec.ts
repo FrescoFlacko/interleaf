@@ -7,10 +7,14 @@ import type { PdfAnnotationAnchor } from '@shared/types/annotation';
 function mountedPdf(text: string) {
   const scroll = document.createElement('div');
   scroll.dataset.testid = 'pdf-scroll-container';
+  const page = document.createElement('div');
+  page.dataset.testid = 'pdf-page-1';
+  page.scrollIntoView = vi.fn();
   const layer = document.createElement('div');
   layer.dataset.testid = 'pdf-textlayer-p1';
   layer.textContent = text;
-  scroll.append(layer); document.body.append(scroll);
+  if (text) layer.dataset.pdfTextReady = 'true';
+  page.append(layer); scroll.append(page); document.body.append(scroll);
   const scrollTo = vi.fn();
   scroll.scrollTo = scrollTo;
   const pdf = new PdfAdapter();
@@ -44,7 +48,7 @@ describe('actual mounted PDF adapter source boundary', () => {
     const pending = adapter.navigateLearningAnchor?.(source, () => true);
     window.setTimeout(() => {
       const layer = document.querySelector('[data-testid="pdf-textlayer-p1"]');
-      if (layer) layer.textContent = 'source passage and source passage';
+      if (layer instanceof HTMLElement) { layer.textContent = 'source passage and source passage'; layer.dataset.pdfTextReady = 'true'; }
     }, 20);
     expect(await pending).toBe(false);
     expect(document.querySelector('[data-testid="pdf-textlayer-p1"]')?.textContent).toBe('source passage and source passage');

@@ -32,11 +32,11 @@ it('sends only the selected card evidence after an explicit request and excludes
     let healthy = true;
     let failAfterReadiness = false;
     let delayed = false;
-    const healthStarted = Promise.withResolvers<void>();
+    const healthStarted = Promise.withResolvers<undefined>();
     const healthFinished = Promise.withResolvers<boolean>();
     const checker = new PracticeChecker(repo, { require: requireProvider, getStatus: () => Promise.resolve(status), resolveModel: () => { if (failAfterReadiness) healthy = false; return Promise.resolve(status.models[0]!); } }, async () => {
       if (!delayed) return healthy;
-      healthStarted.resolve();
+      healthStarted.resolve(undefined);
       return healthFinished.promise;
     });
     expect(requests).toHaveLength(0);
@@ -89,7 +89,7 @@ it('keeps cancellation cleanup counted until the provider stop settles', async (
       detect: () => Promise.resolve(status), listModels: () => Promise.resolve(status.models),
       streamChat: async function* () { started.resolve(undefined); await stream.promise; yield { type: 'done' }; },
       cancel: () => stopped.promise };
-    const checker = new PracticeChecker(repo, { require: () => provider, getStatus: () => Promise.resolve(status), resolveModel: () => Promise.resolve(status.models[0]!) }, async () => true);
+    const checker = new PracticeChecker(repo, { require: () => provider, getStatus: () => Promise.resolve(status), resolveModel: () => Promise.resolve(status.models[0]!) }, () => Promise.resolve(true));
     const work = checker.check(1, card.id, 'Answer', 'claude', 'model');
     await started.promise;
     checker.cancel(1);

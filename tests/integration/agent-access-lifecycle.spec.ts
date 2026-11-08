@@ -35,7 +35,7 @@ describe('agent access shutdown ownership', () => {
     let answer!: (value: { response: number; checkboxChecked: boolean }) => void;
     const deferred = new Promise<{ response: number; checkboxChecked: boolean }>((resolve) => { answer = resolve; });
     const dialog = { showMessageBox: vi.fn(() => deferred) } as Pick<Dialog, 'showMessageBox'>;
-    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: async () => true, clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => Promise.resolve(true), clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
     const activeWork = createActiveWork({ agentSessions: [() => controller.liveWork()], chatStreams: [], imports: [], closeAdmission: [() => { controller.closeAdmission(); }] });
     try {
       await controller.start();
@@ -66,7 +66,7 @@ describe('agent access shutdown ownership', () => {
     let finishPrepare!: (value: { version: string; install: () => void }) => void;
     const prepared = new Promise<{ version: string; install: () => void }>((resolve) => { finishPrepare = resolve; });
     const dialog = { showMessageBox: vi.fn(() => new Promise(() => undefined)) } as Pick<Dialog, 'showMessageBox'>;
-    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: async () => true, clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => Promise.resolve(true), clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
     const activeWork = createActiveWork({ agentSessions: [() => controller.liveWork()], chatStreams: [], imports: [], closeAdmission: [() => { controller.closeAdmission(); }] });
     const cancelPreparedInstall = vi.fn();
     const requestQuitForUpdate = vi.fn();
@@ -88,7 +88,7 @@ describe('agent access shutdown ownership', () => {
     let answer!: (value: { response: number; checkboxChecked: boolean }) => void;
     const deferred = new Promise<{ response: number; checkboxChecked: boolean }>((resolve) => { answer = resolve; });
     const dialog = { showMessageBox: vi.fn(() => deferred) } as Pick<Dialog, 'showMessageBox'>;
-    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: async () => true, clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => Promise.resolve(true), clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
     const sent = vi.fn();
     const window = { isDestroyed: () => false, close: vi.fn(), webContents: { send: sent } };
     const barrier = new ShutdownBarrier({ mainWindow: () => window, drain: () => controller.close(), closeAdmission: () => { controller.closeAdmission(); }, hasLiveServices: () => true, quit: vi.fn(), log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }, handshakeTimeoutMs: 10 });
@@ -110,7 +110,7 @@ describe('agent access shutdown ownership', () => {
   it('does not leave a listener behind when close races startup', async () => {
     const fixture = setup();
     const dialog = { showMessageBox: vi.fn(() => Promise.resolve({ response: 1, checkboxChecked: false })) } as Pick<Dialog, 'showMessageBox'>;
-    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: async () => true, clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => Promise.resolve(true), clipboard: { writeText: vi.fn() }, parent: () => null, openSource: vi.fn() });
     try {
       const start = controller.start();
       const close = controller.close();
@@ -125,7 +125,7 @@ describe('agent access shutdown ownership', () => {
     const fixture = setup();
     let copied = '';
     const dialog = { showMessageBox: vi.fn(() => Promise.resolve({ response: 1, checkboxChecked: false })) } as Pick<Dialog, 'showMessageBox'>;
-    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: async () => true, clipboard: { writeText: (value: string) => { copied = value; return Promise.resolve(); } }, parent: () => null, openSource: vi.fn() });
+    const controller = new AgentAccessController({ ...fixture, dialog, sourceHealthy: () => Promise.resolve(true), clipboard: { writeText: (value: string) => { copied = value; return Promise.resolve(); } }, parent: () => null, openSource: vi.fn() });
     try {
       await controller.start();
       await controller.copyConnection();
