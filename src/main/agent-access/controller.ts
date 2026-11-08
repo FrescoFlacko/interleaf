@@ -11,6 +11,7 @@ import type { PassageReference } from './passage-link';
 import type { AgentSource } from '@shared/schemas/agent-access';
 import { InterleafError } from '@shared/errors/interleaf-error';
 import { AgentAccessLifetime, awaitDialog } from './lifetime';
+import { reviewProposals } from './proposal-review';
 
 type Dependencies = {
   readonly database: InterleafDatabase;
@@ -110,41 +111,9 @@ export class AgentAccessController {
   private async reviewAdmitted(): Promise<void> {
     if (this.reviewing) return;
     this.reviewing = true;
-    try { await this.reviewPending(); } finally { this.reviewing = false; }
-  }
-  private async reviewPending(): Promise<void> {
-    const pending = this.proposals.list();
-    if (pending.length === 0) { await this.show({ type: 'info', title: 'Suggestions', message: 'No pending suggestions.' }); return; }
-    for (const proposal of pending) {
-      const input = proposal.input;
-      const canAccept = this.proposals.canAccept(input.kind);
-      const buttons = ['Later', 'Open source', ...(input.kind === 'conflict' ? ['Open second source'] : []), 'Reject', ...(canAccept ? ['Accept'] : [])];
-      const choice = await this.show({ type: 'question', title: 'Review suggestion',
-        message: `${input.kind}: ${input.text}`, detail: `Source quote: ${input.source.anchor.quote.exact}\nDocument: ${this.proposals.sourceTitle(input.source.documentId)}${input.kind === 'conflict' ? `\nSecond source: ${input.secondSource.anchor.quote.exact}\nDocument: ${this.proposals.sourceTitle(input.secondSource.documentId)}` : ''}${canAccept ? '' : '\nAcceptance is not available yet.'}`,
-        buttons, defaultId: 0, cancelId: 0 });
-      if (choice === 0 || !this.lifetime.isOpen()) return;
-      if (choice === 1 || (input.kind === 'conflict' && choice === 2)) {
-        const source = input.kind === 'conflict' && choice === 2 ? input.secondSource : input.source;
-        this.deps.openSource(source);
-        return;
-      }
-      const rejectChoice = input.kind === 'conflict' ? 3 : 2;
-      if (choice !== rejectChoice && (!canAccept || choice !== rejectChoice + 1)) return;
-      try {
-        if (choice !== rejectChoice) {
-          const sources = input.kind === 'conflict' ? [input.source, input.secondSource] : [input.source];
-          for (const source of sources) {
-            if (!(await this.deps.sourceHealthy(source.documentId, source.documentHash))) throw new Error('Source is unavailable.');
-            if (!this.lifetime.isOpen()) return;
-          }
-        }
-        const result = this.proposals.resolve(proposal.id, choice === rejectChoice ? 'reject' : 'accept');
-        if (result.status === 'accepted') {
-          try { this.deps.onAccepted?.({ documentId: input.source.documentId, documentHash: input.source.documentHash }); }
-          catch { /* The transaction succeeded; a closed renderer does not undo it. */ }
-        }
-      }
-      catch { await this.show({ type: 'warning', title: 'Suggestion not accepted', message: 'The source changed or this suggestion type is not available yet. It remains pending.' }); }
-    }
+    try {
+      await reviewProposals({ proposals: this.proposals, show: (options) => this.show(options), isOpen: () => this.lifetime.isOpen(),
+        sourceHealthy: this.deps.sourceHealthy, openSource: this.deps.openSource, onAccepted: this.deps.onAccepted });
+    } finally { this.reviewing = false; }
   }
 }

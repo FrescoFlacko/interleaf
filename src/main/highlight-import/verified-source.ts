@@ -20,7 +20,8 @@ function nativeSource(db: DatabaseSync, row: SourceRow, annotationId: string, ch
   const chunk = db.prepare('SELECT id, text, location_json FROM document_text_chunks WHERE document_id = ? AND id = ?')
     .get(row.document_id, chunkId) as Chunk | undefined;
   if (!doc || !annotation || !chunk || annotation.status !== 'anchored' || annotation.document_hash !== doc.file_hash || annotation.selected_text !== row.quote) return null;
-  const count = db.prepare('SELECT COUNT(*) AS count FROM document_text_chunks WHERE document_id = ?').get(row.document_id) as { count: number };
+  if (doc.published_total_chunks > 1000) return null;
+  const count = db.prepare('SELECT COUNT(*) AS count FROM (SELECT 1 FROM document_text_chunks WHERE document_id = ? LIMIT 1001)').get(row.document_id) as { count: number };
   if (count.count !== doc.published_total_chunks) return null;
   try {
     const anchor = documentAnchorSchema.parse(parsePortableJson(annotation.anchor_json));
