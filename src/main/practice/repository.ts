@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { InterleafError } from '@shared/errors/interleaf-error';
 import { parsePortableJson } from '@shared/models/portable';
+import { documentAnchorSchema } from '@shared/schemas/annotation';
 import {
   nativePracticeSourceSchema, practiceCardSchema, practiceCreateImportedSchema, practiceCreateSchema,
   practiceDueSchema, practiceRateSchema, practiceSourceSchema,
@@ -108,12 +109,12 @@ export class PracticeRepository {
     if (!doc) return 'missing';
     if (doc.file_hash !== source.documentHash) return 'changed';
     if (source.annotationId !== null) {
-      const annotation = this.db.prepare('SELECT status, document_hash, anchor_json FROM annotations WHERE document_id = ? AND id = ? AND type = ?')
-        .get(source.documentId, source.annotationId, 'highlight') as { status: string; document_hash: string; anchor_json: string } | undefined;
+      const annotation = this.db.prepare('SELECT status, document_hash, anchor_json, selected_text FROM annotations WHERE document_id = ? AND id = ? AND type = ?')
+        .get(source.documentId, source.annotationId, 'highlight') as { status: string; document_hash: string; anchor_json: string; selected_text: string | null } | undefined;
       if (!annotation) return 'missing';
       if (annotation.document_hash !== source.documentHash) return 'changed';
       if (annotation.status !== 'anchored') return 'unanchored';
-      if (JSON.stringify(parsePortableJson(annotation.anchor_json)) !== JSON.stringify(source.anchor)) return 'changed';
+      if (annotation.selected_text !== source.anchor.quote.exact || !samePassageAnchor(annotation.anchor_json, source.anchor)) return 'changed';
     }
     return 'available';
   }
@@ -126,5 +127,21 @@ export class PracticeRepository {
     const navigation = sourceState === 'available' ? native : null;
     return practiceCardSchema.parse({ id: row.id, question: row.question, source, evidence: imported?.evidence ?? row.evidence, sourceLabel: imported?.label ?? row.source_label, exportDetails: imported?.details ?? null, navigation,
       dueAt: row.due_at, intervalDays: row.interval_days, repetitions: row.repetitions, lapses: row.lapses, revision: row.revision, sourceState });
+  }
+}
+
+/** Ebook layout repair may update progression without moving the native passage. */
+function samePassageAnchor(raw: string, saved: Extract<PracticeSource, { kind: 'native' }>['anchor']): boolean {
+  try {
+    const result = documentAnchorSchema.safeParse(parsePortableJson(raw));
+    if (!result.success) return false;
+    const current = result.data;
+    if ((saved.format === 'epub' || saved.format === 'mobi') && current.format === saved.format
+      && saved.progression !== undefined && current.progression !== undefined) {
+      return JSON.stringify({ ...current, progression: saved.progression }) === JSON.stringify(saved);
+    }
+    return JSON.stringify(current) === JSON.stringify(saved);
+  } catch {
+    return false;
   }
 }

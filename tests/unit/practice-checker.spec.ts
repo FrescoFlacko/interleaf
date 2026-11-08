@@ -37,6 +37,17 @@ it('sends only the selected card evidence after an explicit request and excludes
     expect(JSON.parse(requests[0]!.userMessage)).toEqual({ question: 'Why?', answer: 'My answer', source: 'Evidence A', sourceKind: 'native' });
     expect(requests[0]).toMatchObject({ webSearch: false, history: [], sources: [] });
     expect(JSON.stringify(requests[0])).not.toContain('PRIVATE OTHER BOOK');
+    db.raw.prepare(`INSERT INTO documents (id,title,format,file_path,storage_mode,file_size,file_mtime_ms,file_hash)
+      VALUES ('ebook','Ebook','epub','/ebook','managed',1,1,'ebook-hash')`).run();
+    const annotations = new AnnotationRepository(db);
+    const ebookAnchor = { format: 'epub' as const, cfi: 'epubcfi(/6/2!/4/2)', spineHref: 'chapter.xhtml', progression: 0.5,
+      textStart: 0, textEnd: 10, quote: { exact: 'Evidence B', prefix: '', suffix: '' } };
+    const ebookHighlight = annotations.create({ documentId: 'ebook', type: 'highlight', selectedText: 'Evidence B', color: 'yellow', anchor: ebookAnchor });
+    const ebookCard = repo.createFromHighlight({ documentId: 'ebook', annotationId: ebookHighlight.id, question: 'What?' });
+    annotations.repairAnchor({ documentId: 'ebook', id: ebookHighlight.id, documentHash: 'ebook-hash', status: 'anchored',
+      anchor: { ...ebookAnchor, progression: 1 } });
+    expect(await checker.check(2, ebookCard.id, 'Answer B', 'claude', 'model')).toBe('Compare this.');
+    expect(JSON.parse(requests[1]!.userMessage)).toEqual({ question: 'What?', answer: 'Answer B', source: 'Evidence B', sourceKind: 'native' });
     await checker.shutdown();
   } finally { db.close(); }
 });

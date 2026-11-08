@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { expect, test, type Frame, type Page } from '@playwright/test';
 import { makeEpubFixture, makeMobiFixture, makeMarkdownFixture, makePdfFixture } from '../fixtures/document-fixtures';
 import { launchInterleaf, returnToLibrary, stubOpenDialog } from './helpers';
+import { verifyRepeatedPracticeSource } from './practice-repeat-check';
 
 const PHRASE = 'UNIQUE PRACTICE TARGET AT END';
 const EVIDENCE = process.env.INTERLEAF_PRACTICE_SOURCE_EVIDENCE;
@@ -79,6 +80,8 @@ for (const format of ['markdown', 'epub', 'mobi'] as const) {
       await app.window.getByLabel('Question', { exact: true }).fill('Where is the late quote?');
       await app.window.getByRole('button', { name: 'Save card', exact: true }).click();
       await expect(app.window.getByText('Practice card saved.')).toBeVisible();
+      const [savedCard] = await app.window.evaluate(() => window.interleafAPI.practice.due(20));
+      if (savedCard?.source.kind !== 'native') throw new Error('Native card was not saved');
       await returnToLibrary(app);
       await app.window.getByRole('button', { name: 'Review practice', exact: true }).click();
       if (reflow) {
@@ -97,6 +100,7 @@ for (const format of ['markdown', 'epub', 'mobi'] as const) {
         await app.window.screenshot({ path: join(EVIDENCE, `${format}${reflow ? "-reflow" : ""}-source.png`) });
       }
       expect(position.visible, 'Opening the source must position the actual quote in the viewport').toBe(true);
+      await verifyRepeatedPracticeSource({ app, documentId: doc.id, savedCard, format, reflow, evidenceDir: EVIDENCE, frame, quotePosition });
     } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }
   });
 }
