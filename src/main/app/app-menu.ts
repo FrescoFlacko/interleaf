@@ -3,6 +3,7 @@ import type { MenuItemConstructorOptions } from 'electron';
 export type AppMenuCommands = {
   readonly openFile: () => void;
   readonly importToLibrary: () => void;
+  readonly agentAccess: { readonly copyConnection: () => void; readonly toggleProposals: () => void; readonly review: () => void };
 };
 
 type MenuApi = {
@@ -28,6 +29,11 @@ export function buildAppMenuTemplate(platform: NodeJS.Platform, commands: AppMen
   return [
     ...(isMac ? [{ role: 'appMenu' } satisfies MenuItemConstructorOptions] : []),
     fileMenu,
+    { label: 'Agent access', submenu: [
+      { label: 'Copy connection details…', click: commands.agentAccess.copyConnection },
+      { label: 'Toggle suggestion submissions…', click: commands.agentAccess.toggleProposals },
+      { label: 'Review suggestions…', click: commands.agentAccess.review },
+    ] },
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { role: 'windowMenu' },

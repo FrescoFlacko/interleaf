@@ -19,6 +19,7 @@ import { useLibraryStore } from './use-library-store';
 import { openExternalLink } from '../features/reader/open-external-link';
 import { useSearchStore } from './use-search-store';
 import { bridge } from '../app/api-client';
+import { failedPassageState, verifyOpenedPassage } from './passage-open-guard';
 
 let readingPositionDebounceTimer: number | null = null;
 let readerOpenSequence = 0;
@@ -103,7 +104,7 @@ export type ReaderState = {
   searchHighlightAnnouncement: string;
 
   // Actions
-  openDocument: (documentId: string, initialLocation?: DocumentLocation | null) => Promise<void>;
+  openDocument: (documentId: string, initialLocation?: DocumentLocation | null, expectedHash?: string) => Promise<void>;
   retryOpenDocument: () => Promise<void>;
   clearReaderError: () => void;
   requestSearchHighlight: (request: SearchHighlightInput) => void;
@@ -234,7 +235,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   searchHighlightText: null,
   searchHighlightAnnouncement: '',
 
-  openDocument: async (documentId: string, initialLocation = null) => {
+  openDocument: async (documentId: string, initialLocation = null, expectedHash) => {
     readerOpenSequence += 1;
     readerMountSequence += 1;
     activeMountContext = null;
@@ -278,6 +279,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         }
         return;
       }
+      verifyOpenedPassage(opened, expectedHash);
       const adapter = createDocumentAdapter(opened.document.format);
 
       const resolvedInitialLocation =
@@ -310,8 +312,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       set({
         isLoading: false,
         error: err instanceof Error ? err.message : 'Failed to open document.',
-        failedDocumentId: documentId,
-        failedInitialLocation: initialLocation,
+        ...failedPassageState(documentId, initialLocation, expectedHash),
       });
     }
   },

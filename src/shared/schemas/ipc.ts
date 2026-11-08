@@ -194,6 +194,7 @@ export const ipcRequestSchemas = {
   [IPC.libraryGetDocumentPreview]: getDocumentPreviewRequestSchema,
   [IPC.filesOpenDialog]: undefined,
   [IPC.filesOpenPending]: undefined,
+  [IPC.filesOpenPassage]: undefined,
   [IPC.readerRenderMermaid]: mermaidRenderRequestSchema,
   // Phase 5 — Annotations & Highlights
   [IPC.annotationsCreate]: createAnnotationRequestSchema,
@@ -298,6 +299,7 @@ type IpcResults = {
   readonly [IPC.libraryGetDocumentPreview]: DocumentPreviewData;
   readonly [IPC.filesOpenDialog]: DocumentMetadata | null;
   readonly [IPC.filesOpenPending]: DocumentMetadata | null;
+  readonly [IPC.filesOpenPassage]: { readonly documentId: string; readonly documentHash: string; readonly location: import('../types/document').DocumentLocation } | null;
   readonly [IPC.readerRenderMermaid]: MermaidRenderResult;
   readonly [IPC.annotationsCreate]: Annotation;
   readonly [IPC.annotationsList]: readonly Annotation[];

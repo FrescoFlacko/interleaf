@@ -7,6 +7,7 @@ import { PPTX_DOCUMENT_FORMAT_STATEMENTS } from './pptx-format-migration';
 import { AGENT_SESSION_TARGET_AUTHORITY_STATEMENTS, FILE_IDENTITY_BIRTH_TIME_STATEMENTS } from './agent-identity-migrations';
 import { CHAT_TITLE_OWNERSHIP_STATEMENTS } from './chat-title-ownership-migration';
 import { CHAT_REASONING_EFFORT_STATEMENTS } from './chat-reasoning-effort-migration';
+import { AGENT_ACCESS_STATEMENTS } from './agent-access-migration';
 /**
  * Forward-only schema migrations (docs/DATABASE.md §2), each run in BEGIN IMMEDIATE and
  * recorded in `schema_migrations` with a SHA-256 checksum that detects drift.
@@ -19,7 +20,6 @@ import { CHAT_REASONING_EFFORT_STATEMENTS } from './chat-reasoning-effort-migrat
  * on those databases. `InterleafDatabase.open` therefore keeps registering that
  * exact function name (see src/main/db/database.ts).
  */
-
 export type Migration = {
   readonly version: number;
   readonly name: string;
@@ -27,7 +27,6 @@ export type Migration = {
   /** When true, foreign keys are disabled around the transaction (required for table rebuilds). */
   readonly disableForeignKeys?: boolean;
 };
-
 export function computeMigrationChecksum(migration: Migration): string {
   const normalizedSql = migration.statements
     .map((statement) => statement.trim().replace(/\r\n/g, '\n'))
@@ -712,6 +711,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 26, name: 'file_identity_birth_time', statements: FILE_IDENTITY_BIRTH_TIME_STATEMENTS },
   { version: 27, name: 'chat_session_title_ownership', statements: CHAT_TITLE_OWNERSHIP_STATEMENTS },
   { version: 28, name: 'chat_session_reasoning_effort', statements: CHAT_REASONING_EFFORT_STATEMENTS },
+  { version: 29, name: 'agent_access', statements: AGENT_ACCESS_STATEMENTS },
 ];
 
 /**

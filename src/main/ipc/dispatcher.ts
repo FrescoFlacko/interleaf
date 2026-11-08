@@ -65,6 +65,7 @@ export type AppInfoProviderResult = {
 };
 
 export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
+  readonly openPassage?: () => { readonly documentId: string; readonly documentHash: string; readonly location: import('@shared/types/document').DocumentLocation } | null;
   readonly settings: SettingsRepository;
   /**
    * The guided-onboarding verdict main latched at startup. A getter rather than
@@ -247,6 +248,7 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'library:get-document-preview': (req) => servicesForDocument(deps, req.documentId).library.getDocumentPreview(req.documentId, req.location),
     'files:open-dialog': () => openFromDialog(deps),
     'files:open-pending': () => openPending(deps),
+    'files:open-passage': () => deps.openPassage?.() ?? null,
 
     // Phase 5 — Annotations & Highlights
     'annotations:create': (req) => servicesForDocument(deps, req.documentId).annotations.create(req),

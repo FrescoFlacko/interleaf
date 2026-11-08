@@ -50,7 +50,8 @@ afterAll(async () => {
 describe('wiki site build', () => {
   it('renders every wiki Markdown page as an HTML page', async () => {
     const sources = await wikiSources();
-    expect(sources).toHaveLength(28);
+    expect(sources).toHaveLength(29);
+    expect(sources).toContain('wiki/agent-access.md');
     const rendered = new Set(result.pages.map((page) => page.source));
     for (const source of sources) expect(rendered.has(source)).toBe(true);
     expect(documents.size).toBe(result.pages.length);

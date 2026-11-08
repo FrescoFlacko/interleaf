@@ -13,6 +13,7 @@ export function createFilesBridge(invoke: PreloadInvoke, ipc: Pick<PreloadIpc, '
   return {
     openDialog: () => invoke(IPC.filesOpenDialog),
     openPending: () => invoke(IPC.filesOpenPending),
+    openPassage: () => invoke(IPC.filesOpenPassage),
     onCommand: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, payload: CloneableValue): void => {
         if (typeof payload === 'string' && isFileCommand(payload)) callback(payload);

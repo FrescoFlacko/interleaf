@@ -86,6 +86,7 @@ change.
   OpenCode, Pi, and Cursor. Missing CLIs are shown as unavailable rather than
   crashing the app. GitHub Copilot is not offered: it cannot run unattended
   Agent Mode in this integration.
+- Local MCP library access with revision-bound passage links and an opt-in suggestion inbox; see [Agent access](docs/wiki/agent-access.md).
 - Six semantic reading palettes (Paper, Sepia, Moss, Ocean, Graphite,
   Midnight), resizable panels, keyboard shortcuts, and Focus Reading Mode.
 
