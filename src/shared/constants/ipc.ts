@@ -69,6 +69,7 @@ export const IPC = {
   importedHighlightsCommit: 'imported-highlights:commit',
   importedHighlightsList: 'imported-highlights:list',
   importedHighlightsAssociate: 'imported-highlights:associate',
+  importedHighlightsVerify: 'imported-highlights:verify',
   practiceCreate: 'practice:create',
   practiceCreateImported: 'practice:create-imported',
   practiceDue: 'practice:due',

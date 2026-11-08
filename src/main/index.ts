@@ -353,7 +353,7 @@ async function bootstrap(): Promise<void> {
   const annotations = new AnnotationRepository(database);
   const externalHighlights = new ExternalHighlightRepository(database);
   const highlightImport = new HighlightImportService(externalHighlights, (parent, options) =>
-    parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options));
+    parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options), undefined, sourceHealthy);
   highlightImportService = highlightImport;
   const learning = new LearningRepository(database);
   const practice = new PracticeRepository(database, importedPracticeResolver(externalHighlights), undefined, indexedPracticeResolver(database));

@@ -37,9 +37,14 @@ reported and skipped.
 Review counts, duplicate warnings, source titles and sample text, then choose
 **Confirm import**. You can search your library and explicitly associate a
 source title with a document, or leave it unmatched and associate it later.
-The associated book can be opened from a saved highlight. The provider's page
-or location is retained as source metadata: it does not verify a passage or
-navigate to one. Re-importing the same records skips duplicates. Kindle notes,
+The associated book can be opened from a saved highlight. To link an exact
+passage, first save a matching highlight in that book and let its index finish.
+Choose **Verify against saved highlight** on the imported record. Verification
+requires one matching saved highlight and one exact occurrence in the current
+index; ambiguous matches are refused. This check is bounded to 1,000 indexed
+chunks and 20 million indexed characters. A practice card can open the verified
+passage while its source remains current. The provider's page or location is
+retained as source metadata: it does not verify a passage or navigate to one. Re-importing the same records skips duplicates. Kindle notes,
 bookmarks and unrecognized clipping types are reported as unsupported; malformed
 or incomplete rows are reported and skipped. No export file is changed.
 
@@ -257,4 +262,4 @@ Next: [AI Chat](ai-chat.md) · [Reading a document](reading.md) ·
 
 In the Annotations browser, choose **Make practice card** on an anchored highlight, enter a question and save. In the library, choose **Review practice** to review up to 20 due cards across your library. Write an answer, reveal the saved source and compare it before choosing Again, Hard, Good or Easy. Your rating determines the next due date.
 
-You can explicitly choose an eligible tool-free provider and send the question, answer and displayed evidence for an optional comparison. This may use provider credits and the feedback may be wrong. Manual comparison remains available when no provider is ready. A missing or changed source is identified and cannot be opened at an old location. From a saved imported highlight, choose **Make practice card** and enter a question. During review, **View exported highlight** opens the retained quote and provider details. Imported highlight evidence is an export quote, not a verified book passage; a title association or provider location does not establish an exact passage.
+You can explicitly choose an eligible tool-free provider and send the question, answer and displayed evidence for an optional comparison. This may use provider credits and the feedback may be wrong. Manual comparison remains available when no provider is ready. A missing or changed source is identified and cannot be opened at an old location. From a saved imported highlight, choose **Make practice card** and enter a question. During review, **View exported highlight** opens the retained quote and provider details. Imported highlight evidence remains an export quote. A title association or provider location does not establish an exact passage; the separate verification above can link a current saved book highlight.

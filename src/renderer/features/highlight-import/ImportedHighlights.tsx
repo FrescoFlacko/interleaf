@@ -76,6 +76,15 @@ export function ImportedHighlights() {
       setRecords(await bridge.importedHighlights.list(offset));
     } catch { setMessage('Could not associate that document.'); }
   }
+  async function verify(id: string): Promise<void> {
+    setBusy(true);
+    try {
+      await bridge.importedHighlights.verify(id);
+      setRecords(await bridge.importedHighlights.list(offset));
+      setMessage('Passage verified against a unique saved highlight and the current index.');
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not verify that passage.'); }
+    finally { setBusy(false); }
+  }
   function documentOptions(current: string | null = null) {
     const options = [{ value: '', label: 'Unmatched' }, ...documents.map((doc) => ({ value: doc.id, label: `${doc.title}${doc.author ? ` — ${doc.author}` : ''}` }))];
     if (current !== null && !documents.some((doc) => doc.id === current)) options.push({ value: current, label: 'Current association' });
@@ -104,7 +113,10 @@ export function ImportedHighlights() {
         <blockquote>{item.quote}</blockquote>{item.note && <p>Note: {item.note}</p>}{item.location && <p>Source location: {item.location}</p>}
         <div>Confirmed library document <Select aria-label={`Match saved ${item.title}`} value={item.documentId ?? ''} options={documentOptions(item.documentId)} onValueChange={(value) => { void associate(item.id, value); }} /></div>
         {item.documentId && <button type="button" className="ml-2 underline" onClick={() => { void openDocument(item.documentId ?? ''); }}>Open document</button>}
-        <p>No verified passage location.</p>
+        {item.verifiedAnchor ? <p>Passage verified against a saved highlight and the current index.</p> : <>
+          <p>No verified passage location.</p>
+          {item.documentId && <button type="button" disabled={busy} className="underline" onClick={() => { void verify(item.id); }}>Verify against saved highlight</button>}
+        </>}
         <ImportedPracticeCreate importedHighlightId={item.id} />
       </article>)}
       <div><button type="button" disabled={offset === 0} onClick={() => { setOffset(Math.max(0, offset - 50)); }}>Previous</button><button type="button" disabled={records.length < 50} onClick={() => { setOffset(offset + 50); }} className="ml-4">Next</button></div>

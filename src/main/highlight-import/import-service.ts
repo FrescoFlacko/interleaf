@@ -5,7 +5,7 @@ import { InterleafError } from '@shared/errors/interleaf-error';
 import type { BrowserWindow, OpenDialogOptions, OpenDialogReturnValue } from 'electron';
 import type { ExternalHighlightRepository } from '../db/repositories/external-highlight-repository';
 import type { ImportCommitInput } from '@shared/schemas/imported-highlight';
-import type { ImportPreview, ImportResult } from '@shared/types/imported-highlight';
+import type { ImportPreview, ImportResult, ImportedHighlight } from '@shared/types/imported-highlight';
 import type { ImportedSource } from './parser';
 import { readImportFile } from './read-import-file';
 import { summarizeImport } from './preview-summary';
@@ -14,11 +14,12 @@ type OpenDialog = (parent: BrowserWindow | null, options: OpenDialogOptions) => 
 type Pending = { owner: number; expires: number; records: readonly ImportedSource[] };
 export class HighlightImportService {
   readonly admission = new WorkAdmission();
-  private readonly active = new Set<Promise<ImportPreview | null>>();
+  private readonly active = new Set<Promise<ImportPreview | ImportedHighlight | null>>();
   private readonly pending = new Map<string, Pending>();
   private readonly generations = new Map<number, string>();
   constructor(private readonly repository: ExternalHighlightRepository, private readonly choose: OpenDialog,
-    private readonly read: typeof readImportFile = readImportFile) {}
+    private readonly read: typeof readImportFile = readImportFile,
+    private readonly sourceHealthy: (id: string, hash: string) => Promise<boolean> = () => Promise.resolve(false)) {}
   preview(owner: number, parent: BrowserWindow | null): Promise<ImportPreview | null> {
     const operation = this.admission.run(() => this.previewAdmitted(owner, parent));
     this.active.add(operation);
@@ -43,6 +44,18 @@ export class HighlightImportService {
   associate(id: string, documentId: string | null) {
     this.assertOpen();
     return this.repository.associate(id, documentId);
+  }
+  verify(id: string) {
+    const operation = this.admission.run(async () => {
+      const candidate = this.repository.candidate(id);
+      if (!candidate) throw new InterleafError('validation', 'No unique matching saved highlight and current index were found for that book.');
+      if (!(await this.sourceHealthy(candidate.documentId, candidate.documentHash))) throw new InterleafError('validation', 'The selected book is missing or changed.');
+      this.assertOpen();
+      return this.repository.verify(id, candidate);
+    });
+    this.active.add(operation);
+    void operation.then(() => { this.active.delete(operation); }, () => { this.active.delete(operation); });
+    return operation;
   }
   private assertOpen(): void {
     if (this.admission.isClosed()) throw new InterleafError('internal', 'Application is shutting down.');

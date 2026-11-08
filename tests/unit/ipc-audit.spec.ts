@@ -251,6 +251,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       const importInput = { token: '123e4567-e89b-42d3-a456-426614174000', choices: [] }; await api.importedHighlights.commit(importInput); last(IPC.importedHighlightsCommit, importInput);
       await api.importedHighlights.list(0); last(IPC.importedHighlightsList, { offset: 0 });
       await api.importedHighlights.associate('source', null); last(IPC.importedHighlightsAssociate, { id: 'source', documentId: null });
+      await api.importedHighlights.verify('source'); last(IPC.importedHighlightsVerify, { id: 'source' });
       const anchor = { format: 'pdf' as const, pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } };
       const source = { documentId: 'doc', documentHash: 'hash', anchor };
       const learning = { kind: 'question' as const, title: 'Why?', body: 'Think', primary: source };
@@ -358,7 +359,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         // never writes onboarding state on a channel of its own.
         ['onboarding', ['getLaunchState']],
         ['library', ['closeDocument', 'createFolder', 'deleteDocument', 'deleteFolder', 'getContinueReading', 'getDocumentPreview', 'getFolderTree', 'getRecentlyAdded', 'getRecentlyRead', 'getSummary', 'importDroppedFiles', 'importWebArticle', 'listDocuments', 'listFolders', 'moveDocumentToFolder', 'onStorageHealthUpdated', 'openDocument', 'openFileDialog', 'renameFolder', 'updateReadingPosition']],
-        ['importedHighlights', ['associate', 'commit', 'list', 'preview', 'release']],
+        ['importedHighlights', ['associate', 'commit', 'list', 'preview', 'release', 'verify']],
         ['learning', ['create', 'dismiss', 'list', 'onAccepted', 'remove', 'sourceStatus']],
         ['practice', ['cancelCheck', 'check', 'create', 'createImported', 'due', 'get', 'rate']],
         ['annotations', ['create', 'delete', 'list', 'page', 'repairAnchor', 'update']],

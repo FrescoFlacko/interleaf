@@ -275,6 +275,7 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     },
     'imported-highlights:list': (req) => deps.highlightImport.list(req.offset),
     'imported-highlights:associate': (req) => deps.highlightImport.associate(req.id, req.documentId),
+    'imported-highlights:verify': (req) => deps.highlightImport.verify(req.id),
     'learning:source-status': (req) => servicesForDocument(deps, req.documentId).learning.sourceStatus(req.source),
     'learning:create': (req) => servicesForDocument(deps, req.primary.documentId).learning.create(req),
     'learning:list': (req) => servicesForDocument(deps, req.documentId).learning.list(req.documentId),

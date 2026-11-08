@@ -219,7 +219,7 @@ function buildApi(overrides: BridgeStubs): InterleafAPI {
     library: { ...library, ...overrides.library },
     files: { ...files, ...overrides.files },
     reader: { ...reader, ...overrides.reader },
-    importedHighlights: { preview: () => Promise.resolve(null), release: () => Promise.resolve(), commit: () => Promise.resolve({ inserted: 0, duplicates: 0 }), list: () => Promise.resolve([]), associate: () => Promise.resolve(null), ...overrides.importedHighlights },
+    importedHighlights: { preview: () => Promise.resolve(null), release: () => Promise.resolve(), commit: () => Promise.resolve({ inserted: 0, duplicates: 0 }), list: () => Promise.resolve([]), associate: () => Promise.resolve(null), verify: () => Promise.resolve(null), ...overrides.importedHighlights },
     annotations: { ...annotations, ...overrides.annotations },
     learning: { ...learning, ...overrides.learning },
     practice: { ...practice, ...overrides.practice },

@@ -28,7 +28,7 @@ export function importedPracticeResolver(repository: ExternalHighlightRepository
     const record = repository.resolveSource(id);
     if (!record) return null;
     return { evidence: record.quote, label: `${record.provider === 'kindle' ? 'Kindle' : 'Readwise'}: ${record.title}${record.author ? ` — ${record.author}` : ''}`,
-      details: { provider: record.provider, title: record.title, author: record.author, location: record.location, date: record.date, note: record.note }, native: null };
+      details: { provider: record.provider, title: record.title, author: record.author, location: record.location, date: record.date, note: record.note }, native: repository.resolveNativeSource(id) };
   };
 }
 

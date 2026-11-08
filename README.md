@@ -76,7 +76,8 @@ change.
   Notes save as you type. Kindle My Clippings and Readwise Highlights CSV exports
   can be previewed and imported as separate source material; provider locations
   are not verified document anchors. Saved imported highlights can also become
-  practice cards, with the exported record available during review.
+  practice cards, with the exported record available during review. An explicit
+  verification can link a uniquely matching saved highlight in an indexed book.
 - Source-linked learning items in the reader margin: primers, questions,
   checkpoints, and prompts comparing two passages. Authoring them stays local
   and does not send document text to an AI provider.

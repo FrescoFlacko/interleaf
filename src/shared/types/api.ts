@@ -168,6 +168,7 @@ export type InterleafAPI = {
     commit(input: ImportCommitInput): Promise<ImportResult>;
     list(offset: number): Promise<readonly ImportedHighlight[]>;
     associate(id: string, documentId: string | null): Promise<ImportedHighlight | null>;
+    verify(id: string): Promise<ImportedHighlight | null>;
   },
   readonly learning: {
     onAccepted(callback: (source: { readonly documentId: string; readonly documentHash: string }) => void): () => void;

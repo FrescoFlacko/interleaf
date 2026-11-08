@@ -1,4 +1,4 @@
-import { importCommitSchema, importListSchema, importAssociateSchema } from './imported-highlight';
+import { importCommitSchema, importListSchema, importAssociateSchema, importVerifySchema } from './imported-highlight';
 import type { ImportPreview, ImportResult, ImportedHighlight } from '../types/imported-highlight';
 import { practiceCreateSchema, practiceCreateImportedSchema, practiceDueSchema, practiceRateSchema, practiceCardIdSchema, practiceCheckSchema, type PracticeCard } from './practice';
 import { z } from 'zod';
@@ -205,6 +205,7 @@ export const ipcRequestSchemas = {
   [IPC.importedHighlightsCommit]: importCommitSchema,
   [IPC.importedHighlightsList]: importListSchema,
   [IPC.importedHighlightsAssociate]: importAssociateSchema,
+  [IPC.importedHighlightsVerify]: importVerifySchema,
   [IPC.practiceCreate]: practiceCreateSchema,
   [IPC.practiceCreateImported]: practiceCreateImportedSchema,
   [IPC.practiceDue]: practiceDueSchema,
@@ -327,6 +328,7 @@ type IpcResults = {
   readonly [IPC.importedHighlightsCommit]: ImportResult;
   readonly [IPC.importedHighlightsList]: readonly ImportedHighlight[];
   readonly [IPC.importedHighlightsAssociate]: ImportedHighlight | null;
+  readonly [IPC.importedHighlightsVerify]: ImportedHighlight | null;
   readonly [IPC.learningSourceStatus]: LearningSourceStatus;
   readonly [IPC.learningCreate]: LearningItem;
   readonly [IPC.learningList]: readonly LearningItem[];

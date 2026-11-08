@@ -7,3 +7,5 @@ export const importListSchema = z.object({ offset: z.number().int().min(0).max(1
 export type ImportCommitInput = z.output<typeof importCommitSchema>;
 
 export const importAssociateSchema = z.object({ id: z.uuid(), documentId: z.uuid().nullable() }).strict();
+
+export const importVerifySchema = z.object({ id: z.uuid() }).strict();

@@ -332,6 +332,7 @@ export function createInterleafApi(
     commit: (input) => invoke(IPC.importedHighlightsCommit, input),
     list: (offset) => invoke(IPC.importedHighlightsList, { offset }),
     associate: (id, documentId) => invoke(IPC.importedHighlightsAssociate, { id, documentId }),
+    verify: (id) => invoke(IPC.importedHighlightsVerify, { id }),
   },
   learning: {
     onAccepted: (callback) => {

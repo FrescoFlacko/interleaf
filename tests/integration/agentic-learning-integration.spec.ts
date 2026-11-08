@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { InterleafDatabase } from '@main/db/database';
 import { applyMigrations, MIGRATIONS, runMigrations } from '@main/db/migrations';
 import { DocumentRepository } from '@main/db/repositories/document-repository';
+import { AnnotationRepository } from '@main/db/repositories/annotation-repository';
+import { HighlightImportService } from '@main/highlight-import/import-service';
 import { SearchRepository } from '@main/db/repositories/search-repository';
 import { LearningRepository } from '@main/db/repositories/learning-repository';
 import { ExternalHighlightRepository } from '@main/db/repositories/external-highlight-repository';
@@ -86,6 +88,72 @@ describe('combined learning source contracts', () => {
       expect(learning.remove('one', accepted.resultId!)).toBe(true);
       expect(() => normal.resolve(pending.id, 'accept')).toThrow(/no longer available/);
       expect(learning.list('one')).toEqual([]);
+    } finally { db.close(); }
+  });
+  it('verifies an imported quote only against a unique current saved highlight and index', async () => {
+    const db = InterleafDatabase.open(':memory:'); runMigrations(db);
+    try {
+      const source = fixture(db, 'one', 'Exact native quote');
+      const annotations = new AnnotationRepository(db);
+      const annotation = annotations.create({ documentId: 'one', type: 'highlight', selectedText: 'Exact native quote', color: 'yellow', anchor: source.anchor });
+      const duplicate = annotations.create({ documentId: 'one', type: 'highlight', selectedText: 'Exact native quote', color: 'blue', anchor: source.anchor });
+      const external = new ExternalHighlightRepository(db);
+      external.commit([{ provider: 'kindle', title: 'Book', author: null, quote: 'Exact native quote', note: null, location: 'page 4', date: null }], new Map());
+      const record = external.list(0)[0]!;
+      external.associate(record.id, 'one');
+      let healthy = false;
+      const service = new HighlightImportService(external, () => Promise.resolve({ canceled: true, filePaths: [] }), undefined, () => Promise.resolve(healthy));
+      await expect(service.verify(record.id)).rejects.toThrow(/unique/);
+      annotations.delete('one', duplicate.id);
+      db.raw.prepare('UPDATE document_text_chunks SET text = ? WHERE id = ?').run('Exact native quote and Exact native quote', source.chunkId);
+      await expect(service.verify(record.id)).rejects.toThrow(/unique/);
+      db.raw.prepare('UPDATE document_text_chunks SET text = ? WHERE id = ?').run('Exact native quote', source.chunkId);
+      await expect(service.verify(record.id)).rejects.toThrow(/missing or changed/);
+      const entered = Promise.withResolvers<undefined>();
+      const finish = Promise.withResolvers<boolean>();
+      const delayed = new HighlightImportService(external, () => Promise.resolve({ canceled: true, filePaths: [] }), undefined,
+        () => { entered.resolve(undefined); return finish.promise; });
+      const pending = delayed.verify(record.id);
+      await entered.promise;
+      expect(delayed.admission.liveWork()).toBe(1);
+      const shutdown = delayed.shutdown();
+      finish.resolve(true);
+      await expect(pending).rejects.toThrow(/shutting down/);
+      await shutdown;
+      expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
+      const checking = Promise.withResolvers<undefined>();
+      const checked = Promise.withResolvers<boolean>();
+      const raced = new HighlightImportService(external, () => Promise.resolve({ canceled: true, filePaths: [] }), undefined,
+        () => { checking.resolve(undefined); return checked.promise; });
+      const racing = raced.verify(record.id);
+      await checking.promise;
+      const laterDuplicate = annotations.create({ documentId: 'one', type: 'highlight', selectedText: 'Exact native quote', color: 'blue', anchor: source.anchor });
+      checked.resolve(true);
+      await expect(racing).rejects.toThrow(/ambiguous/);
+      annotations.delete('one', laterDuplicate.id);
+      await raced.shutdown();
+      healthy = true;
+      const verified = await service.verify(record.id);
+      expect(verified).toMatchObject({ verifiedDocumentHash: 'hash-one', verifiedAnchor: source.anchor, location: 'page 4' });
+      const practice = new PracticeRepository(db, importedPracticeResolver(external), undefined, indexedPracticeResolver(db));
+      const card = practice.createFromImported({ importedHighlightId: record.id, question: 'What?' });
+      expect(card).toMatchObject({ source: { kind: 'imported' }, sourceState: 'available', navigation: { annotationId: annotation.id, documentHash: 'hash-one', anchor: source.anchor } });
+      db.raw.prepare('UPDATE document_index_state SET published_document_hash = ? WHERE document_id = ?').run('stale', 'one');
+      expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
+      expect(practice.get(card.id)).toMatchObject({ sourceState: 'export-only', navigation: null, evidence: 'Exact native quote' });
+      db.raw.prepare('UPDATE document_index_state SET published_document_hash = ? WHERE document_id = ?').run('hash-one', 'one');
+      const search = new SearchRepository(db);
+      const next = search.begin('one', 'hash-one');
+      search.append('one', 'hash-one', next.generationId, [{ ordinal: 0, text: 'Exact native quote', location: { format: 'pdf', pageIndex: 0 }, heading: null, pageLabel: null }]);
+      search.complete('one', 'hash-one', next.generationId);
+      expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
+      expect((await service.verify(record.id))?.verifiedAnchor).toEqual(source.anchor);
+      external.associate(record.id, 'one');
+      expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
+      await service.verify(record.id);
+      annotations.delete('one', annotation.id);
+      expect(external.resolveSource(record.id)?.verifiedAnchor).toBeNull();
+      await service.shutdown();
     } finally { db.close(); }
   });
   it('turns retained imported quotes into export-only practice evidence', () => {
