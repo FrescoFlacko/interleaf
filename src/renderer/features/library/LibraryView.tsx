@@ -1,3 +1,4 @@
+import { ImportedHighlights } from '../highlight-import/ImportedHighlights';
 import { useEffect } from 'react';
 import { AppIcon } from '../../components/AppIcon';
 import { LoadingShimmerText } from '../../components/LoadingShimmer';
@@ -116,6 +117,8 @@ export function LibraryView() {
             import split button is deliberately outside it: its menu must
             layer over the library, which a scroll container clips. */}
         <LibraryHeaderControls />
+
+        <ImportedHighlights />
 
         {/* Import Menu. Outside the scrolling strip so the split button keeps
             its place at the end of the row at every width, and so its menu

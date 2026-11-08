@@ -8,6 +8,7 @@ is never modified.
 
 **On this page**
 
+- [Importing highlights](#importing-highlights)
 - [Highlighting a passage](#highlighting-a-passage)
 - [Notes](#notes)
 - [Bookmarks](#bookmarks)
@@ -15,6 +16,28 @@ is never modified.
 - [Editing and deleting](#editing-and-deleting)
 - [When a highlight loses its place](#when-a-highlight-loses-its-place)
 - [Size limits on a single selection](#size-limits-on-a-single-selection)
+
+---
+
+## Importing highlights
+
+In the library, choose **Imported highlights**, then **Choose export…**. Select
+Kindle `My Clippings.txt` or a Readwise **Highlights bulk export CSV** with
+`Title` and `Highlight` columns. Optional `Author`, `Note`, `Location`, and
+`Highlighted at` columns are retained. Readwise Reader library metadata CSV is
+not a highlights export and is not supported. Files must be UTF-8 or
+BOM-marked UTF-16 and at most 5 MB. CSV fields may contain quoted newlines. Individual highlights are limited to
+20,000 characters, titles to 250 and authors to 150; over-limit entries are
+reported and skipped.
+
+Review counts, duplicate warnings, source titles and sample text, then choose
+**Confirm import**. You can search your library and explicitly associate a
+source title with a document, or leave it unmatched and associate it later.
+The associated book can be opened from a saved highlight. The provider's page
+or location is retained as source metadata: it does not verify a passage or
+navigate to one. Re-importing the same records skips duplicates. Kindle notes,
+bookmarks and unrecognized clipping types are reported as unsupported; malformed
+or incomplete rows are reported and skipped. No export file is changed.
 
 ---
 

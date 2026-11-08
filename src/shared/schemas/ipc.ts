@@ -1,3 +1,5 @@
+import { importCommitSchema, importListSchema, importAssociateSchema } from './imported-highlight';
+import type { ImportPreview, ImportResult, ImportedHighlight } from '../types/imported-highlight';
 import { z } from 'zod';
 import { IPC, type IpcChannel } from '../constants/ipc';
 import { appSettingsSchema, type AppSettings } from './settings';
@@ -195,6 +197,10 @@ export const ipcRequestSchemas = {
   [IPC.filesOpenDialog]: undefined,
   [IPC.filesOpenPending]: undefined,
   [IPC.readerRenderMermaid]: mermaidRenderRequestSchema,
+  [IPC.importedHighlightsPreview]: undefined,
+  [IPC.importedHighlightsCommit]: importCommitSchema,
+  [IPC.importedHighlightsList]: importListSchema,
+  [IPC.importedHighlightsAssociate]: importAssociateSchema,
   // Phase 5 — Annotations & Highlights
   [IPC.annotationsCreate]: createAnnotationRequestSchema,
   [IPC.annotationsList]: listAnnotationsRequestSchema,
@@ -299,6 +305,10 @@ type IpcResults = {
   readonly [IPC.filesOpenDialog]: DocumentMetadata | null;
   readonly [IPC.filesOpenPending]: DocumentMetadata | null;
   readonly [IPC.readerRenderMermaid]: MermaidRenderResult;
+  readonly [IPC.importedHighlightsPreview]: ImportPreview | null;
+  readonly [IPC.importedHighlightsCommit]: ImportResult;
+  readonly [IPC.importedHighlightsList]: readonly ImportedHighlight[];
+  readonly [IPC.importedHighlightsAssociate]: ImportedHighlight | null;
   readonly [IPC.annotationsCreate]: Annotation;
   readonly [IPC.annotationsList]: readonly Annotation[];
   readonly [IPC.annotationsPage]: AnnotationPage;

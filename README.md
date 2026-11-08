@@ -72,7 +72,9 @@ change.
   images.
 - Highlights, highlight notes, location notes, bookmarks, five highlight
   colors, annotation filtering/search, and format-specific anchor recovery.
-  Notes save as you type.
+  Notes save as you type. Kindle My Clippings and Readwise Highlights CSV exports
+  can be previewed and imported as separate source material; provider locations
+  are not verified document anchors.
 - Current-document search and SQLite FTS5-backed indexing with source locations.
 - Persistent one-document chat sessions, explicit selection/location/page-range
   context, bounded retrieval, streamed responses, and validated citation jumps.
