@@ -73,10 +73,10 @@ function nonempty(value: string | undefined): string | null {
 export function parseReadwise(text: string): ParsedImport {
   const rows = parseCsv(text);
   const header = rows[0]?.map((cell) => cell.trim().toLowerCase()) ?? [];
-  const title = header.indexOf('title');
+  const title = header.includes('book title') ? header.indexOf('book title') : header.indexOf('title');
   const quote = header.indexOf('highlight');
-  if (title < 0 || quote < 0) throw new Error('Expected a Readwise Highlights bulk CSV with Title and Highlight columns. Reader library metadata exports are not supported.');
-  const author = header.indexOf('author');
+  if (title < 0 || quote < 0) throw new Error('Expected a Readwise Highlights bulk CSV with Book Title (or Title) and Highlight columns. Reader library metadata exports are not supported.');
+  const author = header.includes('book author') ? header.indexOf('book author') : header.indexOf('author');
   const note = header.indexOf('note');
   const location = header.indexOf('location');
   const date = header.indexOf('highlighted at');

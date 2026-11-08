@@ -25,3 +25,23 @@ describe('imported highlight preview', () => {
     expect(await screen.findByText('Imported 1; skipped 0 duplicates.')).toBeTruthy();
   });
 });
+
+describe('preview cleanup', () => {
+  afterEach(cleanup);
+  it('releases the owner on unmount and ignores a late chooser result', async () => {
+    let finish: (value: null) => void = () => undefined;
+    const delayed = new Promise<null>((resolve) => { finish = resolve; });
+    const release = vi.fn().mockResolvedValue(undefined);
+    stubBridge({ library: { listDocuments: () => Promise.resolve([]) }, importedHighlights: {
+      list: () => Promise.resolve([]), preview: () => delayed, release,
+    } });
+    const view = render(<ImportedHighlights />);
+    fireEvent.click(screen.getByRole('button', { name: 'Imported highlights' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Choose export…' }));
+    view.unmount();
+    expect(release).toHaveBeenCalledOnce();
+    finish(null);
+    await delayed;
+    expect(screen.queryByText('Preview: Kindle')).toBeNull();
+  });
+});

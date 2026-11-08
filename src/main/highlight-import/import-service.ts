@@ -17,12 +17,18 @@ export class HighlightImportService {
   private readonly active = new Set<Promise<ImportPreview | null>>();
   private readonly pending = new Map<string, Pending>();
   private readonly generations = new Map<number, string>();
-  constructor(private readonly repository: ExternalHighlightRepository, private readonly choose: OpenDialog) {}
+  constructor(private readonly repository: ExternalHighlightRepository, private readonly choose: OpenDialog,
+    private readonly read: typeof readImportFile = readImportFile) {}
   preview(owner: number, parent: BrowserWindow | null): Promise<ImportPreview | null> {
     const operation = this.admission.run(() => this.previewAdmitted(owner, parent));
     this.active.add(operation);
     void operation.then(() => { this.active.delete(operation); }, () => { this.active.delete(operation); });
     return operation;
+  }
+  /** Revoke the owner's outstanding preview and any chooser/read in flight. */
+  disposeOwner(owner: number): void {
+    this.generations.delete(owner);
+    for (const [token, pending] of this.pending) if (pending.owner === owner) this.pending.delete(token);
   }
   async shutdown(): Promise<void> {
     this.admission.close();
@@ -50,7 +56,8 @@ export class HighlightImportService {
     const result = await this.choose(parent, { title: 'Import highlights', properties: ['openFile'],
       filters: [{ name: 'Kindle clippings or Readwise highlights', extensions: ['txt', 'csv'] }] });
     if (result.canceled || !result.filePaths[0]) return null;
-    const { provider, parsed } = await readImportFile(result.filePaths[0]);
+    if (this.generations.get(owner) !== generation) throw new InterleafError('validation', 'The preview was superseded.');
+    const { provider, parsed } = await this.read(result.filePaths[0]);
     if (this.generations.get(owner) !== generation) throw new InterleafError('validation', 'The preview was superseded.');
     const summary = summarizeImport(parsed.records, this.repository);
     const token = randomUUID();

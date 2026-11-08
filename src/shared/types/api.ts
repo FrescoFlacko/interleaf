@@ -161,6 +161,7 @@ export type InterleafAPI = {
   };
   readonly importedHighlights: {
     preview(): Promise<ImportPreview | null>;
+    release(): Promise<void>;
     commit(input: ImportCommitInput): Promise<ImportResult>;
     list(offset: number): Promise<readonly ImportedHighlight[]>;
     associate(id: string, documentId: string | null): Promise<ImportedHighlight | null>;

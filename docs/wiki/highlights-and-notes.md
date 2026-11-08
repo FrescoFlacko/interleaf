@@ -23,10 +23,13 @@ is never modified.
 
 In the library, choose **Imported highlights**, then **Choose export…**. Select
 Kindle `My Clippings.txt` or a Readwise **Highlights bulk export CSV** with
-`Title` and `Highlight` columns. Optional `Author`, `Note`, `Location`, and
+`Highlight` and `Book Title` columns (the `Title` alias is also accepted).
+Optional `Book Author` (or `Author`), `Note`, `Location`, and
 `Highlighted at` columns are retained. Readwise Reader library metadata CSV is
 not a highlights export and is not supported. Files must be UTF-8 or
-BOM-marked UTF-16 and at most 5 MB. CSV fields may contain quoted newlines. Individual highlights are limited to
+BOM-marked UTF-16 and at most 5 MB. CSV fields may contain quoted newlines; the import accepts at most 10,000 rows,
+64 columns per row and 32,000 characters per field. Kindle highlights must use
+English metadata containing “Highlight”; unrecognized types are reported. Individual highlights are limited to
 20,000 characters, titles to 250 and authors to 150; over-limit entries are
 reported and skipped.
 

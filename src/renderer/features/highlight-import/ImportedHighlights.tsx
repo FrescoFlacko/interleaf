@@ -1,5 +1,5 @@
 import { Select } from '../../components/ui/select';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { bridge } from '../../app/api-client';
 import { useReaderStore } from '../../stores/use-reader-store';
 import type { DocumentMetadata } from '@shared/types/document';
@@ -15,6 +15,8 @@ export function ImportedHighlights() {
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const epoch = useRef(0);
+  const session = useRef<{ closed: boolean } | null>(null);
   const openDocument = useReaderStore((state) => state.openDocument);
   useEffect(() => {
     if (!open) return;
@@ -24,11 +26,37 @@ export function ImportedHighlights() {
       .catch(() => { if (live) setMessage('Could not load imported highlights.'); });
     return () => { live = false; };
   }, [open, offset, search]);
+  function release(): void {
+    epoch.current += 1;
+    void bridge.importedHighlights.release().catch(() => undefined);
+    setPreview(null);
+    setBusy(false);
+  }
+  function close(): void {
+    if (session.current) session.current.closed = true;
+    release();
+    setOpen(false);
+  }
+  useEffect(() => {
+    if (!open) return;
+    const active = session.current;
+    return () => {
+      if (active && !active.closed) {
+        active.closed = true;
+        epoch.current += 1;
+        void bridge.importedHighlights.release().catch(() => undefined);
+      }
+    };
+  }, [open]);
   async function choose(): Promise<void> {
-    setBusy(true); setMessage('');
-    try { setPreview(await bridge.importedHighlights.preview()); setChoices({}); }
-    catch (error) { setMessage(error instanceof Error ? error.message : 'Could not read that file.'); }
-    finally { setBusy(false); }
+    const request = ++epoch.current;
+    setBusy(true); setMessage(''); setPreview(null);
+    try {
+      const result = await bridge.importedHighlights.preview();
+      if (epoch.current === request) { setPreview(result); setChoices({}); }
+    } catch (error) {
+      if (epoch.current === request) setMessage(error instanceof Error ? error.message : 'Could not read that file.');
+    } finally { if (epoch.current === request) setBusy(false); }
   }
   async function commit(): Promise<void> {
     if (!preview) return;
@@ -53,9 +81,9 @@ export function ImportedHighlights() {
     return options;
   }
   return <>
-    <button type="button" className="shrink-0 whitespace-nowrap rounded border border-border-subtle px-2 py-1" onClick={() => { setOpen(!open); }}>Imported highlights</button>
+    <button type="button" className="shrink-0 whitespace-nowrap rounded border border-border-subtle px-2 py-1" onClick={() => { if (open) close(); else { session.current = { closed: false }; setOpen(true); } }}>Imported highlights</button>
     {open && <section aria-label="Imported highlights" className="absolute inset-4 z-50 flex flex-col overflow-auto rounded border border-border-subtle bg-bg-primary p-5 shadow-xl">
-      <div className="flex justify-between"><h2 className="text-lg font-semibold">Imported highlights</h2><button type="button" onClick={() => { setOpen(false); setPreview(null); }}>Close</button></div>
+      <div className="flex justify-between"><h2 className="text-lg font-semibold">Imported highlights</h2><button type="button" onClick={close}>Close</button></div>
       <p className="text-sm">Kindle My Clippings or Readwise Highlights CSV. Source locations are not verified passages.</p>
       <div><button type="button" disabled={busy} onClick={() => { void choose(); }} className="my-2 rounded bg-accent px-3 py-1 text-on-accent">Choose export…</button></div>
       {message && <p role="status">{message}</p>}
@@ -67,7 +95,7 @@ export function ImportedHighlights() {
         {preview.titles.map((group) => <div key={group.key} className="my-2 block">{group.title}{group.author ? ` — ${group.author}` : ''} ({group.count}) <Select aria-label={`Match ${group.title}`} value={choices[group.key] ?? ''} options={documentOptions()} onValueChange={(value) => { setChoices({ ...choices, [group.key]: value }); }} /></div>)}
         <h4>Sample highlights (up to 20)</h4>{preview.samples.map((sample, index) => <p key={index}><strong>{sample.title}</strong>: {sample.quote} {sample.location && `(${sample.location})`}</p>)}
         <button type="button" disabled={busy || preview.count === 0} onClick={() => { void commit(); }} className="rounded bg-accent px-3 py-1 text-on-accent">Confirm import</button>
-        <button type="button" onClick={() => { setPreview(null); }} className="ml-3">Cancel</button>
+        <button type="button" onClick={release} className="ml-3">Cancel</button>
       </div>}
       <h3 className="mt-3 font-semibold">Saved highlights</h3>
       {records.map((item) => <article key={item.id} className="my-2 border border-border-subtle p-2">

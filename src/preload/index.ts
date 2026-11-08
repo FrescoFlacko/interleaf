@@ -326,6 +326,7 @@ export function createInterleafApi(
   },
   importedHighlights: {
     preview: () => invoke(IPC.importedHighlightsPreview, undefined),
+    release: () => invoke(IPC.importedHighlightsRelease, undefined),
     commit: (input) => invoke(IPC.importedHighlightsCommit, input),
     list: (offset) => invoke(IPC.importedHighlightsList, { offset }),
     associate: (id, documentId) => invoke(IPC.importedHighlightsAssociate, { id, documentId }),

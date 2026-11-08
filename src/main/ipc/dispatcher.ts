@@ -252,11 +252,16 @@ function buildHandlers(deps: IpcDispatcherDeps): {
 
     // Phase 5 — Annotations & Highlights
     'imported-highlights:preview': (_req, event) => {
-      if (!event.sender) throw new InterleafError('validation', 'Missing sender.');
+      if (!event.sender || event.sender.isDestroyed()) throw new InterleafError('sender-rejected', 'A live sender is required.');
       return deps.highlightImport.preview(event.sender.id, deps.parentWindow());
     },
+    'imported-highlights:release': (_req, event) => {
+      if (!event.sender || event.sender.isDestroyed()) throw new InterleafError('sender-rejected', 'A live sender is required.');
+      deps.highlightImport.disposeOwner(event.sender.id);
+      return undefined;
+    },
     'imported-highlights:commit': (req, event) => {
-      if (!event.sender) throw new InterleafError('validation', 'Missing sender.');
+      if (!event.sender || event.sender.isDestroyed()) throw new InterleafError('sender-rejected', 'A live sender is required.');
       return deps.highlightImport.commit(event.sender.id, req);
     },
     'imported-highlights:list': (req) => deps.highlightImport.list(req.offset),

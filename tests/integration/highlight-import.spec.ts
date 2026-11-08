@@ -1,12 +1,13 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InterleafDatabase } from '@main/db/database';
 import { runMigrations } from '@main/db/migrations';
 import { DocumentRepository } from '@main/db/repositories/document-repository';
 import { ExternalHighlightRepository } from '@main/db/repositories/external-highlight-repository';
 import { HighlightImportService } from '@main/highlight-import/import-service';
+import { readImportFile } from '@main/highlight-import/read-import-file';
 
 describe('native highlight import boundary', () => {
   let db: InterleafDatabase;
@@ -44,6 +45,19 @@ describe('native highlight import boundary', () => {
     db.raw.prepare('DELETE FROM documents WHERE id = ?').run('document');
     expect(repository.resolveSource(record.id)).toMatchObject({ documentId: null, quote: 'A quote', note: 'A note' });
   });
+  it('imports a synthetic fixture matching publicly reported bulk export headers', async () => {
+    // Synthetic, not an account export. The official guide describes export workflow, not headers.
+    // Header shape reported: https://www.reddit.com/r/readwise/comments/16n6p7a/is_there_a_way_to_export_all_highlights_under_a/
+    // and https://alexop.dev/posts/supercharging-reading-comprehension-claude-readwise/
+    const path = join(directory, 'readwise.csv');
+    await writeFile(path, await readFile('tests/fixtures/highlight-import/readwise-bulk-synthetic.csv'));
+    const repository = new ExternalHighlightRepository(db);
+    const service = new HighlightImportService(repository, () => Promise.resolve({ canceled: false, filePaths: [path] }));
+    const preview = await service.preview(1, null);
+    expect(preview).toMatchObject({ provider: 'readwise', count: 1, titles: [{ title: 'Book', author: 'Writer' }] });
+    expect(service.commit(1, { token: preview!.token, choices: [] }).inserted).toBe(1);
+    expect(repository.list(0)[0]).toMatchObject({ title: 'Book', author: 'Writer', quote: 'A quote', note: 'A note', location: '2', date: '2026-11-01' });
+  });
   it('handles cancel and refuses reader metadata CSV', async () => {
     const repository = new ExternalHighlightRepository(db);
     const cancelled = new HighlightImportService(repository, () => Promise.resolve({ canceled: true, filePaths: [] }));
@@ -76,5 +90,60 @@ describe('highlight import lifecycle', () => {
     expect(closed).toBe(true);
     expect(service.admission.liveWork()).toBe(0);
     db.close();
+  });
+});
+
+describe('preview disposal', () => {
+  it('does not query the database after a disposed read completes', async () => {
+    const db = InterleafDatabase.open(':memory:');
+    runMigrations(db);
+    const directory = await mkdtemp(join(tmpdir(), 'import-read-'));
+    try {
+      const file = join(directory, 'clippings.txt');
+      await writeFile(file, 'Book\n- Your Highlight on page 2\n\nQuote\n==========');
+      let finish: () => void = () => undefined;
+      let started: () => void = () => undefined;
+      const entered = new Promise<void>((resolve) => { started = resolve; });
+      const gate = new Promise<void>((resolve) => { finish = resolve; });
+      const repository = new ExternalHighlightRepository(db);
+      const has = vi.spyOn(repository, 'has');
+      const service = new HighlightImportService(repository, () => Promise.resolve({ canceled: false, filePaths: [file] }), async (path) => {
+        started();
+        await gate;
+        return readImportFile(path);
+      });
+      const pending = service.preview(1, null);
+      await entered;
+      service.disposeOwner(1);
+      expect(service.admission.liveWork()).toBe(1);
+      finish();
+      await expect(pending).rejects.toThrow(/superseded/);
+      expect(has).not.toHaveBeenCalled();
+      expect(service.admission.liveWork()).toBe(0);
+    } finally { db.close(); await rm(directory, { recursive: true, force: true }); }
+  });
+
+  it('invalidates a late chooser and cannot resurrect it after a new preview', async () => {
+    const db = InterleafDatabase.open(':memory:');
+    runMigrations(db);
+    const directory = await mkdtemp(join(tmpdir(), 'import-late-'));
+    try {
+      const file = join(directory, 'clippings.txt');
+      await writeFile(file, 'Book\n- Your Highlight on page 2\n\nQuote\n==========');
+      let release: (value: { canceled: boolean; filePaths: string[] }) => void = () => undefined;
+      const delayed = new Promise<{ canceled: boolean; filePaths: string[] }>((resolve) => { release = resolve; });
+      let calls = 0;
+      const service = new HighlightImportService(new ExternalHighlightRepository(db), () => {
+        calls += 1;
+        return calls === 1 ? delayed : Promise.resolve({ canceled: false, filePaths: [file] });
+      });
+      const old = service.preview(1, null);
+      service.disposeOwner(1);
+      const fresh = await service.preview(1, null);
+      release({ canceled: false, filePaths: [file] });
+      await expect(old).rejects.toThrow(/superseded/);
+      expect(service.admission.liveWork()).toBe(0);
+      expect(service.commit(1, { token: fresh!.token, choices: [] }).inserted).toBe(1);
+    } finally { db.close(); await rm(directory, { recursive: true, force: true }); }
   });
 });

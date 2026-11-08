@@ -141,8 +141,12 @@ function createAndAttachMainWindow(): BrowserWindow {
   // A reload or navigation leaves no page to own diagnostics handles.
   const ownerId = window.webContents.id;
   window.webContents.on('did-start-navigation', (details) => {
-    if (details.isMainFrame && !details.isSameDocument) diagnostics?.disposeOwner(ownerId);
+    if (details.isMainFrame && !details.isSameDocument) {
+      diagnostics?.disposeOwner(ownerId);
+      highlightImportService?.disposeOwner(ownerId);
+    }
   });
+  window.webContents.once('destroyed', () => { highlightImportService?.disposeOwner(ownerId); });
   // Item C: main, not the renderer, names the window that may take over agent
   // sessions a destroyed window left behind. This is the only caller.
   agentService?.adoptMainWindow(window.webContents.id);

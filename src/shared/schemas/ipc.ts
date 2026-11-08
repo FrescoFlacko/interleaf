@@ -198,6 +198,7 @@ export const ipcRequestSchemas = {
   [IPC.filesOpenPending]: undefined,
   [IPC.readerRenderMermaid]: mermaidRenderRequestSchema,
   [IPC.importedHighlightsPreview]: undefined,
+  [IPC.importedHighlightsRelease]: undefined,
   [IPC.importedHighlightsCommit]: importCommitSchema,
   [IPC.importedHighlightsList]: importListSchema,
   [IPC.importedHighlightsAssociate]: importAssociateSchema,
@@ -306,6 +307,7 @@ type IpcResults = {
   readonly [IPC.filesOpenPending]: DocumentMetadata | null;
   readonly [IPC.readerRenderMermaid]: MermaidRenderResult;
   readonly [IPC.importedHighlightsPreview]: ImportPreview | null;
+  readonly [IPC.importedHighlightsRelease]: undefined;
   readonly [IPC.importedHighlightsCommit]: ImportResult;
   readonly [IPC.importedHighlightsList]: readonly ImportedHighlight[];
   readonly [IPC.importedHighlightsAssociate]: ImportedHighlight | null;
