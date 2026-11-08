@@ -334,6 +334,14 @@ export function createInterleafApi(
     associate: (id, documentId) => invoke(IPC.importedHighlightsAssociate, { id, documentId }),
   },
   learning: {
+    onAccepted: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, payload: CloneableValue): void => {
+        const parsed = z.object({ documentId: z.string().min(1).max(128), documentHash: z.string().min(1).max(256) }).strict().safeParse(payload);
+        if (parsed.success) callback(parsed.data);
+      };
+      ipc.on(IPC_EVENTS.learningAccepted, listener);
+      return () => { ipc.removeListener(IPC_EVENTS.learningAccepted, listener); };
+    },
     sourceStatus: (documentId, source) => invokeValidated(IPC.learningSourceStatus, { documentId, source }, learningSourceStatusSchema, 'Invalid source status.'),
     create: (input) => invokeValidated(IPC.learningCreate, input, learningItemSchema, 'Invalid learning item.'),
     list: (documentId) => invokeValidated(IPC.learningList, { documentId }, z.array(learningItemSchema).max(250), 'Invalid learning items.'),

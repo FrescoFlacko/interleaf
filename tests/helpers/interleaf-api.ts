@@ -171,6 +171,7 @@ const agent: InterleafAPI['agent'] = {
 };
 
 const learning: InterleafAPI['learning'] = {
+  onAccepted: () => noSubscription(),
   sourceStatus: () => unstubbed('learning.sourceStatus'),
   create: () => unstubbed('learning.create'),
   list: () => Promise.resolve([]),

@@ -1,3 +1,4 @@
+import { indexedPracticeResolver, importedPracticeResolver, proposalIntegrationHandlers } from './agent-access/integration-adapters';
 import { ExternalHighlightRepository } from './db/repositories/external-highlight-repository';
 import { HighlightImportService } from './highlight-import/import-service';
 import { PracticeChecker } from './practice/checker';
@@ -351,7 +352,7 @@ async function bootstrap(): Promise<void> {
     parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options));
   highlightImportService = highlightImport;
   const learning = new LearningRepository(database);
-  const practice = new PracticeRepository(database);
+  const practice = new PracticeRepository(database, importedPracticeResolver(externalHighlights), undefined, indexedPracticeResolver(database));
   const search = new SearchRepository(database);
   const chat = new ChatRepository(database);
   const agentRepository = new AgentRepository(database);
@@ -701,7 +702,7 @@ async function bootstrap(): Promise<void> {
   const deliverFileCommand = (command: FileCommand): void => {
     sendFileCommand(() => lifecycleCoordinator.ensureMainWindow(), command);
   };
-  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, parent: () => lifecycleCoordinator.mainWindow, openSource: (link) => { passageRequests.enqueue([link]); lifecycleCoordinator.handleActivate(); } });
+  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, acceptHandlers: proposalIntegrationHandlers(learning, practice), onAccepted: (source) => { lifecycleCoordinator.mainWindow?.webContents.send(IPC_EVENTS.learningAccepted, source); }, parent: () => lifecycleCoordinator.mainWindow, openSource: (link) => { passageRequests.enqueue([link]); lifecycleCoordinator.handleActivate(); } });
   await agentAccess.start();
   installAppMenu(Menu, process.platform, {
     openFile: () => { deliverFileCommand('open-dialog'); },

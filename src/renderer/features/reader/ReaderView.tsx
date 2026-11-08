@@ -1,3 +1,5 @@
+import { bridge } from '../../app/api-client';
+import { useLearningStore } from '../../stores/use-learning-store';
 import { PracticeNavigationNotice } from '../practice/PracticeNavigationNotice';
 import { useEffect, useRef } from 'react';
 import { reportRejection } from '@shared/models/caught-error';
@@ -82,6 +84,16 @@ export function ReaderView() {
     }
     previousFocusMode.current = focusMode;
   }, [focusMode, isTocOpen, setTocOpen]);
+
+  useEffect(() => bridge.learning.onAccepted((source) => {
+    const current = useReaderStore.getState().session;
+    if (!current || current.document.id !== source.documentId || current.document.fileHash !== source.documentHash) return;
+    void useLearningStore.getState().load(source.documentId, () => useReaderStore.getState().session === current);
+    const loaded = useAnnotationStore.getState().loaded;
+    if (loaded?.documentId === source.documentId && loaded.documentHash === source.documentHash) {
+      void useAnnotationStore.getState().load(loaded.documentId, loaded.scope, loaded.documentHash);
+    }
+  }), []);
 
   useEffect(() => {
     if (!session || pageCount <= 0) return;

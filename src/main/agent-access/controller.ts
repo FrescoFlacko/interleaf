@@ -19,6 +19,7 @@ type Dependencies = {
   readonly parent: () => BrowserWindow | null;
   readonly openSource: (link: string) => void;
   readonly acceptHandlers?: Pick<ProposalAcceptHandlers, 'learning' | 'card'>;
+  readonly onAccepted?: (source: { readonly documentId: string; readonly documentHash: string }) => void;
 };
 
 /** Native, main-owned controls; neither token nor arbitrary callbacks cross IPC. */
@@ -101,7 +102,10 @@ export class AgentAccessController {
         return;
       }
       const rejectChoice = input.kind === 'conflict' ? 3 : 2;
-      try { this.proposals.resolve(proposal.id, choice === rejectChoice ? 'reject' : 'accept'); }
+      try {
+        const result = this.proposals.resolve(proposal.id, choice === rejectChoice ? 'reject' : 'accept');
+        if (result.status === 'accepted') this.deps.onAccepted?.({ documentId: input.source.documentId, documentHash: input.source.documentHash });
+      }
       catch { await this.show({ type: 'warning', title: 'Suggestion not accepted', message: 'The source changed or this suggestion type is not available yet. It remains pending.' }); }
     }
   }

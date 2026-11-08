@@ -1,3 +1,4 @@
+import { ImportedPracticeCreate } from './ImportedPracticeCreate';
 import { Select } from '../../components/ui/select';
 import { useEffect, useRef, useState } from 'react';
 import { bridge } from '../../app/api-client';
@@ -104,6 +105,7 @@ export function ImportedHighlights() {
         <div>Confirmed library document <Select aria-label={`Match saved ${item.title}`} value={item.documentId ?? ''} options={documentOptions(item.documentId)} onValueChange={(value) => { void associate(item.id, value); }} /></div>
         {item.documentId && <button type="button" className="ml-2 underline" onClick={() => { void openDocument(item.documentId ?? ''); }}>Open document</button>}
         <p>No verified passage location.</p>
+        <ImportedPracticeCreate importedHighlightId={item.id} />
       </article>)}
       <div><button type="button" disabled={offset === 0} onClick={() => { setOffset(Math.max(0, offset - 50)); }}>Previous</button><button type="button" disabled={records.length < 50} onClick={() => { setOffset(offset + 50); }} className="ml-4">Next</button></div>
     </section>}

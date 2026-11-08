@@ -84,9 +84,9 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       const learningSource = { documentId: 'doc', documentHash: 'hash', anchor: { format: 'pdf', pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } } };
       const learningItem = { id: 'item', content: { kind: 'question', title: 'Why?', body: 'Think', primary: learningSource }, provenance: { kind: 'manual' }, status: 'active', createdAt: 'now', updatedAt: 'now' };
       const practiceCard = { id: 'card', question: 'Why?', source: { kind: 'native', documentId: 'doc', documentHash: 'hash', annotationId: 'anno', anchor: { format: 'pdf', pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } } }, evidence: 'text', sourceLabel: 'Book', exportDetails: null, navigation: null, dueAt: '2026-01-01T00:00:00.000Z', intervalDays: 0, repetitions: 0, lapses: 0, revision: 0, sourceState: 'missing' };
+      const replies = new Map<string, CloneableValue>([
         [IPC.practiceCreate, practiceCard], [IPC.practiceCreateImported, practiceCard], [IPC.practiceDue, [practiceCard]],
         [IPC.practiceRate, practiceCard], [IPC.practiceGet, practiceCard], [IPC.practiceCheck, 'feedback'],
-      const replies = new Map<string, CloneableValue>([
         [IPC.learningSourceStatus, { status: 'current', title: 'Book' }],
         [IPC.learningCreate, learningItem],
         [IPC.learningList, [learningItem]],
@@ -359,7 +359,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         ['onboarding', ['getLaunchState']],
         ['library', ['closeDocument', 'createFolder', 'deleteDocument', 'deleteFolder', 'getContinueReading', 'getDocumentPreview', 'getFolderTree', 'getRecentlyAdded', 'getRecentlyRead', 'getSummary', 'importDroppedFiles', 'importWebArticle', 'listDocuments', 'listFolders', 'moveDocumentToFolder', 'onStorageHealthUpdated', 'openDocument', 'openFileDialog', 'renameFolder', 'updateReadingPosition']],
         ['importedHighlights', ['associate', 'commit', 'list', 'preview', 'release']],
-        ['learning', ['create', 'dismiss', 'list', 'remove', 'sourceStatus']],
+        ['learning', ['create', 'dismiss', 'list', 'onAccepted', 'remove', 'sourceStatus']],
         ['practice', ['cancelCheck', 'check', 'create', 'createImported', 'due', 'get', 'rate']],
         ['annotations', ['create', 'delete', 'list', 'page', 'repairAnchor', 'update']],
         ['search', ['appendIndex', 'beginIndex', 'completeIndex', 'failIndex', 'getIndexState', 'resolveHit', 'searchDocument']],

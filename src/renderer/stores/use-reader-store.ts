@@ -1,4 +1,4 @@
-import { practiceOpenFailure, verifyPracticeRevision } from './practice-open-guard';
+import { verifyPracticeRevision } from './practice-open-guard';
 import { create } from 'zustand';
 import { reportRejection } from '@shared/models/caught-error';
 import type {

@@ -196,6 +196,7 @@ export const IPC_EVENTS = {
   libraryStorageHealthUpdated: 'library:storage-health-updated',
   /** A native menu command or an operating-system open request for the renderer to act on. */
   filesCommand: 'files:command',
+  learningAccepted: 'learning:accepted',
   chatStreamEvent: 'chat:stream-event',
   chatSessionTitleChanged: 'chat:session-title-changed',
   agentEvent: 'agent:event',

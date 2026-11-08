@@ -170,6 +170,7 @@ export type InterleafAPI = {
     associate(id: string, documentId: string | null): Promise<ImportedHighlight | null>;
   },
   readonly learning: {
+    onAccepted(callback: (source: { readonly documentId: string; readonly documentHash: string }) => void): () => void;
     sourceStatus(documentId: string, source: LearningSource): Promise<LearningSourceStatus>;
     create(input: LearningContent): Promise<LearningItem>;
     list(documentId: string): Promise<readonly LearningItem[]>;

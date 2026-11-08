@@ -20,7 +20,7 @@ type LearningState = {
   start: (source: LearningSource) => void;
   setSecondary: (source: LearningSource) => void;
   clearDraft: () => void;
-  load: (documentId: string) => Promise<void>;
+  load: (documentId: string, isCurrent?: () => boolean) => Promise<void>;
   create: (content: LearningContent) => Promise<boolean>;
   dismiss: (documentId: string, id: string) => Promise<void>;
   remove: (documentId: string, id: string) => Promise<void>;
@@ -37,14 +37,14 @@ export const useLearningStore = create<LearningState>((set, get) => ({
   start: (source) => { set({ primary: source, secondary: null, error: null, kind: 'question', title: '', body: '' }); },
   setSecondary: (source) => { set({ secondary: source }); },
   clearDraft: () => { set({ primary: null, secondary: null, title: '', body: '' }); },
-  load: async (documentId) => {
+  load: async (documentId, isCurrent = () => true) => {
     const request = ++sequence;
     set({ items: [] });
     try {
       const items = await bridge.learning.list(documentId);
-      if (request === sequence) set({ items, error: null });
+      if (request === sequence && isCurrent()) set({ items, error: null });
     } catch {
-      if (request === sequence) set({ items: [], error: 'Could not load learning items.' });
+      if (request === sequence && isCurrent()) set({ items: [], error: 'Could not load learning items.' });
     }
   },
   create: async (content) => {
