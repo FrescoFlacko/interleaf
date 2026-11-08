@@ -1,3 +1,5 @@
+import { ExternalHighlightRepository } from './db/repositories/external-highlight-repository';
+import { HighlightImportService } from './highlight-import/import-service';
 import { app, autoUpdater, BrowserWindow, ipcMain, Menu, net, protocol, session, dialog, safeStorage, shell, clipboard } from 'electron';
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
@@ -118,6 +120,7 @@ let durableLogSink: DurableLogSink | null = null;
 let openFiles: OpenFileManager | null = null;
 let updates: UpdateController | null = null;
 let diagnostics: DiagnosticsService | null = null;
+let highlightImportService: HighlightImportService | null = null;
 // Operating-system open requests can arrive before app ready (macOS
 // `open-file`, the launch command line); they wait here for the renderer.
 const openFileRequests = new OpenFileRequestQueue();
@@ -138,8 +141,12 @@ function createAndAttachMainWindow(): BrowserWindow {
   // A reload or navigation leaves no page to own diagnostics handles.
   const ownerId = window.webContents.id;
   window.webContents.on('did-start-navigation', (details) => {
-    if (details.isMainFrame && !details.isSameDocument) diagnostics?.disposeOwner(ownerId);
+    if (details.isMainFrame && !details.isSameDocument) {
+      diagnostics?.disposeOwner(ownerId);
+      highlightImportService?.disposeOwner(ownerId);
+    }
   });
+  window.webContents.once('destroyed', () => { highlightImportService?.disposeOwner(ownerId); });
   // Item C: main, not the renderer, names the window that may take over agent
   // sessions a destroyed window left behind. This is the only caller.
   agentService?.adoptMainWindow(window.webContents.id);
@@ -325,6 +332,10 @@ async function bootstrap(): Promise<void> {
   const folders = new FolderRepository(database);
   const readingPositions = new ReadingPositionRepository(database);
   const annotations = new AnnotationRepository(database);
+  const externalHighlights = new ExternalHighlightRepository(database);
+  const highlightImport = new HighlightImportService(externalHighlights, (parent, options) =>
+    parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options));
+  highlightImportService = highlightImport;
   const search = new SearchRepository(database);
   const chat = new ChatRepository(database);
   const agentRepository = new AgentRepository(database);
@@ -593,12 +604,13 @@ async function bootstrap(): Promise<void> {
     activeWork: createActiveWork({
       agentSessions: [() => liveAgents.liveWork()],
       chatStreams: [() => libraryChat.liveWork(), () => liveOpenFiles.liveChatWork(), () => liveDiagnostics.activeCount()],
-      imports: [() => library.importAdmission.liveWork(), () => liveOpenFiles.liveOpens()],
+      imports: [() => library.importAdmission.liveWork(), () => liveOpenFiles.liveOpens(), () => highlightImport.admission.liveWork()],
       closeAdmission: [
         () => { libraryChat.closeAdmission(); },
         () => { liveOpenFiles.closeAdmission(); },
         () => { liveAgents.closeAdmission(); },
         () => { library.importAdmission.close(); },
+        () => { highlightImport.admission.close(); },
         () => { liveDiagnostics.closeAdmission(); },
       ],
     }),
@@ -613,6 +625,7 @@ async function bootstrap(): Promise<void> {
     onboardingLaunchState: () => onboardingLaunchStateLatch.get(),
     library,
     annotations,
+    highlightImport,
     search,
     chat: chatService,
     credentials,
@@ -705,6 +718,8 @@ async function drainServices(): Promise<void> {
   lifecycleCoordinator.startShutdown();
   updates?.dispose();
   updates = null;
+  await highlightImportService?.shutdown();
+  highlightImportService = null;
   // Before the providers it borrows are shut down with the chat services; the
   // wait for its provider stops is bounded, never indefinite.
   await diagnostics?.shutdown();

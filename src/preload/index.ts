@@ -324,6 +324,13 @@ export function createInterleafApi(
         'The diagram renderer returned an invalid response.'
       ),
   },
+  importedHighlights: {
+    preview: () => invoke(IPC.importedHighlightsPreview, undefined),
+    release: () => invoke(IPC.importedHighlightsRelease, undefined),
+    commit: (input) => invoke(IPC.importedHighlightsCommit, input),
+    list: (offset) => invoke(IPC.importedHighlightsList, { offset }),
+    associate: (id, documentId) => invoke(IPC.importedHighlightsAssociate, { id, documentId }),
+  },
   annotations: {
     create: (input) => invoke(IPC.annotationsCreate, input),
     list: (documentId, filter) =>

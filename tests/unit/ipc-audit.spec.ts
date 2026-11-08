@@ -233,6 +233,11 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
       await api.library.moveDocumentToFolder('doc', null); last(IPC.libraryMoveDocumentToFolder, { documentId: 'doc', folderId: null });
       await api.library.updateReadingPosition('doc', loc, 0.5); last(IPC.libraryUpdateReadingPosition, { documentId: 'doc', location: loc, progress: 0.5 });
       await api.library.getDocumentPreview('doc', null); last(IPC.libraryGetDocumentPreview, { documentId: 'doc', location: null });
+      await api.importedHighlights.preview(); last(IPC.importedHighlightsPreview, undefined);
+      await api.importedHighlights.release(); last(IPC.importedHighlightsRelease, undefined);
+      const importInput = { token: '123e4567-e89b-42d3-a456-426614174000', choices: [] }; await api.importedHighlights.commit(importInput); last(IPC.importedHighlightsCommit, importInput);
+      await api.importedHighlights.list(0); last(IPC.importedHighlightsList, { offset: 0 });
+      await api.importedHighlights.associate('source', null); last(IPC.importedHighlightsAssociate, { id: 'source', documentId: null });
       const anchor = { format: 'pdf' as const, pageIndex: 0, quote: { exact: 'text', prefix: '', suffix: '' } };
       const createAnno = { documentId: 'doc', type: 'highlight' as const, anchor }; await api.annotations.create(createAnno); last(IPC.annotationsCreate, createAnno);
       await api.annotations.list('doc', { type: 'highlight' }); last(IPC.annotationsList, { documentId: 'doc', filter: { type: 'highlight' } });
@@ -316,7 +321,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
     it('exposes only the declared namespace surface and no raw or generic bridge', () => {
       const { api } = setup();
       const exposed = new Set(Object.keys(api));
-      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
+      expect([...exposed].sort()).toEqual(['agent', 'ai', 'annotations', 'app', 'chat', 'clipboard', 'credentials', 'diagnostics', 'files', 'importedHighlights', 'library', 'onboarding', 'reader', 'search', 'settings', 'updates']);
       for (const key of ['ipcRenderer', 'require', 'process', 'invoke', 'send', 'on']) expect(exposed.has(key)).toBe(false);
       const expectedNamespaces: readonly (readonly [keyof InterleafAPI, readonly string[]])[] = [
         ['app', ['exportDebugLog', 'getInfo', 'onBeforeClose', 'openExternal']],
@@ -325,6 +330,7 @@ describe('IPC Security, Preload Bridge & Schema Drift Audit (Phase 11)', () => {
         // never writes onboarding state on a channel of its own.
         ['onboarding', ['getLaunchState']],
         ['library', ['closeDocument', 'createFolder', 'deleteDocument', 'deleteFolder', 'getContinueReading', 'getDocumentPreview', 'getFolderTree', 'getRecentlyAdded', 'getRecentlyRead', 'getSummary', 'importDroppedFiles', 'importWebArticle', 'listDocuments', 'listFolders', 'moveDocumentToFolder', 'onStorageHealthUpdated', 'openDocument', 'openFileDialog', 'renameFolder', 'updateReadingPosition']],
+        ['importedHighlights', ['associate', 'commit', 'list', 'preview', 'release']],
         ['annotations', ['create', 'delete', 'list', 'page', 'repairAnchor', 'update']],
         ['search', ['appendIndex', 'beginIndex', 'completeIndex', 'failIndex', 'getIndexState', 'resolveHit', 'searchDocument']],
         ['ai', ['configureOpenRouter', 'getProviderStatus', 'listOpenRouterModels', 'listProviders', 'signInWithChatGPT']],

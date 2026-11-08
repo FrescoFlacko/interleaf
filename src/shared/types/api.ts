@@ -1,3 +1,5 @@
+import type { ImportCommitInput } from '../schemas/imported-highlight';
+import type { ImportPreview, ImportResult, ImportedHighlight } from './imported-highlight';
 import type { AppInfo } from '../schemas/ipc';
 import type { AppSettings } from '../schemas/settings';
 import type { DebugLogExportResult } from '../schemas/ipc';
@@ -156,6 +158,13 @@ export type InterleafAPI = {
      * failure is typed so the reader can show the fenced source instead.
      */
     renderMermaid(request: MermaidRenderRequest): Promise<MermaidRenderResult>;
+  };
+  readonly importedHighlights: {
+    preview(): Promise<ImportPreview | null>;
+    release(): Promise<void>;
+    commit(input: ImportCommitInput): Promise<ImportResult>;
+    list(offset: number): Promise<readonly ImportedHighlight[]>;
+    associate(id: string, documentId: string | null): Promise<ImportedHighlight | null>;
   };
   readonly annotations: {
     create(input: CreateAnnotationInput): Promise<Annotation>;

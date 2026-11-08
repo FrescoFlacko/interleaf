@@ -63,6 +63,12 @@ export const IPC = {
    */
   readerRenderMermaid: 'reader:render-mermaid',
 
+  importedHighlightsPreview: 'imported-highlights:preview',
+  importedHighlightsRelease: 'imported-highlights:release',
+  importedHighlightsCommit: 'imported-highlights:commit',
+  importedHighlightsList: 'imported-highlights:list',
+  importedHighlightsAssociate: 'imported-highlights:associate',
+
   // Phase 5 — Annotations & Highlights
   annotationsCreate: 'annotations:create',
   annotationsList: 'annotations:list',

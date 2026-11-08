@@ -1,3 +1,4 @@
+import type { HighlightImportService } from '../highlight-import/import-service';
 import { ZodError, type ZodType } from 'zod';
 import { randomUUID } from 'node:crypto';
 import type { BrowserWindow } from 'electron';
@@ -74,6 +75,7 @@ export type IpcDispatcherDeps = UpdateHandlerDeps & DiagnosticsHandlerDeps & {
   readonly onboardingLaunchState: () => OnboardingLaunchState;
   readonly library: LibraryService;
   readonly annotations: AnnotationRepository;
+  readonly highlightImport: HighlightImportService;
   readonly search: SearchRepository;
   readonly chat: ChatService;
   readonly credentials: CredentialVault;
@@ -249,6 +251,21 @@ function buildHandlers(deps: IpcDispatcherDeps): {
     'files:open-pending': () => openPending(deps),
 
     // Phase 5 — Annotations & Highlights
+    'imported-highlights:preview': (_req, event) => {
+      if (!event.sender || event.sender.isDestroyed()) throw new InterleafError('sender-rejected', 'A live sender is required.');
+      return deps.highlightImport.preview(event.sender.id, deps.parentWindow());
+    },
+    'imported-highlights:release': (_req, event) => {
+      if (!event.sender || event.sender.isDestroyed()) throw new InterleafError('sender-rejected', 'A live sender is required.');
+      deps.highlightImport.disposeOwner(event.sender.id);
+      return undefined;
+    },
+    'imported-highlights:commit': (req, event) => {
+      if (!event.sender || event.sender.isDestroyed()) throw new InterleafError('sender-rejected', 'A live sender is required.');
+      return deps.highlightImport.commit(event.sender.id, req);
+    },
+    'imported-highlights:list': (req) => deps.highlightImport.list(req.offset),
+    'imported-highlights:associate': (req) => deps.highlightImport.associate(req.id, req.documentId),
     'annotations:create': (req) => servicesForDocument(deps, req.documentId).annotations.create(req),
     'annotations:list': (req) => servicesForDocument(deps, req.documentId).annotations.list(req.documentId, req.filter),
     'annotations:page': (req) => servicesForDocument(deps, req.documentId).annotations.page(req.documentId, req.filter),
