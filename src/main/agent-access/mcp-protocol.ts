@@ -27,8 +27,8 @@ function headerName(value: string | undefined): string | undefined {
   try { return Buffer.from(value.slice(9, -2), 'base64').toString('utf8'); } catch { return undefined; }
 }
 
-export function handleMcp(body: string, headers: { readonly version?: string; readonly method?: string; readonly name?: string },
-  tools: McpTools, legacyState: 'initializing' | 'ready' | null): ProtocolReply {
+export async function handleMcp(body: string, headers: { readonly version?: string; readonly method?: string; readonly name?: string },
+  tools: McpTools, legacyState: 'initializing' | 'ready' | null): Promise<ProtocolReply> {
   let request: Request;
   try { request = requestSchema.parse(parsePortableJson(body)); }
   catch { return error(undefined, -32600, 'Invalid request'); }
@@ -57,7 +57,7 @@ function validateRequest(request: Request, headers: { readonly version?: string;
   return { modern };
 }
 
-function dispatchRequest(request: Request, tools: McpTools, modern: boolean): ProtocolReply {
+async function dispatchRequest(request: Request, tools: McpTools, modern: boolean): Promise<ProtocolReply> {
   if (request.method === 'server/discover' && modern) return response(request.id, { resultType: 'complete', supportedVersions: SUPPORTED,
     capabilities: { tools: {} }, _meta: { 'io.modelcontextprotocol/serverInfo': { name: 'interleaf', version: '0.14.0' } } });
   if (request.method === 'ping') return response(request.id, modern ? { resultType: 'complete' } : {});
@@ -66,7 +66,7 @@ function dispatchRequest(request: Request, tools: McpTools, modern: boolean): Pr
   const params = callParams.safeParse(request.params);
   if (!params.success) return error(request.id, -32602, 'Invalid tool call');
   try {
-    const result = tools.call(params.data.name, params.data.arguments);
+    const result = await tools.call(params.data.name, params.data.arguments);
     return response(request.id, { ...(modern ? { resultType: 'complete' } : {}), content: [{ type: 'text', text: JSON.stringify(result) }], isError: false });
   } catch {
     return response(request.id, { ...(modern ? { resultType: 'complete' } : {}), content: [{ type: 'text', text: 'Tool call failed validation or source is unavailable.' }], isError: true });

@@ -2,13 +2,17 @@ import { expect, test } from '@playwright/test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { launchInterleaf, stubOpenDialog } from './helpers';
+import { captureWindowPng, launchInterleaf, stubOpenDialog } from './helpers';
+import { createDiagnosticsClaudeFixture } from './diagnostics-claude-fixture';
 
 test('retained unmatched export creates a due card with honest source evidence', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'interleaf-import-practice-'));
   const file = join(dir, 'My Clippings.txt');
   writeFileSync(file, 'Export Book (Writer)\n- Your Highlight on page 4 | Added today\n\nRecall this imported quote.\n==========\n');
-  const app = await launchInterleaf();
+  const claude = createDiagnosticsClaudeFixture(['The answer is supported by the export.']);
+  claude.signIn();
+  const profile = join(dir, 'profile');
+  const app = await launchInterleaf({ binDir: claude.binDir, userDataDir: profile });
   try {
     await stubOpenDialog(app, [file]);
     await app.window.getByRole('button', { name: 'Imported highlights' }).click();
@@ -20,7 +24,7 @@ test('retained unmatched export creates a due card with honest source evidence',
     await app.window.getByLabel('Question').fill('What did the export say?');
     await app.window.getByRole('button', { name: 'Save card' }).click();
     await expect(app.window.getByText('Practice card saved.')).toBeVisible();
-    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await app.window.screenshot({ path: join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'import-card.png') });
+    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await captureWindowPng(app, join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'import-card.png'));
     await app.window.getByRole('button', { name: 'Close', exact: true }).click();
     await app.window.getByRole('button', { name: 'Review practice' }).click();
     await expect(app.window.getByText('What did the export say?')).toBeVisible();
@@ -30,6 +34,26 @@ test('retained unmatched export creates a due card with honest source evidence',
     await expect(app.window.getByRole('button', { name: 'Open source passage' })).toBeDisabled();
     await app.window.getByRole('button', { name: 'View exported highlight' }).click();
     await expect(app.window.getByRole('region', { name: 'Exported highlight record' })).toContainText('Recall this imported quote.');
-    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await app.window.screenshot({ path: join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'import-review.png') });
-  } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }
+    await app.window.evaluate(() => window.interleafAPI.ai.listProviders({ forceRefresh: true }));
+    await app.window.getByRole('button', { name: 'Choose a provider for an optional check' }).click();
+    await app.window.getByRole('combobox', { name: 'Provider and model' }).click();
+    await app.window.getByRole('option', { name: /Claude/ }).first().click();
+    await app.window.getByRole('button', { name: 'Send for source check' }).click();
+    await expect(app.window.getByText('The answer is supported by the export.')).toBeVisible();
+    expect(claude.chatPrompts().join('\n')).toContain('Recall this imported quote.');
+    expect(claude.chatInvocations()).toHaveLength(1);
+    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await captureWindowPng(app, join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'import-review.png'));
+    const [card] = await app.window.evaluate(() => window.interleafAPI.practice.due(20));
+    if (!card) throw new Error('Missing imported card');
+    await app.window.getByRole('button', { name: 'good', exact: true }).click();
+    await expect(app.window.getByText('Review complete.')).toBeVisible();
+    await expect(app.window.evaluate((input) => window.interleafAPI.practice.rate(input), { cardId: card.id, revision: card.revision, rating: 'good' as const })).rejects.toThrow();
+    await app.close();
+    const restarted = await launchInterleaf({ binDir: claude.binDir, userDataDir: profile });
+    try {
+      const saved = await restarted.window.evaluate((id) => window.interleafAPI.practice.get(id), card.id);
+      expect(saved).toMatchObject({ revision: 1, sourceState: 'export-only', evidence: 'Recall this imported quote.', source: { kind: 'imported' } });
+      expect(await restarted.window.evaluate(() => window.interleafAPI.practice.due(20))).toHaveLength(0);
+    } finally { await restarted.close(); }
+  } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); rmSync(claude.binDir, { recursive: true, force: true }); }
 });

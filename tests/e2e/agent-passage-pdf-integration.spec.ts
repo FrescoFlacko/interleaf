@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makePdfFixture } from '../fixtures/document-fixtures';
-import { launchInterleaf, stubOpenDialog } from './helpers';
+import { captureWindowPng, launchInterleaf, stubOpenDialog } from './helpers';
 
 const marker = 'EXACTPDFINTEGRATIONMARKER';
 
@@ -57,6 +57,6 @@ test('MCP citation resolves a real indexed PDF passage into its mounted text lay
     }, marker)).toBe(true);
     await expect(handle.window.getByText('Failed to Open Document')).toHaveCount(0);
     await expect(handle.window.getByText('The exact passage could not be displayed in this document.')).toHaveCount(0);
-    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await handle.window.screenshot({ path: join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'mcp-pdf-range.png') });
+    if (process.env.INTERLEAF_INTEGRATION_EVIDENCE) await captureWindowPng(handle, join(process.env.INTERLEAF_INTEGRATION_EVIDENCE, 'mcp-pdf-range.png'));
   } finally { await handle.close(); rmSync(directory, { recursive: true, force: true }); }
 });

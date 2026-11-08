@@ -22,6 +22,7 @@ type Dependencies = {
   readonly parent: () => BrowserWindow | null;
   readonly openSource: (source: AgentSource) => void;
   readonly acceptHandlers?: Pick<ProposalAcceptHandlers, 'learning' | 'card' | 'verifyAccepted'>;
+  readonly sourceHealthy: (documentId: string, documentHash: string) => Promise<boolean>;
   readonly onAccepted?: (source: { readonly documentId: string; readonly documentHash: string }) => void;
 };
 
@@ -40,7 +41,7 @@ export class AgentAccessController {
       selectedText: input.source.anchor.quote.exact, note: input.text, isLocationNote: false,
     }).id });
     this.reader = new LibraryReader(deps.database, deps.search, deps.annotations, deps.positions);
-    this.server = new McpServer(new McpTools(this.reader, this.proposals, () => this.proposalsEnabled), this.lifetime);
+    this.server = new McpServer(new McpTools(this.reader, this.proposals, () => this.proposalsEnabled, deps.sourceHealthy, () => this.lifetime.isOpen()), this.lifetime);
   }
   resolvePassage(reference: PassageReference | AgentSource) {
     if (!this.lifetime.isOpen()) throw new InterleafError('validation', 'Agent access is closed.');
@@ -130,6 +131,13 @@ export class AgentAccessController {
       const rejectChoice = input.kind === 'conflict' ? 3 : 2;
       if (choice !== rejectChoice && (!canAccept || choice !== rejectChoice + 1)) return;
       try {
+        if (choice !== rejectChoice) {
+          const sources = input.kind === 'conflict' ? [input.source, input.secondSource] : [input.source];
+          for (const source of sources) {
+            if (!(await this.deps.sourceHealthy(source.documentId, source.documentHash))) throw new Error('Source is unavailable.');
+            if (!this.lifetime.isOpen()) return;
+          }
+        }
         const result = this.proposals.resolve(proposal.id, choice === rejectChoice ? 'reject' : 'accept');
         if (result.status === 'accepted') {
           try { this.deps.onAccepted?.({ documentId: input.source.documentId, documentHash: input.source.documentHash }); }

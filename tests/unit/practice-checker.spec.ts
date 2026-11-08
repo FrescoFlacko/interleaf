@@ -29,7 +29,16 @@ it('sends only the selected card evidence after an explicit request and excludes
     const provider: AIProvider = { id: 'claude', name: 'Fixture', capabilities: status.capabilities, detect: () => Promise.resolve(status), listModels: () => Promise.resolve(status.models),
       streamChat: async function* (request) { await Promise.resolve(); requests.push(request); yield { type: 'token', token: 'Compare this.' }; yield { type: 'done' }; }, cancel: () => Promise.resolve() };
     const requireProvider = vi.fn(() => provider);
-    const checker = new PracticeChecker(repo, { require: requireProvider, getStatus: () => Promise.resolve(status), resolveModel: () => Promise.resolve(status.models[0]!) });
+    let healthy = true;
+    let failAfterReadiness = false;
+    let delayed = false;
+    const healthStarted = Promise.withResolvers<void>();
+    const healthFinished = Promise.withResolvers<boolean>();
+    const checker = new PracticeChecker(repo, { require: requireProvider, getStatus: () => Promise.resolve(status), resolveModel: () => { if (failAfterReadiness) healthy = false; return Promise.resolve(status.models[0]!); } }, async () => {
+      if (!delayed) return healthy;
+      healthStarted.resolve();
+      return healthFinished.promise;
+    });
     expect(requests).toHaveLength(0);
     expect(await checker.check(1, card.id, 'My answer', 'codex', 'model')).toBeNull();
     expect(requireProvider).not.toHaveBeenCalled();
@@ -37,6 +46,25 @@ it('sends only the selected card evidence after an explicit request and excludes
     expect(JSON.parse(requests[0]!.userMessage)).toEqual({ question: 'Why?', answer: 'My answer', source: 'Evidence A', sourceKind: 'native' });
     expect(requests[0]).toMatchObject({ webSearch: false, history: [], sources: [] });
     expect(JSON.stringify(requests[0])).not.toContain('PRIVATE OTHER BOOK');
+    healthy = false;
+    expect(await checker.check(1, card.id, 'My answer', 'claude', 'model')).toBeNull();
+    expect(requests).toHaveLength(1);
+    await vi.waitFor(() => { expect(checker.activeCount()).toBe(0); });
+    healthy = true;
+    failAfterReadiness = true;
+    expect(await checker.check(1, card.id, 'My answer', 'claude', 'model')).toBeNull();
+    expect(requests).toHaveLength(1);
+    await vi.waitFor(() => { expect(checker.activeCount()).toBe(0); });
+    failAfterReadiness = false;
+    delayed = true;
+    const pending = checker.check(2, card.id, 'My answer', 'claude', 'model');
+    await healthStarted.promise;
+    checker.cancel(2);
+    expect(checker.activeCount()).toBe(1);
+    healthFinished.resolve(true);
+    expect(await pending).toBeNull();
+    await vi.waitFor(() => { expect(checker.activeCount()).toBe(0); });
+    expect(requests).toHaveLength(1);
     await checker.shutdown();
   } finally { db.close(); }
 });
@@ -61,7 +89,7 @@ it('keeps cancellation cleanup counted until the provider stop settles', async (
       detect: () => Promise.resolve(status), listModels: () => Promise.resolve(status.models),
       streamChat: async function* () { started.resolve(undefined); await stream.promise; yield { type: 'done' }; },
       cancel: () => stopped.promise };
-    const checker = new PracticeChecker(repo, { require: () => provider, getStatus: () => Promise.resolve(status), resolveModel: () => Promise.resolve(status.models[0]!) });
+    const checker = new PracticeChecker(repo, { require: () => provider, getStatus: () => Promise.resolve(status), resolveModel: () => Promise.resolve(status.models[0]!) }, async () => true);
     const work = checker.check(1, card.id, 'Answer', 'claude', 'model');
     await started.promise;
     checker.cancel(1);

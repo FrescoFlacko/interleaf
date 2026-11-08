@@ -87,19 +87,23 @@ export class McpServer {
     });
     request.on('end', () => {
       if (response.writableEnded || request.destroyed || !this.lifetime.isOpen()) return;
-      this.process(request, response, Buffer.concat(chunks).toString('utf8'));
+      void this.process(request, response, Buffer.concat(chunks).toString('utf8'));
     });
     request.on('error', () => { if (!response.writableEnded) response.writeHead(400).end(); });
   }
 
-  private process(request: IncomingMessage, response: ServerResponse, body: string): void {
+  private async process(request: IncomingMessage, response: ServerResponse, body: string): Promise<void> {
+    const release = this.lifetime.enter();
+    if (!release) return;
+    try {
     const now = Date.now();
     for (const [id, session] of this.sessions) if (session.expiry <= now) this.sessions.delete(id);
     const session = request.headers['mcp-session-id'];
     const sessionId = typeof session === 'string' ? session : '';
-    const reply = handleMcp(body, { ...(typeof request.headers['mcp-protocol-version'] === 'string' ? { version: request.headers['mcp-protocol-version'] } : {}),
+    const reply = await handleMcp(body, { ...(typeof request.headers['mcp-protocol-version'] === 'string' ? { version: request.headers['mcp-protocol-version'] } : {}),
       ...(typeof request.headers['mcp-method'] === 'string' ? { method: request.headers['mcp-method'] } : {}),
       ...(typeof request.headers['mcp-name'] === 'string' ? { name: request.headers['mcp-name'] } : {}) }, this.tools, this.sessions.get(sessionId)?.state ?? null);
+    if (!this.lifetime.isOpen() || response.destroyed) return;
     const activeSession = this.sessions.get(sessionId);
     if (reply.markInitialized && activeSession) activeSession.state = 'ready';
     if (reply.initializeLegacy) {
@@ -111,5 +115,8 @@ export class McpServer {
     response.setHeader('Cache-Control', 'no-store');
     if (reply.body === null) { response.writeHead(reply.status).end(); return; }
     response.writeHead(reply.status, { 'Content-Type': 'application/json' }).end(JSON.stringify(reply.body));
+    } catch {
+      if (this.lifetime.isOpen() && !response.destroyed && !response.writableEnded) response.writeHead(500).end();
+    } finally { release(); }
   }
 }

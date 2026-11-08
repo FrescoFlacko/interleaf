@@ -1,4 +1,5 @@
 import { agentSelectionDialogs } from './app/agent-selection-dialogs';
+import { createSourceHealthCheck } from './app/source-health';
 import { indexedPracticeResolver, importedPracticeResolver, proposalIntegrationHandlers } from './agent-access/integration-adapters';
 import { ExternalHighlightRepository } from './db/repositories/external-highlight-repository';
 import { HighlightImportService } from './highlight-import/import-service';
@@ -336,6 +337,7 @@ async function bootstrap(): Promise<void> {
   // Reconcile abandoned imports before any IPC handler or renderer can begin
   // a new import; otherwise cleanup could race a live temp file.
   await storage.initialize();
+  const sourceHealthy = createSourceHealthCheck(database, storage);
 
   assetRegistry = new AssetRegistry([paths.library, paths.openFiles]);
   registerMediaProtocol(assetRegistry, () => mediaScopeId, securityLog);
@@ -563,7 +565,7 @@ async function bootstrap(): Promise<void> {
     };
   };
   const exportDebugLog = createDebugLogExporter(durableLogSink, showSaveDialog);
-  const livePracticeChecker = new PracticeChecker(practice, aiProviders);
+  const livePracticeChecker = new PracticeChecker(practice, aiProviders, sourceHealthy);
   practiceChecker = livePracticeChecker;
   const liveDiagnostics = new DiagnosticsService({
     environment: processEnvironment(resolveDiagnosticsAppVersion(app), app.isPackaged),
@@ -680,7 +682,7 @@ async function bootstrap(): Promise<void> {
   const deliverFileCommand = (command: FileCommand): void => {
     sendFileCommand(() => lifecycleCoordinator.ensureMainWindow(), command);
   };
-  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, acceptHandlers: proposalIntegrationHandlers(database, learning, practice), onAccepted: (source) => { lifecycleCoordinator.mainWindow?.webContents.send(IPC_EVENTS.learningAccepted, source); }, parent: () => lifecycleCoordinator.mainWindow, openSource: (source) => { passageRequests.enqueueSource(source); lifecycleCoordinator.handleActivate(); } });
+  agentAccess = new AgentAccessController({ database, search, annotations, positions: readingPositions, dialog, clipboard, sourceHealthy, acceptHandlers: proposalIntegrationHandlers(database, learning, practice), onAccepted: (source) => { lifecycleCoordinator.mainWindow?.webContents.send(IPC_EVENTS.learningAccepted, source); }, parent: () => lifecycleCoordinator.mainWindow, openSource: (source) => { passageRequests.enqueueSource(source); lifecycleCoordinator.handleActivate(); } });
   await agentAccess.start();
   installAppMenu(Menu, process.platform, {
     openFile: () => { deliverFileCommand('open-dialog'); },

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AgentAccessLifetime } from '@main/agent-access/lifetime';
 import { InterleafDatabase } from '@main/db/database';
 import { runMigrations } from '@main/db/migrations';
 import { DocumentRepository } from '@main/db/repositories/document-repository';
@@ -26,7 +27,8 @@ describe('MCP HTTP boundary', () => {
       location: { format: 'pdf', pageIndex: 0 }, heading: null, pageLabel: null }]);
     search.complete('doc', 'hash', generation.generationId);
     const reader = new LibraryReader(db, search, new AnnotationRepository(db), new ReadingPositionRepository(db));
-    const server = new McpServer(new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false));
+    let healthy = true;
+    const server = new McpServer(new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false, async () => healthy, () => true));
     await server.start();
     const { url, token } = server.connection();
     const headers = { 'content-type': 'application/json', accept: 'application/json, text/event-stream',
@@ -44,6 +46,13 @@ describe('MCP HTTP boundary', () => {
       expect(searchResponse.status).toBe(200);
       const result = await searchResponse.json();
       expect(JSON.stringify(result)).toContain('interleaf://doc/doc#');
+      const hit = search.search('doc', 'useful')[0]!;
+      const passageBody = JSON.stringify({ jsonrpc: '2.0', id: 9, method: 'tools/call',
+        params: { _meta: meta, name: 'get_passage', arguments: { documentId: 'doc', documentHash: 'hash', chunkId: hit.chunkId } } });
+      healthy = false;
+      const missingPassage = await fetch(url, { method: 'POST', headers: { ...headers, 'mcp-method': 'tools/call', 'mcp-name': 'get_passage' }, body: passageBody });
+      expect(await missingPassage.json()).toMatchObject({ result: { isError: true } });
+      healthy = true;
       expect((await fetch(url, { method: 'POST', headers: { ...headers, 'mcp-method': 'wrong' }, body })).status).toBe(400);
       const legacyBody = JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'initialize', params: {
         protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'legacy', version: '1' } } });
@@ -60,5 +69,34 @@ describe('MCP HTTP boundary', () => {
       expect(list.status).toBe(200);
       expect(JSON.stringify(await list.json())).not.toContain('submit_proposal');
     } finally { await server.close(); db.close(); }
+  });
+  it('keeps a disconnected source-health request admitted until its filesystem work settles', async () => {
+    const db = InterleafDatabase.open(':memory:');
+    runMigrations(db);
+    const reader = new LibraryReader(db, new SearchRepository(db), new AnnotationRepository(db), new ReadingPositionRepository(db));
+    const lifetime = new AgentAccessLifetime();
+    const started = Promise.withResolvers<void>();
+    const finish = Promise.withResolvers<boolean>();
+    const tools = new McpTools(reader, new ProposalRepository(db, { annotation: () => 'unused' }), () => false,
+      () => { started.resolve(); return finish.promise; }, () => lifetime.isOpen());
+    const server = new McpServer(tools, lifetime);
+    await server.start();
+    const { url, token } = server.connection();
+    const body = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { _meta: meta, name: 'get_passage',
+      arguments: { documentId: 'doc', documentHash: 'hash', chunkId: 'chunk' } } });
+    const request = fetch(url, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json',
+      accept: 'application/json, text/event-stream', 'mcp-protocol-version': '2026-07-28', 'mcp-method': 'tools/call', 'mcp-name': 'get_passage' }, body }).catch(() => null);
+    try {
+      await started.promise;
+      let drained = false;
+      const closing = Promise.all([server.close(), lifetime.drain()]).then(() => { drained = true; });
+      await Promise.resolve();
+      expect(lifetime.liveWork()).toBeGreaterThan(0);
+      expect(drained).toBe(false);
+      finish.resolve(true);
+      await closing;
+      expect(lifetime.liveWork()).toBe(0);
+      await request;
+    } finally { finish.resolve(false); await server.close(); db.close(); }
   });
 });
