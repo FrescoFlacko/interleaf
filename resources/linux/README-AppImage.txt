@@ -31,4 +31,5 @@ Error about libfuse.so.2
    Do not install a package named "fuse" that would remove fuse3.
 
 Error about the sandbox
-   Install the .deb or pacman package from the same release instead.
+   Interleaf requires a working Chromium sandbox and does not disable it.
+   If the AppImage cannot start, try the .deb or pacman package instead.

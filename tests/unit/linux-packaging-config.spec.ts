@@ -118,6 +118,11 @@ describe('electron-builder Linux configuration', () => {
     expect(linux.some((line) => line.trimStart().startsWith('mimeTypes:'))).toBe(false);
   });
 
+  it('overrides the AppImage default that disables the Chromium sandbox', () => {
+    const appImage = topLevelBlock(configText, 'appImage');
+    expect(scalar(appImage, 'executableArgs', '  ')).toBe('[]');
+  });
+
   it('names the pacman artifact so pacman -U gets a conventional filename', () => {
     expect(scalar(pacman, 'artifactName', '  ')).toMatch(/\.pkg\.tar\.xz$/);
   });

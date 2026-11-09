@@ -68,6 +68,7 @@ describe('AppImage README hook', () => {
     for (const required of ['Settings > About & Updates', 'libfuse2t64', 'libfuse2', 'https://docs.appimage.org/user-guide/troubleshooting/fuse.html']) {
       expect(readme).toContain(required);
     }
+    expect(readme).toContain('requires a working Chromium sandbox');
     expect(readme).not.toMatch(/--no-sandbox|sudo \.\/|sudo ~|chmod 4755|sysctl|apparmor|apt install fuse\b/i);
   });
 });

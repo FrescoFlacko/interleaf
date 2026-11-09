@@ -214,6 +214,8 @@ npm run package:mac     # macOS: .dmg and .zip, arm64 and x64
 npm run package:linux   # Linux: AppImage, .deb and pacman (.pkg.tar.xz)
 ```
 
+The AppImage requires a working Chromium sandbox and does not turn it off. If it cannot start on your system, try the `.deb` or pacman package from the same build.
+
 Output again lands in **`release/`**.
 
 On macOS, a distributable build also requires an Apple Developer signing

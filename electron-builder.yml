@@ -1,5 +1,8 @@
 appId: com.interleaf.app
 productName: Interleaf
+# Public project distribution page, also required by Debian package metadata.
+extraMetadata:
+  homepage: https://github.com/FrescoFlacko/interleaf-releases
 copyright: Copyright © 2026 Interleaf
 
 directories:
@@ -41,6 +44,10 @@ publish:
 # AppImage, in whatever output directory the build uses. Other targets are
 # left alone (electron.appimage-readme.ts).
 afterAllArtifactBuild: ./electron.appimage-readme.ts
+
+# Override the builder launcher, which otherwise disables the sandbox when a
+# namespace probe fails. The desktop Exec is configured separately below.
+afterPack: ./electron.appimage-launcher.ts
 
 asar: true
 # Native decoders cannot be read from inside the archive: keep sharp and its
@@ -180,6 +187,10 @@ linux:
       StartupNotify: 'true'
       GenericName: Document Reader
       Keywords: reader;pdf;epub;mobi;docx;pptx;markdown;annotation;
+
+# Override electron-builder's AppImage-only default of disabling Chromium's sandbox.
+appImage:
+  executableArgs: []
 
 pacman:
   # fpm names its pacman output `<name>-<version>-<arch>.pacman` by default.

@@ -313,8 +313,8 @@ distribution artifacts. Do not treat an unsigned local package as a release.
 ### Linux and Omarchy install
 
 `npm run package:linux` produces an AppImage, a Debian package, and a pacman
-package. Build it on the Linux host so `npm ci` fetches the Linux `sharp`
-prebuilds. On Arch-based systems such as **Omarchy**:
+package. The AppImage requires a working Chromium sandbox and does not disable
+it. Build it on the Linux host so `npm ci` fetches the Linux `sharp` prebuilds. On Arch-based systems such as **Omarchy**:
 
 ```bash
 sudo pacman -U ./interleaf-<version>-<arch>.pkg.tar.xz

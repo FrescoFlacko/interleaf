@@ -158,10 +158,15 @@ export function isolatedLaunchEnvironment(options: {
 }
 
 /**
- * Chromium's mock keychain: Electron `safeStorage` encrypts the suite's
- * placeholder keys without reading or writing the host's login keychain.
+ * A private Linux Secret Service can opt in to override Playwright's own
+ * `--password-store=basic` after its loader runs. The launcher must supply an
+ * isolated DBus session; the application still verifies its actual backend.
+ * Other platforms retain the existing mock keychain switch.
  */
-export const ISOLATED_ELECTRON_SWITCHES: readonly string[] = ['--use-mock-keychain'];
+export const ISOLATED_ELECTRON_SWITCHES: readonly string[] =
+  process.platform === 'linux' && process.env.INTERLEAF_E2E_SECRET_SERVICE === '1'
+    ? ['-r', path.resolve('tests/e2e/secure-keyring-preload.ts')]
+    : ['--use-mock-keychain'];
 
 /**
  * Fails the run — before any application starts — if the sanitized `PATH`

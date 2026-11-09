@@ -332,7 +332,9 @@ The Linux target is configured for AppImage, `.deb`, and `pacman` output with
 the icon and metadata under `resources/`. Build and smoke-test these artifacts
 on a Linux runner matching the intended architecture. No Linux signing or
 repository publishing is configured here, and a macOS build must not be
-described as a Linux artifact.
+described as a Linux artifact. The AppImage launcher retains Chromium's
+sandbox; systems that cannot start it must use a supported sandbox-enabled
+installation rather than disable that boundary.
 
 Every build that produces an AppImage also writes `README-AppImage.txt` beside
 it, in the same output directory: short plain-text instructions for saving,

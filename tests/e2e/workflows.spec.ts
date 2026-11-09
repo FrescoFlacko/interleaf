@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { launchInterleaf, selectFakeAgentForTest, stubMessageBox, stubOpenDialog, getRecordedMessageBoxCalls, resetRecordedMessageBoxCalls, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 import { chooseListboxValue, choosePalette } from './listbox';
@@ -757,9 +757,9 @@ test.describe('Agent resume boundary workflow', () => {
 test.describe('custom Expert Shell persistence workflow', () => {
   test('creates, runs, and rehydrates a custom Expert Shell profile through the desktop UI', async () => {
     test.skip(process.platform === 'win32', 'The deterministic shell fixture uses the POSIX /bin/sh executable.');
-
     const userDataDir = mkdtempSync(join(tmpdir(), 'interleaf-expert-shell-user-data-'));
     const workingDirectory = mkdtempSync(join(tmpdir(), 'interleaf-expert-shell-workspace-'));
+    const shellExecutable = realpathSync('/bin/sh');
     const profileName = 'E2E Expert Shell';
     const outputMarker = 'interleaf-expert-shell-ok';
     let app: AppHandle | null = null;
@@ -784,10 +784,10 @@ test.describe('custom Expert Shell persistence workflow', () => {
       await expect(settings.getByRole('heading', { name: 'Your custom profiles' })).toBeVisible();
 
       // The only native boundary stub is the executable picker. The renderer
-      // receives the typed public projection ("sh"), never the selected path.
-      await stubOpenDialog(app, ['/bin/sh']);
+      // receives the typed public projection (the executable name), never the selected path.
+      await stubOpenDialog(app, [shellExecutable]);
       await settings.getByRole('button', { name: 'Choose executable…' }).click();
-      await expect(settings.getByText('sh', { exact: true })).toBeVisible();
+      await expect(settings.getByText(basename(shellExecutable), { exact: true })).toBeVisible();
       await settings.getByRole('radio', { name: /Expert Shell \(Dangerous/ }).check();
       await settings.getByLabel('Custom profile name').fill(profileName);
       await settings.getByLabel('Static shell command').fill(`printf '${outputMarker}\\n'`);
