@@ -537,6 +537,15 @@ test.describe('Reader anchor stability across a Markdown reflow', () => {
       return stable;
     };
     await expect.poll(measureIsStable, { timeout: 10_000, intervals: [150] }).toBe(true);
+    // A visible width can precede delivery of the adapter's initial resize
+    // observation, particularly in a background Electron window. Wait for a
+    // real observer delivery before placing the test's reading position.
+    await app.window.evaluate(() => new Promise<void>((resolve) => {
+      const wrapper = document.querySelector<HTMLElement>('[data-testid="markdown-content-wrapper"]');
+      if (!wrapper) throw new Error('Markdown content wrapper not ready');
+      const observer = new ResizeObserver(() => { observer.disconnect(); resolve(); });
+      observer.observe(wrapper);
+    }));
   };
 
   test.beforeEach(async () => {

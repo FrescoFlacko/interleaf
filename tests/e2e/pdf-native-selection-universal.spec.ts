@@ -193,6 +193,7 @@ test.describe('Universal PDF selection (official TextLayerBuilder)', () => {
     await app.window.getByTestId(`read-doc-${doc!.id}`).click();
     await expect(app.window.getByTestId('pdf-canvas-p1')).toBeVisible();
     await expect(app.window.getByTestId('pdf-textlayer-p1')).toBeVisible();
+    await expect(app.window.getByTestId('pdf-textlayer-p1')).toHaveAttribute('data-pdf-text-ready', 'true');
     return doc!.id;
   }
 
