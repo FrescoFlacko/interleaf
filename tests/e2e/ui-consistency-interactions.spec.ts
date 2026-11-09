@@ -163,6 +163,12 @@ test.describe('UI consistency interactions', () => {
     await page.getByTestId('settings-rail-theme').click();
     const anchor = page.getByTestId('theme-option-paper');
     await expect(anchor).toBeVisible();
+    const dialog = page.getByTestId('ai-providers-settings-modal');
+    await expect(dialog).toHaveAttribute('data-phase', 'open');
+    await expect.poll(async () => dialog.evaluate((element) => ({
+      transform: getComputedStyle(element).transform,
+      running: element.getAnimations().filter((animation) => animation.playState === 'running' || animation.pending).length,
+    }))).toEqual({ transform: 'none', running: 0 });
     const before = await anchor.boundingBox();
 
     // Sample the card's box on every frame across the change and its fade.
