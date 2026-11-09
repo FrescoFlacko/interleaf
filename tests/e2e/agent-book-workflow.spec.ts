@@ -256,10 +256,15 @@ test.describe('Agent work within a book', () => {
     await expect.poll(() => drawer.evaluate((element) => Math.round(element.getBoundingClientRect().right) === window.innerWidth
       && element.getAnimations({ subtree: false }).length === 0)).toBe(true);
     const zoomedWholeBook = drawer.getByTestId('agent-attach-entire-doc');
-    await zoomedWholeBook.scrollIntoViewIfNeeded();
+    // Leave room below the trigger for the pending status and Cancel control.
+    await zoomedWholeBook.evaluate((element) => { element.scrollIntoView({ block: 'center' }); });
     await zoomedWholeBook.click();
     await expect(drawer.getByRole('button', { name: 'Cancel attaching Entire document' })).toBeInViewport();
     await captureWindow('agent-context-pending-zoom-200.png');
+    await drawer.getByRole('button', { name: 'Cancel attaching Entire document' }).click();
+    await expect(drawer.getByTestId('agent-context-pending')).toHaveCount(0);
+    await expect(drawer.getByTestId('agent-context-summary')).toHaveCount(0);
+    await zoomedWholeBook.click();
 
     // Left alone, the capture lands and Start runs with it.
     await expect(drawer.getByTestId('agent-context-summary')).toBeVisible({ timeout: 60_000 });

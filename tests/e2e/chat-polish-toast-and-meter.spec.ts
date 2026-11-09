@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { chooseChatModel, configureOpenRouterTestSeam, dismissOnboardingIfOpen, launchInterleaf, stubOpenDialog, type AppHandle } from './helpers';
+import { chooseChatModel, configureOpenRouterTestSeam, dismissOnboardingIfOpen, launchInterleaf, resizeRestoredWindow, stubOpenDialog, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 
 /**
@@ -393,10 +393,10 @@ test.describe('AI chat polish: saved-note toast and composer context wheel', () 
 
     // 200% zoom in the genuine window, with enough CSS width for the desktop
     // companion panel to stay mounted.
+    await resizeRestoredWindow(app, 2400, 1200);
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
       if (!window) throw new Error('Main BrowserWindow was not found.');
-      window.setSize(2400, 1200);
       window.webContents.setZoomFactor(2.0);
     });
     await expect.poll(async () => app.window.evaluate(() => window.innerWidth)).toBeGreaterThanOrEqual(920);

@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { chooseChatModel, configureOpenRouterTestSeam, launchInterleaf, stubOpenDialog, type AppHandle } from './helpers';
+import { chooseChatModel, configureOpenRouterTestSeam, launchInterleaf, resizeRestoredWindow, stubOpenDialog, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 
 /**
@@ -181,10 +181,10 @@ test.describe('Chat Clean Context and persistent attached context', () => {
 
     // Real BrowserWindow zoom: the control and its confirmation stay inside the
     // window at 200%, and the summary row does not clip its label.
+    await resizeRestoredWindow(app, 2400, 1200);
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
       if (!window) throw new Error('Main BrowserWindow was not found.');
-      window.setSize(2400, 1200);
       window.webContents.setZoomFactor(2.0);
     });
     await expect.poll(async () => app.electronApp.evaluate(({ BrowserWindow }) =>

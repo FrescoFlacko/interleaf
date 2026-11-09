@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { captureWindowPng, launchInterleaf, type AppHandle } from './helpers';
+import { captureWindowPng, launchInterleaf, nativeOuterBounds, type AppHandle } from './helpers';
 import { e2eBackgroundWindows } from './offline-environment';
 
 /**
@@ -151,8 +151,7 @@ function expectBackgroundWindow(state: FocusState): void {
     maximized: true,
     fullScreen: false,
   });
-  // The same maximized geometry a real launch has.
-  expect(state.bounds).toEqual(state.workArea);
+
   if (process.platform === 'darwin') expect(state.dockVisible).toBe(false);
 }
 
@@ -194,6 +193,10 @@ test.describe('E2E windows open in the background', () => {
     const expectInBackground = async (label: string): Promise<void> => {
       const state = await focusState(electronApp);
       expectBackgroundWindow(state);
+      await expect.poll(async () => {
+        const current = await focusState(electronApp);
+        return nativeOuterBounds(app!, current.bounds);
+      }).toEqual(state.workArea);
       if (process.platform !== 'darwin' || orderHelper === undefined) {
         evidence.checkpoints[label] = { state };
         return;

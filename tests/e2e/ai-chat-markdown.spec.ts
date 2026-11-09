@@ -57,12 +57,12 @@ test.describe('Defect 5: AI Chat Markdown rendering', () => {
         .filter((message) => message.status === 'complete').length;
     }).toBe(2);
 
-    const userMessage = app.window.getByRole('article').filter({ hasText: 'You' });
+    const userMessage = app.window.getByRole('article', { name: 'Your message' });
     await expect(userMessage.getByRole('heading', { name: 'User heading' })).toBeVisible();
-    await expect(userMessage.getByText('prompt')).toHaveCount(1);
+    await expect(userMessage.getByText('prompt', { exact: true })).toHaveCount(1);
     await expect(userMessage).not.toContainText('### User heading');
 
-    const assistantMessage = app.window.getByRole('article').filter({ hasText: 'Reader AI' });
+    const assistantMessage = app.window.getByRole('article', { name: 'Reader AI response' });
     await expect(assistantMessage.getByRole('heading', { name: 'Grounded Markdown' })).toBeVisible();
     await expect(assistantMessage.getByText('formatted')).toHaveCount(1);
     await expect(assistantMessage.getByRole('list')).toBeVisible();

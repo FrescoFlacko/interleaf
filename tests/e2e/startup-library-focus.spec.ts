@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { captureWindowPng, launchInterleaf, type AppHandle } from './helpers';
+import { captureWindowPng, launchInterleaf, nativeOuterBounds, type AppHandle } from './helpers';
 
 /**
  * Every launch opens on the Library in a window maximized to the display's
@@ -94,7 +94,10 @@ async function expectLibraryFocusedLaunch(
     maximizable: true,
   });
   // Maximized fills the display's work area, leaving the menu bar/taskbar.
-  expect(state.bounds).toEqual(state.workArea);
+  await expect.poll(async () => {
+    const current = await nativeWindowState(app);
+    return nativeOuterBounds(app, current.bounds);
+  }).toEqual(state.workArea);
 
   await expect(app.window.getByTestId('library-view')).toBeVisible();
   await expect(app.window.getByTestId('sidebar-library')).toBeVisible();

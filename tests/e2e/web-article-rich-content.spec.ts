@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { launchInterleaf, returnToLibrary, type AppHandle } from './helpers';
+import { launchInterleaf, resizeRestoredWindow, returnToLibrary, type AppHandle } from './helpers';
 import {
   ASTRA_ALT_TEXT,
   ASTRA_ARCHIVED_IMAGE_URLS,
@@ -180,13 +180,6 @@ async function assertKeyboardScrolling(app: AppHandle): Promise<void> {
   ).toBe(0);
 }
 
-async function setWindowSize(app: AppHandle, width: number, height: number): Promise<void> {
-  await app.electronApp.evaluate(({ BrowserWindow }, size: { width: number; height: number }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(size.width, size.height);
-  }, { width, height });
-  await app.window.waitForTimeout(400);
-}
-
 async function setZoomFactor(app: AppHandle, factor: number): Promise<void> {
   await app.electronApp.evaluate(({ BrowserWindow }, value: number) => {
     BrowserWindow.getAllWindows()[0]?.webContents.setZoomFactor(value);
@@ -328,27 +321,40 @@ test.describe('Rich web-article capture', () => {
   });
 
   test('keeps tables reachable at a narrow width and 200% zoom', async () => {
-    await registerArticleFixture(app, ASTRA_ARTICLE_URL, astraArticleHtml());
+    // Unbreakable benchmark identifiers make both tables genuinely overflow at
+    // the application's minimum window size, independently of font metrics.
+    const article = astraArticleHtml().replace('Zero-shot', 'ZeroShotBenchmarkIdentifier'.repeat(4))
+      .replace('Single image', 'SingleImageBenchmarkIdentifier'.repeat(4));
+    await registerArticleFixture(app, ASTRA_ARTICLE_URL, article);
     await registerMediaFixtures(app, astraMediaFixtures());
     const documentId = await importArticleThroughUi(app, ASTRA_ARTICLE_URL);
     await openInReader(app, documentId);
 
-    await setWindowSize(app, 720, 900);
+    // The native window has a 960px minimum; its reader column is narrower.
+    await resizeRestoredWindow(app, 960, 900);
+    const companionToggle = app.window.getByTestId('toggle-right-panel');
+    if (await companionToggle.getAttribute('aria-pressed') !== 'true') await companionToggle.click();
+    const resizer = app.window.getByTestId('panel-resizer-left');
+    await resizer.focus();
+    await app.window.keyboard.press('End');
+    await expect.poll(() => resizer.getAttribute('aria-valuenow')).toBe(await resizer.getAttribute('aria-valuemax'));
+    const readerWidth = await app.window.getByTestId('markdown-content-wrapper').evaluate((element) => element.getBoundingClientRect().width);
+    expect(readerWidth).toBeLessThanOrEqual(720);
     const narrow = await readTables(app);
     for (const [index, table] of narrow.entries()) {
-      expect(table.wrapperOverflowX, `table ${String(index)} scrolls itself at 720px`).toBe('auto');
-      // Seven columns cannot fit a 720px window, so the table really is wider
+      expect(table.wrapperOverflowX, `table ${String(index)} scrolls itself in the narrow reader`).toBe('auto');
+      // Seven columns cannot fit the narrow reader, so the table really is wider
       // than its box — which is what makes the scroller load-bearing rather
       // than decorative.
-      expect(table.scrollWidth, `table ${String(index)} overflows at 720px`).toBeGreaterThan(
+      expect(table.scrollWidth, `table ${String(index)} overflows in the narrow reader`).toBeGreaterThan(
         table.clientWidth
       );
-      expect(table.headers, `table ${String(index)} keeps every column at 720px`).toHaveLength(7);
+      expect(table.headers, `table ${String(index)} keeps every column in the narrow reader`).toHaveLength(7);
       // A scroller only a pointer can reach hides half the table from everyone
       // else, so an overflowing one is a focusable, named region.
-      expect(table.tabIndex, `table ${String(index)} is a tab stop at 720px`).toBe(0);
-      expect(table.role, `table ${String(index)} is a region at 720px`).toBe('region');
-      expect(table.ariaLabel, `table ${String(index)} is named at 720px`).toMatch(
+      expect(table.tabIndex, `table ${String(index)} is a tab stop in the narrow reader`).toBe(0);
+      expect(table.role, `table ${String(index)} is a region in the narrow reader`).toBe('region');
+      expect(table.ariaLabel, `table ${String(index)} is named in the narrow reader`).toMatch(
         /scrollable horizontally$/
       );
     }
@@ -382,7 +388,7 @@ test.describe('Rich web-article capture', () => {
     expect(overflowingImages, 'no image escapes the reading column at 200%').toBe(0);
 
     await setZoomFactor(app, 1);
-    await setWindowSize(app, 1200, 800);
+    await resizeRestoredWindow(app, 1200, 800);
   });
 
   test('reopens with its images after a restart with no fixtures registered', async () => {

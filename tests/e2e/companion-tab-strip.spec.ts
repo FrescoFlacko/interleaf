@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { launchInterleaf, stubOpenDialog, type AppHandle } from './helpers';
+import { launchInterleaf, resizeRestoredWindow, stubOpenDialog, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 
 /** The labels the companion bar owes the reader, in order. */
@@ -146,10 +146,10 @@ test.describe('Companion tab strip', () => {
   test('keeps them visible in a 960x640 window at 200% zoom', async () => {
     await openDocument();
 
+    await resizeRestoredWindow(app, 960, 640);
     await app.electronApp.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0];
       if (!win) throw new Error('Main BrowserWindow not found');
-      win.setSize(960, 640);
       win.webContents.setZoomFactor(2);
     });
     await expect.poll(async () => app.window.evaluate(() => window.innerWidth)).toBeLessThan(600);

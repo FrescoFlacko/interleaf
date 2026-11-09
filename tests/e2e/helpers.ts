@@ -532,3 +532,32 @@ export async function restoreDefaultWindowSize(app: AppHandle): Promise<void> {
 export function searchStatus(app: AppHandle): Locator {
   return app.window.getByTestId('search-panel').getByRole('status');
 }
+
+/** Resize a real restored window; maximized windows ignore setSize on X11. */
+export async function resizeRestoredWindow(app: AppHandle, width: number, height: number): Promise<void> {
+  const window = await app.electronApp.browserWindow(app.window);
+  await window.evaluate((win) => { if (win.isMaximized()) win.unmaximize(); });
+  await expect.poll(() => window.evaluate((win) => win.isMaximized() === true)).toBe(false);
+  await window.evaluate((win, size) => { win.setSize(size.width, size.height); }, { width, height });
+  await expect.poll(() => window.evaluate((win, size) => {
+    const bounds = win.getBounds();
+    return bounds.width === size.width && bounds.height === size.height;
+  }, { width, height })).toBe(true);
+}
+
+/** Include the real X11 window-manager frame when comparing maximized bounds. */
+export async function nativeOuterBounds(app: AppHandle, bounds: { x: number; y: number; width: number; height: number }): Promise<typeof bounds> {
+  if (process.platform !== 'linux' || !process.env.DISPLAY) return bounds;
+  const id = await app.electronApp.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) throw new Error('Main BrowserWindow not found');
+    return win.getNativeWindowHandle().readUInt32LE(0);
+  });
+  const { execFileSync } = await import('node:child_process');
+  const result = execFileSync('xprop', ['-id', `0x${id.toString(16)}`, '_NET_FRAME_EXTENTS'], { encoding: 'utf8', timeout: 5000 });
+  const match = /=\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)/u.exec(result);
+  if (!match) throw new Error(`Native frame extents unavailable: ${result}`);
+  const [left, right, top, bottom] = match.slice(1).map(Number);
+  if (left === undefined || right === undefined || top === undefined || bottom === undefined) throw new Error('Invalid frame extents');
+  return { x: bounds.x - left, y: bounds.y - top, width: bounds.width + left + right, height: bounds.height + top + bottom };
+}
