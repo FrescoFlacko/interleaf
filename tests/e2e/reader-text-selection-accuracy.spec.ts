@@ -675,6 +675,8 @@ All documents remain on local storage and render with high typography fidelity.`
 
     await app.window.getByTestId(`read-doc-${epubDoc!.id}`).click();
     await expect(app.window.locator('iframe[title="Ebook Content"]')).toBeVisible();
+    // The frame is attached before its section document is loaded.
+    await expect(app.window.frameLocator('iframe[title="Ebook Content"]').locator('p').nth(1)).toBeAttached();
 
     // Select across paragraph 0 and paragraph 1 inside the iframe
     const nativeSelectedText = await app.window.evaluate(() => {
@@ -725,11 +727,10 @@ All documents remain on local storage and render with high typography fidelity.`
     expect(savedAnnotation.status).toBe('anchored');
 
     // Assert highlight is registered in iframe CSS.highlights
-    const highlightStats = await app.window.evaluate(() => {
+    await expect.poll(() => app.window.evaluate(() => {
       const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="Ebook Content"]');
       const win = iframe?.contentWindow as (Window & { CSS?: { highlights?: Map<string, { size: number }> } }) | null;
       return win?.CSS?.highlights?.get('interleaf-pink')?.size ?? 0;
-    });
-    expect(highlightStats).toBe(1);
+    })).toBe(1);
   });
 });
