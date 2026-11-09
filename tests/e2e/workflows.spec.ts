@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { launchInterleaf, selectFakeAgentForTest, stubMessageBox, stubOpenDialog, getRecordedMessageBoxCalls, resetRecordedMessageBoxCalls, type AppHandle } from './helpers';
+import { launchInterleaf, resizeRestoredWindow, selectFakeAgentForTest, stubMessageBox, stubOpenDialog, getRecordedMessageBoxCalls, resetRecordedMessageBoxCalls, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 import { chooseListboxValue, choosePalette } from './listbox';
 test.describe('interleaf-media protocol containment', () => {
@@ -456,14 +456,19 @@ test.describe('renderer shell behaviors', () => {
   });
 
   test('shell reflows without horizontal overflow at minimum window size 960x640 and zoom factor 2', async () => {
-    // Set window size to minimum 960x640 and zoom factor to 2.0
-    await app.electronApp.evaluate(({ BrowserWindow }) => {
+    // Establish both native bounds and the renderer's actual compact layout.
+    await resizeRestoredWindow(app, 960, 640);
+    const native = await app.electronApp.evaluate(({ BrowserWindow, screen }) => {
       const win = BrowserWindow.getAllWindows()[0]!;
-      win.setSize(960, 640);
       win.webContents.setZoomFactor(2.0);
+      return { content: win.getContentBounds(), scale: screen.getDisplayMatching(win.getBounds()).scaleFactor };
     });
-
-    await app.window.waitForTimeout(500);
+    await expect.poll(() => app.window.evaluate((expected) => ({
+      width: Math.abs(window.innerWidth - expected.content.width / 2) <= 1,
+      height: Math.abs(window.innerHeight - expected.content.height / 2) <= 1,
+      dpr: Math.abs(window.devicePixelRatio - expected.scale * 2) < 0.01,
+      controls: document.querySelector('[data-testid="toggle-left-panel"]')?.getAttribute('aria-controls'),
+    }), native)).toEqual({ width: true, height: true, dpr: true, controls: 'compact-drawer-left' });
 
     // Verify horizontal overflow invariant: scrollWidth <= clientWidth across all shell containers
     const overflowCheck = await app.window.evaluate(() => {

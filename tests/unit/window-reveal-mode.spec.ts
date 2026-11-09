@@ -126,7 +126,7 @@ describe('reveal routes', () => {
     for (const platform of ['linux', 'win32'] as const) {
       const calls: string[] = [];
       revealNewWindow(record(calls), 'background', platform);
-      expect(calls).toEqual(['maximize', 'showInactive']);
+      expect(calls).toEqual(platform === 'linux' ? ['showInactive', 'maximize'] : ['maximize', 'showInactive']);
     }
   });
 });

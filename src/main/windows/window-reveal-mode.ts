@@ -94,8 +94,8 @@ export type NewRevealWindow = LevelledWindow & {
  * A new window's first reveal, once its content is ready: maximized to the
  * work area, then shown. The foreground reveal activates the app. The
  * background reveal first drops the window below ordinary windows (macOS),
- * then orders the same maximized window in without activating the app;
- * `maximize()` itself never activates it.
+ * then orders the same maximized window in without activating the app. On Linux,
+ * an inactive show comes first because maximizing a hidden window can activate it.
  */
 export function revealNewWindow(
   window: NewRevealWindow,
@@ -108,6 +108,12 @@ export function revealNewWindow(
     return;
   }
   keepBelowOrdinaryWindows(window, platform);
+  if (platform === 'linux') {
+    // X11 window managers may activate a hidden window when it is maximized.
+    window.showInactive();
+    window.maximize();
+    return;
+  }
   window.maximize();
   window.showInactive();
 }

@@ -94,8 +94,11 @@ describe('main window launch geometry', () => {
     electron.once.get('ready-to-show')?.();
 
     // On macOS the window drops below ordinary windows before anything orders it in.
-    const lowered = process.platform === 'darwin' ? [BELOW_ORDINARY] : [];
-    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual([...lowered, 'maximize', 'showInactive']);
+    const orders = new Map<NodeJS.Platform, string[]>([
+      ['darwin', [BELOW_ORDINARY, 'maximize', 'showInactive']],
+      ['linux', ['showInactive', 'maximize']],
+    ]);
+    expect(electron.calls.filter((call) => REVEAL_CALLS.has(call))).toEqual(orders.get(process.platform) ?? ['maximize', 'showInactive']);
     expect(electron.calls).not.toContain('setFullScreen');
     // Geometry and security are the foreground window's.
     expect(electron.constructed[0]).toMatchObject({ width: 1400, height: 900, minWidth: 960, minHeight: 600 });
