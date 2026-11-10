@@ -23,6 +23,15 @@ export type ExitEvidence = {
   terminal: ExitFrame | null;
 };
 
+/** Only protocol reads in the real click's 500 ms window can prove the exit. */
+export const EXIT_PROTOCOL_WINDOW_MS = 500;
+
+export function exitProtocolWindow<T extends { readonly observedAt: number }>(frames: readonly T[], click: number | null): T[] {
+  if (click === null || !Number.isFinite(click)) return [];
+  return frames.filter(({ observedAt }) => Number.isFinite(observedAt)
+    && observedAt >= click && observedAt - click <= EXIT_PROTOCOL_WINDOW_MS);
+}
+
 type Closing = NonNullable<ExitEvidence['closing']>;
 
 function openAtClick(initial: ExitFrame, click: number | null, expectedWidth: number): boolean {

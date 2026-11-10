@@ -161,7 +161,23 @@ async function readTables(app: AppHandle): Promise<readonly TableState[]> {
  */
 async function assertKeyboardScrolling(app: AppHandle): Promise<void> {
   const table = app.window.locator('[data-testid^="markdown-table-"]').first();
+  // A pending reader resize can restore its previous anchor after focus has
+  // scrolled this table into view. Wait for real resize delivery and the next
+  // renderer frame before testing the user's keyboard interaction.
+  await app.window.getByTestId('markdown-scroll-container').evaluate((scroller) => new Promise<void>((resolve) => {
+    const content = scroller.querySelector<HTMLElement>('[data-testid="markdown-content-wrapper"]')!;
+    const seen = new Set<Element>();
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) seen.add(entry.target);
+      if (!seen.has(scroller) || !seen.has(content)) return;
+      observer.disconnect();
+      requestAnimationFrame(() => { resolve(); });
+    });
+    observer.observe(scroller);
+    observer.observe(content);
+  }));
   await table.focus();
+  await expect(table).toBeInViewport();
   expect(
     await table.evaluate((element) => document.activeElement === element),
     'the table takes focus'

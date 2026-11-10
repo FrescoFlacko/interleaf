@@ -6,6 +6,7 @@ import { launchInterleaf, stubOpenDialog, type AppHandle, openCompanionPanel } f
 import { makePdfFixture } from '../fixtures/document-fixtures';
 import { exitFadeFailure, type ExitEvidence } from './exit-fade-evidence';
 import { armExitFadeObserver } from './exit-fade-observer';
+import { sampleExitFrames, sampleFrames, SETTLE_MS, type Frame } from './drawer-frame-sampling';
 
 /**
  * Defect 22 (docs/defects/22-drawer-open-close-transitions) frame-sampled
@@ -21,25 +22,12 @@ import { armExitFadeObserver } from './exit-fade-observer';
  *   - PDF keeps one attached canvas per painted page through a toggle.
  */
 
-const SETTLE_MS = 650;
 const MIN_CORE_SPAN_MS = 60;
 /** Product-fixed durations each sampled transition must match (~±40ms). */
 const EXPECTED_PANEL_MS = 200;
 const EXPECTED_PANEL_EXIT_MS = 100;
 const EXPECTED_DRAWER_MS = 280;
 const TRANSFORM_OR_ALL = /(^|,) ?(transform|all)( |,|$)/;
-
-type Frame = {
-  readonly t: number;
-  readonly w: number;
-  /** Horizontal travel of the panel's content, in px. */
-  readonly tx: number;
-  /** Opacity of the panel's content. */
-  readonly op: number;
-  readonly trProp: string;
-  readonly trDur: string;
-  readonly overflowX: number;
-};
 
 type PhaseResult = {
   readonly coreSpanMs: number;
@@ -78,35 +66,6 @@ async function drawerOffset(drawer: Locator): Promise<number> {
     const raw = getComputedStyle(node).transform;
     return raw === 'none' ? 0 : Math.abs(new DOMMatrixReadOnly(raw).m41);
   });
-}
-
-/** Samples discrete reads (~16ms apart) spanning the whole settle window; overflow must stay clean. */
-async function sampleFrames(app: AppHandle, selector: string): Promise<readonly Frame[]> {
-  const collected: Frame[] = [];
-  const startedAt = Date.now();
-  while (Date.now() - startedAt <= SETTLE_MS) {
-    const frame = await app.window.evaluate((sel) => {
-      const node = document.querySelector<HTMLElement>(sel);
-      const content = document.querySelector<HTMLElement>(`${sel} > [data-testid$="-content"]`);
-      if (node === null || content === null) return null;
-      const cs = getComputedStyle(content);
-      return {
-        t: Math.round(performance.now()),
-        w: Math.round(node.getBoundingClientRect().width * 100) / 100,
-        tx: cs.transform === 'none' ? 0 : Math.round(Math.abs(new DOMMatrixReadOnly(cs.transform).m41) * 100) / 100,
-        op: Math.round(Number.parseFloat(cs.opacity) * 1000) / 1000,
-        trProp: cs.transitionProperty,
-        trDur: cs.transitionDuration,
-        overflowX: document.body.scrollWidth - document.body.clientWidth,
-      };
-    }, selector);
-    if (frame !== null) {
-      collected.push(frame);
-      expect(frame.overflowX).toBeLessThanOrEqual(1);
-    }
-    await app.window.waitForTimeout(16);
-  }
-  return collected;
 }
 
 function parseFirstDurationMs(value: string | null): number | null {
@@ -201,9 +160,9 @@ test.describe('Defect 22 drawer transitions (frame-sampled)', () => {
 
         const restingWidth = await panelWidth(app, selector);
         await armExitFadeObserver(app.window, selector, side);
-        const closeSampling = sampleFrames(app, selector);
-        await toggle.click();
-        const closeFrames = await closeSampling;
+        // Sampling is armed before input, but its deadline starts at the real
+        // capture-phase click, not while Playwright waits for an actionable button.
+        const [closeFrames] = await Promise.all([sampleExitFrames(app, selector), toggle.click()]);
         await app.window.waitForFunction(() => {
           const record = Reflect.get(window, '__exitFadeEvidence') as ExitEvidence | undefined;
           return record?.click !== null && record?.click !== undefined && performance.now() - record.click >= 750;

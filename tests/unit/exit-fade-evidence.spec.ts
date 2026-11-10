@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exitFadeFailure, type ExitEvidence, type ExitFrame } from '../e2e/exit-fade-evidence';
+import { exitFadeFailure, exitProtocolWindow, type ExitEvidence, type ExitFrame } from '../e2e/exit-fade-evidence';
 
 function frame(t: number, phase: string, opacity: number, width = 256): ExitFrame {
   return {
@@ -24,6 +24,20 @@ function evidence(): ExitEvidence {
 }
 
 describe('exit fade cadence evidence', () => {
+  it('excludes pre-click reads and a closed terminal observed after the click deadline', () => {
+    const frames = [
+      ...[100, 150, 190].map((observedAt) => ({ observedAt, width: 256 })),
+      ...[200, 300, 400, 500, 600, 700].map((observedAt) => ({ observedAt, width: 256 })),
+      { observedAt: 701, width: 1 },
+    ];
+    const inWindow = exitProtocolWindow(frames, 200);
+    expect(inWindow).toHaveLength(6);
+    expect(inWindow.at(-1)?.width).toBe(256);
+    expect(exitProtocolWindow(frames, null)).toEqual([]);
+    expect(exitProtocolWindow(frames, Number.NaN)).toEqual([]);
+    expect(exitProtocolWindow([{ observedAt: Number.NaN, width: 1 }], 200)).toEqual([]);
+  });
+
   it('accepts a relevant stall with a real transition and safe state', () => {
     expect(exitFadeFailure(evidence(), 256)).toBeNull();
   });
