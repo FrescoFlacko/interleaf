@@ -1,0 +1,167 @@
+{
+  "before_commit": "4e1a87c85058487b4745e57b762ced88cea9d6e3",
+  "after_commit": "6e60ed4828dddc16d721e13159c38037b8d5f301",
+  "theme": "Paper",
+  "images": [
+    {
+      "path": "before/paired-library.png",
+      "source": "BASE",
+      "pair": "L",
+      "size": "1440\u00d71000",
+      "state": "Library after importing Reading and learning.md",
+      "sha256": "808f74d6f00c386ebe9f5a47626eae3d0b75702ea1ed190db9c56a10827934b1"
+    },
+    {
+      "path": "after/paired-library.png",
+      "source": "AFTER",
+      "pair": "L",
+      "size": "1440\u00d71000",
+      "state": "Same library with Review practice and Imported highlights controls",
+      "sha256": "483c17a60215adf4b7c13540d347bf27b8cb4343fd6d609adffa2a791777513e"
+    },
+    {
+      "path": "before/paired-reader.png",
+      "source": "BASE",
+      "pair": "R",
+      "size": "1440\u00d71000",
+      "state": "Reader with Reading and learning.md, before learning item",
+      "sha256": "50b9edcf338af3439b2255f65f3309f4262d2b209a4ff4343accc96c825f88f6"
+    },
+    {
+      "path": "after/paired-reader-learning.png",
+      "source": "AFTER",
+      "pair": "R",
+      "size": "1440\u00d71000",
+      "state": "Same reader and source with saved passage question",
+      "sha256": "8f128207eec439d688a8762839bfdc018cb46abdfd81a50e9711fffd983589b8"
+    },
+    {
+      "path": "before/paired-settings.png",
+      "source": "BASE",
+      "pair": "S",
+      "size": "1440\u00d71000",
+      "state": "Advanced settings before private diagnostics",
+      "sha256": "76f81fec81b11bf1eb910f3a2540c1cc170c2f15f052b0bd654ccbe597de0bf0"
+    },
+    {
+      "path": "after/paired-settings.png",
+      "source": "AFTER",
+      "pair": "S",
+      "size": "1440\u00d71000",
+      "state": "Same Advanced settings with private diagnostics",
+      "sha256": "7e0f803b184f31d7b7a186246cc3c757bf57fab8791e907d3a7bdf750c376946"
+    },
+    {
+      "path": "before/conflict-context.png",
+      "source": "BASE",
+      "pair": "C",
+      "size": "1600\u00d71154",
+      "state": "First.md open with First.md and Second.md imported",
+      "sha256": "028346556d59d1588dc8496fe9204c8b5d3a7d8c5f5624c15ce19fe3f8058b74"
+    },
+    {
+      "path": "after/learning-conflict.png",
+      "source": "AFTER",
+      "pair": "C",
+      "size": "1600\u00d71154",
+      "state": "Same two source documents with saved conflict prompt",
+      "sha256": "45d3d4100c4c06eb450789c026d5ebc7529987429ae95770c16f2a9e71000286"
+    },
+    {
+      "path": "before/practice-context.png",
+      "source": "BASE",
+      "pair": "P",
+      "size": "1600\u00d71154",
+      "state": "Evidence.md and saved Quorums overlap highlight in Annotations",
+      "sha256": "81e6ffb3a0c7ffbfaf8f9c41ffec1eaf7b3584dca1e14adc6bd3fee9d8b06be4"
+    },
+    {
+      "path": "after/card-form.png",
+      "source": "AFTER",
+      "pair": "P",
+      "size": "1600\u00d71154",
+      "state": "Same highlight with practice-card creation form",
+      "sha256": "0858ab40793f712fbf76551b6eff19b31bf20944d9fc2d19f9adffe434bd40ca"
+    },
+    {
+      "path": "after/practice-review.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1600\u00d71154",
+      "state": "Practice review with revealed saved source and rating controls",
+      "sha256": "e5ec83577771d087d8e3207f7e2b0a22be322bed4ac2d97562a4f12d5e0da691"
+    },
+    {
+      "path": "after/import-preview.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1600\u00d71154",
+      "state": "Kindle preview of synthetic Fixture Book clipping",
+      "sha256": "cb1d6420396dc59c49ff7feb9e96190fb73e3f1a8bf9633716643d68329b5ca0"
+    },
+    {
+      "path": "after/import-card.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1600\u00d71154",
+      "state": "Saved unmatched Kindle highlight and practice card action/status",
+      "sha256": "6565fcf24605cd3736039c5c8577ccf7ea30936380587a019a8149fbed393c1e"
+    },
+    {
+      "path": "after/readwise-preview.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1440\u00d71000",
+      "state": "Synthetic Readwise bulk CSV preview",
+      "sha256": "d0647f1132fd09a7bedd3fc12c74fa6ec3249615a6020212abf866220e25a5d0"
+    },
+    {
+      "path": "after/readwise-saved.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1440\u00d71000",
+      "state": "Saved synthetic Readwise highlight and practice action",
+      "sha256": "8d7429938353d465ed110624ff1cd393381f634a4967a315a29aab534df04de9"
+    },
+    {
+      "path": "after/after-settings-diagnostics-entry-details.png",
+      "source": "AFTER",
+      "pair": "S context",
+      "size": "1440\u00d71000",
+      "state": "Private diagnostics disclosure expanded",
+      "sha256": "eb7fe26e46a71b9ef35528ded4929dd0ea0433f6658c9b49eeaa90b341cbae8a"
+    },
+    {
+      "path": "after/after-settings-diagnostics-review.png",
+      "source": "AFTER",
+      "pair": "S context",
+      "size": "1440\u00d71000",
+      "state": "Synthetic report review with full report expanded",
+      "sha256": "add44d0e9310d80f4badaf8dbbf29933bc8a4cf401891806a2aa54cef8e20397"
+    },
+    {
+      "path": "after/native-connect.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1600\u00d71200",
+      "state": "Native Agent access connection confirmation; no token displayed",
+      "sha256": "928d793a86a0cd1e5e15da7013c0e221bfdc55e398cf30e75a134342d391f63c"
+    },
+    {
+      "path": "after/native-permission.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1600\u00d71200",
+      "state": "Native allow-suggestions permission confirmation",
+      "sha256": "1fb603528b34d307f111724bb7b2b289c5a6528a12c7634ec2b25482109d2b2e"
+    },
+    {
+      "path": "after/native-suggestion.png",
+      "source": "AFTER",
+      "pair": "new",
+      "size": "1600\u00d71200",
+      "state": "Native review of pending synthetic question proposal",
+      "sha256": "94d5bbb051bd79da9adea6e9919c7eeec2e094917302566dcf4632039dd0830c"
+    }
+  ]
+}
