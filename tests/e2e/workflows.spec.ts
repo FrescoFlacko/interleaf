@@ -360,7 +360,12 @@ test.describe('renderer shell behaviors', () => {
       );
       if (secondSession === undefined) throw new Error('Workflow H second session was not persisted.');
       expect(secondSession.executionMode).toBe('isolated-worktree');
+      // The completed event can precede the final environment review. Confirm
+      // the changed file is visible before opening a confirmation bound to it.
+      await expect(app.window.getByTestId('agent-environment-review')).toContainText('1 changed file', { timeout: 5_000 });
       await app.window.getByRole('button', { name: 'Review', exact: true }).click();
+      await expect(app.window.getByTestId('agent-review-files')).toContainText('interleaf-fixture-change.txt', { timeout: 5_000 });
+      await expect(app.window.getByTestId('agent-review-tests')).toContainText('passed', { timeout: 5_000 });
       // Cancelling the confirmation keeps the sandbox; only confirming removes it.
       await app.window.getByRole('button', { name: 'Discard Sandbox' }).click();
       await app.window.getByRole('alertdialog', { name: 'Discard sandbox?' }).getByRole('button', { name: 'Cancel' }).click();

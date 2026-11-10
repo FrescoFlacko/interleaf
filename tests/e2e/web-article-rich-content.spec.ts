@@ -332,9 +332,24 @@ test.describe('Rich web-article capture', () => {
 
     // The native window has a 960px minimum; its reader column is narrower.
     await resizeRestoredWindow(app, 960, 900);
+    const content = await app.electronApp.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]!;
+      return { bounds: window.getContentBounds(), zoom: window.webContents.getZoomFactor() };
+    });
+    await expect.poll(() => app.window.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))).toEqual({
+      width: Math.floor(content.bounds.width / content.zoom), height: Math.floor(content.bounds.height / content.zoom),
+    });
     const companionToggle = app.window.getByTestId('toggle-right-panel');
     if (await companionToggle.getAttribute('aria-pressed') !== 'true') await companionToggle.click();
     const resizer = app.window.getByTestId('panel-resizer-left');
+    await expect(app.window.getByTestId('resizable-panel-right')).toHaveAttribute('data-panel-state', 'open');
+    const rightWidth = await app.window.evaluate(async () => (await window.interleafAPI.settings.get()).layout.rightWidth);
+    await expect.poll(() => app.window.evaluate((otherWidth) => {
+      const left = document.querySelector<HTMLElement>('[data-testid="panel-resizer-left"]');
+      if (!left) return false;
+      const max = Math.min(440, Math.max(220, window.innerWidth - 420 - otherWidth));
+      return Number(left.getAttribute('aria-valuemax')) === max;
+    }, rightWidth)).toBe(true);
     await resizer.focus();
     await app.window.keyboard.press('End');
     await expect.poll(() => resizer.getAttribute('aria-valuenow')).toBe(await resizer.getAttribute('aria-valuemax'));

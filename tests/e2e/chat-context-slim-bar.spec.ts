@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { chooseChatModel, launchInterleaf, stubOpenDialog, type AppHandle } from './helpers';
+import { chooseChatModel, launchInterleaf, resizeRestoredWindow, stubOpenDialog, type AppHandle } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
 import { choosePalette } from './listbox';
 
@@ -317,10 +317,14 @@ test.describe('Defect 14: chat context slim bar and Pages popover', () => {
     await popover.getByRole('button', { name: 'Close' }).click();
     await app.window.getByTestId('close-compact-drawer').click();
     await expect(compactDrawer).toBeHidden();
-    await app.electronApp.evaluate(({ BrowserWindow }) => {
-      const window = BrowserWindow.getAllWindows()[0];
-      if (!window) throw new Error('Main BrowserWindow was not found.');
-      window.setSize(2400, 1200);
+    await resizeRestoredWindow(app, 2400, 1200);
+    const desktopNative = await app.electronApp.evaluate(({ BrowserWindow, screen }) => {
+      const window = BrowserWindow.getAllWindows()[0]!;
+      return { content: window.getContentBounds(), zoom: window.webContents.getZoomFactor(), scale: screen.getDisplayMatching(window.getBounds()).scaleFactor };
+    });
+    await expect.poll(() => app.window.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio }))).toEqual({
+      width: Math.floor(desktopNative.content.width / desktopNative.zoom), height: Math.floor(desktopNative.content.height / desktopNative.zoom),
+      dpr: desktopNative.scale * desktopNative.zoom,
     });
     await expect.poll(async () => app.window.evaluate(() => window.innerWidth)).toBeGreaterThanOrEqual(920);
     const desktopToggle = app.window.getByTestId('toggle-right-panel');

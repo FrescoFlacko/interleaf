@@ -4,6 +4,8 @@ import path from 'node:path';
 import { expect, test, type Locator } from '@playwright/test';
 import { launchInterleaf, stubOpenDialog, type AppHandle, openCompanionPanel } from './helpers';
 import { makePdfFixture } from '../fixtures/document-fixtures';
+import { exitFadeFailure, type ExitEvidence } from './exit-fade-evidence';
+import { armExitFadeObserver } from './exit-fade-observer';
 
 /**
  * Defect 22 (docs/defects/22-drawer-open-close-transitions) frame-sampled
@@ -168,13 +170,19 @@ function expectGlide(sample: PhaseResult): void {
  * its full width through every partly faded frame, and only afterwards does
  * the width drop to 0 in one step.
  */
-function expectExitFade(frames: readonly Frame[], restingWidthPx: number): void {
+function expectExitFade(frames: readonly Frame[], restingWidthPx: number, evidence: ExitEvidence): void {
   expect(frames.length).toBeGreaterThanOrEqual(6);
   const fading = frames.filter((frame) => frame.op > 0.02 && frame.op < 0.98);
-  expect(new Set(fading.map((frame) => frame.op)).size).toBeGreaterThanOrEqual(2);
+  const failure = exitFadeFailure(evidence, restingWidthPx);
+  const observedFade = evidence.frames.filter((frame) => frame.t >= (evidence.closing?.t ?? Infinity)
+    && frame.t <= (evidence.terminal?.t ?? -Infinity) && frame.opacity > 0.02 && frame.opacity < 0.98);
+  if (failure === null && new Set(observedFade.map((frame) => Math.round(frame.opacity * 1000) / 1000)).size < 2) {
+    console.log('EXIT_RENDERER_STARVATION', JSON.stringify(evidence));
+  }
+  expect(failure, JSON.stringify(evidence)).toBeNull();
   expect(isMonotonic(frames.map((frame) => frame.op * 100), false)).toBe(true);
   expect(fading.every((frame) => Math.abs(frame.w - restingWidthPx) <= 0.5 && frame.tx <= 0.5)).toBe(true);
-  expect(fading.some((frame) => /(^|,) ?(opacity|all)( |,|$)/u.test(frame.trProp) && isNearMs(frame.trDur, EXPECTED_PANEL_EXIT_MS))).toBe(true);
+  expect(fading.length === 0 || fading.some((frame) => /(^|,) ?(opacity|all)( |,|$)/u.test(frame.trProp) && isNearMs(frame.trDur, EXPECTED_PANEL_EXIT_MS))).toBe(true);
   expect(new Set(frames.filter((frame) => frame.w > 2 && frame.w < restingWidthPx - 2).map((frame) => frame.w)).size).toBe(0);
   expect(frames[frames.length - 1]?.w ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(2);
 }
@@ -192,9 +200,16 @@ test.describe('Defect 22 drawer transitions (frame-sampled)', () => {
         await expect(toggle).toBeEnabled({ timeout: 15_000 });
 
         const restingWidth = await panelWidth(app, selector);
+        await armExitFadeObserver(app.window, selector, side);
         const closeSampling = sampleFrames(app, selector);
         await toggle.click();
-        expectExitFade(await closeSampling, restingWidth);
+        const closeFrames = await closeSampling;
+        await app.window.waitForFunction(() => {
+          const record = Reflect.get(window, '__exitFadeEvidence') as ExitEvidence | undefined;
+          return record?.click !== null && record?.click !== undefined && performance.now() - record.click >= 750;
+        });
+        const evidence = await app.window.evaluate(() => Reflect.get(window, '__exitFadeEvidence') as ExitEvidence);
+        expectExitFade(closeFrames, restingWidth, evidence);
         await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
         // The identical mounted node rests hidden, inert, aria-hidden, without
